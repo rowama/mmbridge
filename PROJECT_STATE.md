@@ -55,7 +55,7 @@ none
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0005: [docs/decisions/](docs/decisions/)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-25_23-43-13_cp-b-approved-plan-drafted.md](thoughts/shared/handoffs/2026-10-25_23-43-13_cp-b-approved-plan-drafted.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-26_00-14-07_s1-implemented.md](thoughts/shared/handoffs/2026-10-26_00-14-07_s1-implemented.md)
 - Plan (approved): [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md](thoughts/shared/plans/2026-10-25-mmbridge-mcp.md)
 - Slices: [thoughts/shared/slices/](thoughts/shared/slices/)
 - Specs: [tests/acceptance/specs/test_mmbridge.py](tests/acceptance/specs/test_mmbridge.py)
