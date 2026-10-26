@@ -28,3 +28,6 @@ base = "main"            # default --base for code-review <slice-id>
 # type = "command"
 # command = "gemini -p {prompt}"
 # prompt_via = "arg"       # arg | stdin (stdin: the prompt is piped in)
+
+[runners.claude]
+implement_args = ["--permission-mode", "bypassPermissions"]

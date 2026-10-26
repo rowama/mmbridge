@@ -1,8 +1,6 @@
 # >>> eng-process defaults (managed by eng-init; edit outside this block)
-__pycache__/
 *.pyc
 *.pyo
-.venv/
 venv/
 .env
 .DS_Store

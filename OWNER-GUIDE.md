@@ -30,3 +30,4 @@ Say "back up to discover" (or to any phase). That's normal, not a failure. The a
 - **ADR (Architecture Decision Record)**: a short numbered note of one durable decision and why, in `docs/decisions/`.
 - **Slice**: one small, end-to-end, demoable piece of work (about 100-200 changed lines).
 - **DoD (Definition of Done)**: the checklist every slice must pass (`docs/definition-of-done.md`).
+
