@@ -2,7 +2,7 @@
 id: PLAN-20261025-mmbridge-mcp
 type: plan
 phase: plan
-status: draft            # input (pre-draft from an earlier phase) | draft | in-review | approved | in-progress | done | superseded
+status: approved            # input (pre-draft from an earlier phase) | draft | in-review | approved | in-progress | done | superseded
 owner_agent: Eddie
 date: 2026-10-25
 links: [docs/design/2026-10-25-mmbridge-mcp.md, docs/architecture/2026-10-25-mmbridge-mcp.md]

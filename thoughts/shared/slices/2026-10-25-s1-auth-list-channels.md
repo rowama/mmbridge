@@ -2,7 +2,7 @@
 id: SLICE-20261025-s1-auth-list-channels
 type: slice
 phase: implement
-status: todo
+status: in-progress
 owner_agent: Eddie
 date: 2026-10-25
 links: [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md]

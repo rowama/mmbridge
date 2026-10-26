@@ -8,3 +8,7 @@ venv/
 .DS_Store
 Thumbs.db
 # <<< eng-process defaults
+.venv/
+__pycache__/
+.pytest_cache/
+.pytest_cache/
