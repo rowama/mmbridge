@@ -1,7 +1,7 @@
 ---
 id: STATE
 type: project-state
-phase: ship
+phase: reflect
 status: active
 owner_agent: Eddie
 date: 2026-10-26
@@ -25,7 +25,7 @@ acceptance: executable-specs   # v2.5: tests/acceptance/, see PROCESS.md 13
 > Update it at the end of every session. Keep it under one screen.
 
 ## Current phase
-ship - entry/exit criteria in `.eng/PROCESS.md` section 3.
+reflect - entry/exit criteria in `.eng/PROCESS.md` section 3.
 
 ## Goal (one sentence)
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
@@ -34,7 +34,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [thoughts/shared/slices/2026-10-25-s3-dm.md](thoughts/shared/slices/2026-10-25-s3-dm.md) (slices 1-3 done; CP-S 2026-10-26)
 
 ## Next action
-Ship prep done locally for v0.2.0 (CHANGELOG, README tools table; suite 84 passed; eng-spec lock ok). Waiting on Rob OK to push main to origin (push_permission=ask). Coolify deploys from main, so after push: tag v0.2.0 and record CP-P (release review) against the commit/tag; a PR is optional. Kit upgrade edits on Merkle stay uncommitted.
+v0.2.0 released (commit 9946445, tag v0.2.0; release review recorded in Approval log). Run eng-retro for the v0.2.0 increment next.
 
 
 ## Blockers
@@ -57,7 +57,7 @@ none
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0005: [docs/decisions/](docs/decisions/)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-26_13-45-00_ship-prep-v0.2.0.md](thoughts/shared/handoffs/2026-10-26_13-45-00_ship-prep-v0.2.0.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-26_14-05-44_ship-done-next-retro.md](thoughts/shared/handoffs/2026-10-26_14-05-44_ship-done-next-retro.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Plan (approved): [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md](thoughts/shared/plans/2026-10-25-mmbridge-mcp.md)
 - Verification s1 (PASS): [thoughts/shared/verification/2026-10-26-s1-verify.md](thoughts/shared/verification/2026-10-26-s1-verify.md)
@@ -71,6 +71,7 @@ none
      Pre-kit decisions: back-fill with Checkpoint "pre-kit" and Decision "approved (back-filled, pre-kit)". .eng/bin/eng-check matches rows to statuses. -->
 | Date | Checkpoint | Artifact | Decision (Rob) |
 |---|---|---|---|
+| 2026-10-26 | CP-P | CHANGELOG.md (v0.2.0, commit 9946445, tag v0.2.0) | approved (release v0.2.0) |
 | 2026-10-26 | CP-S | thoughts/shared/slices/2026-10-25-s3-dm.md | approved (live same-channel dual DM, ping via dm_read, nobody -> unknown_user)
 | 2026-10-26 | CP-S | thoughts/shared/slices/2026-10-25-s2-post-read-channel.md | approved (live post/read/not_member)
 | 2026-10-25 | CP-A | docs/design/2026-10-25-mmbridge-mcp.md | approved (problem, REQ-1..8, acceptance examples) |
