@@ -128,9 +128,9 @@ Slice card: [thoughts/shared/slices/2026-10-25-s2-post-read-channel.md](../slice
 - [x] `pytest tests/acceptance -q -k "not dm"` passes (REQ-1 ex1 + isolation, REQ-3, REQ-4 x2, REQ-7 non-member post/read + unknown channel, REQ-8)
 - [x] `python3 .eng/bin/eng-check .` passes
 #### Manual Verification
-- [ ] After redeploy, bot posts "build is green" to a channel it's in; Rob sees it in Mattermost authored by the bot
-- [ ] Bot reads that channel with limit 5 → 5 newest posts with authors/times
-- [ ] Bot posts to a channel it is not in → told not a member; Rob confirms it didn't join
+- [x] After redeploy, bot posts "build is green" to a channel it's in; Rob sees it in Mattermost authored by the bot
+- [x] Bot reads that channel with limit 5 → 5 newest posts with authors/times
+- [x] Bot posts to a channel it is not in → told not a member; Rob confirms it didn't join
 
 **Stop:** pause for Rob's manual verification before Phase 3.
 

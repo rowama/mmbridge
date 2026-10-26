@@ -2,7 +2,7 @@
 id: SLICE-20261025-s2-post-read-channel
 type: slice
 phase: implement
-status: review
+status: done
 owner_agent: claude-code
 date: 2026-10-25
 links: [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md]
@@ -43,3 +43,7 @@ The bot posts to and reads channels it belongs to; non-member channels are refus
 ## Blockers / deviations from plan
 - 2026-10-26: resolved. The earlier run couldn't execute commands; the re-run (bypassPermissions in .eng/runners.toml) could.
 - none from plan (plan review 2026-10-25: findings 1, 7, 8 folded in; call/anon rate limits moved to slice 1)
+
+
+## Approvals
+- CP-S approved by Rob 2026-10-26 (America/Chicago): live post/read/not_member confirmed.

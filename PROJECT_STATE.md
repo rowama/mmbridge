@@ -10,7 +10,7 @@ triage: medium            # unset | small | medium | large
 active_slice: thoughts/shared/slices/2026-10-25-s2-post-read-channel.md
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: ["CP-S: thoughts/shared/slices/2026-10-25-s2-post-read-channel.md - manual verification"]
+pending_approvals: []
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -34,7 +34,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [thoughts/shared/slices/2026-10-25-s2-post-read-channel.md](thoughts/shared/slices/2026-10-25-s2-post-read-channel.md) (slice 1 done, CP-S 2026-10-26; slice 2 status review)
 
 ## Next action
-Slice 2 verify PASS (automated) — thoughts/shared/verification/2026-10-26-s2-verify.md. Push local commits (ahead 3 + verify/handoff) needs Rob OK, then Coolify redeploy + live post/read/not_member checks, then CP-S. Codex review: no findings.
+Slice 2 done (verify PASS, CP-S approved 2026-10-26). Next: start slice 3 (DM) on Merkle via eng-run. Push of local commits needs Rob OK.
 
 
 ## Blockers
@@ -57,7 +57,7 @@ none
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0005: [docs/decisions/](docs/decisions/)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-26_01-54-00_s2-verify-cps-pending.md](thoughts/shared/handoffs/2026-10-26_01-54-00_s2-verify-cps-pending.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-26_02-09-00_s2-done-next-s3.md](thoughts/shared/handoffs/2026-10-26_02-09-00_s2-done-next-s3.md)
 - Plan (approved): [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md](thoughts/shared/plans/2026-10-25-mmbridge-mcp.md)
 - Verification s1 (PASS): [thoughts/shared/verification/2026-10-26-s1-verify.md](thoughts/shared/verification/2026-10-26-s1-verify.md)
 - Slices: [thoughts/shared/slices/](thoughts/shared/slices/)
@@ -70,6 +70,7 @@ none
      Pre-kit decisions: back-fill with Checkpoint "pre-kit" and Decision "approved (back-filled, pre-kit)". .eng/bin/eng-check matches rows to statuses. -->
 | Date | Checkpoint | Artifact | Decision (Rob) |
 |---|---|---|---|
+| 2026-10-26 | CP-S | thoughts/shared/slices/2026-10-25-s2-post-read-channel.md | approved (live post/read/not_member)
 | 2026-10-25 | CP-A | docs/design/2026-10-25-mmbridge-mcp.md | approved (problem, REQ-1..8, acceptance examples) |
 | 2026-10-25 | CP-A (scope) | docs/design/2026-10-25-mmbridge-mcp.md | approved (scope mode hold: REQ-1..8 in; @mention wakes, auto-join, multi-bot, threads/reactions/files out) |
 | 2026-10-25 | CP-B | docs/architecture/2026-10-25-mmbridge-mcp.md | approved |
