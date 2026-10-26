@@ -2,9 +2,24 @@
 
 Public HTTPS **MCP bridge** between Grok Bots and Rob's self-hosted Mattermost (on Coolify).
 
-**Status:** deployable skeleton. `GET /health` returns `{"ok": true}`; every other path echoes the
-request (method, path, headers) as JSON. MCP endpoints and the Mattermost client are stubs
-(`app/mcp.py`, `app/mattermost.py`).
+**Status:** v0.2.0. `GET /health` returns `{"ok": true}` (public). `POST /mcp` is an MCP
+Streamable HTTP endpoint (stateless, JSON responses); every other path returns 404.
+
+## MCP tools
+Connect with `Authorization: Bearer <this bot's Mattermost bot token>`; the bridge acts as that bot.
+
+| Tool | Arguments | What it does |
+|---|---|---|
+| `list_channels` | none | Public and private channels the bot is a member of, across its teams |
+| `post_channel` | `team`, `channel`, `message` | Post to a channel the bot belongs to (never auto-joins; non-member -> `not_member`) |
+| `read_channel` | `team`, `channel`, `limit` (optional) | Newest posts first from a member channel |
+| `dm_send` | `username`, `message` | DM a user by username (opens or reuses the DM; unknown -> `unknown_user`) |
+| `dm_read` | `username`, `limit` (optional) | Newest posts first of the bot's DM with that user |
+
+Writes (`post_channel`, `dm_send`) are limited to 20 per minute per bot token (in memory);
+all tool calls are limited to 60 per minute per token;
+over a limit returns `rate_limited` with `retry_after_s`. Bad arguments return
+`invalid_argument` before any Mattermost call.
 
 ## Run locally
 ```bash
@@ -30,10 +45,10 @@ Or: `docker build -t mmbridge . && docker run -p 8080:8080 mmbridge`
 (Alternative: deploy as a standalone Coolify "Public/Private Repository" resource with build pack
 "Dockerfile", port 8080. But it must share a network with Mattermost for the later step below.)
 
-### Private network (later)
-The bridge will call Mattermost at `http://mattermost:8065` over the stack's private Docker
-network, never the public URL. Each Grok Bot will get its own Mattermost bot token, supplied as
-Coolify secrets (not committed).
+### Private network
+The bridge calls Mattermost at `MATTERMOST_URL` (default `http://mattermost:8065`) over the stack's
+private Docker network, never the public URL. The bridge stores no tokens: each Grok Bot sends its
+own Mattermost bot token per call.
 
 ## Process
 This repo uses the eng-process kit; start at [PROJECT_STATE.md](PROJECT_STATE.md).
