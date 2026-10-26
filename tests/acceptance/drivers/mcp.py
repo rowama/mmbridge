@@ -1,6 +1,6 @@
 """MCP protocol driver (layer 3): drives the bridge app over Streamable HTTP (/mcp) in-process,
 with Mattermost replaced by a recording fake (/api/v4). Slice 1: list_channels + auth.
-Slice 2: channel posts (post/read). Slice 3 extends the fake and the world/inspection helpers for DMs."""
+Slice 2: channel posts (post/read). Slice 3: DMs (direct channels in the fake, DM world/inspection helpers)."""
 import io
 import json
 import logging
@@ -62,6 +62,13 @@ class McpDriver:
         self.mm.add_team(team)
         assert not any(c["name"] == channel and c["team_id"] == "t-" + team for c in self.mm.channels.values())
 
+    def given_dm_post(self, author, bot, message):
+        a, b = self.mm.user_by_name(author), self.mm.user_by_name(bot)
+        self.mm.add_post(self.mm.direct_channel(a["id"], b["id"])["id"], a["id"], message)
+
+    def given_no_user(self, username):
+        assert not any(u["username"] == username for u in self.mm.users.values())
+
     def given_mattermost_down(self):
         self.mm.down = True
 
@@ -115,6 +122,16 @@ class McpDriver:
     def channel_posts(self, channel):
         cid = self.mm.channel_by_name(channel)["id"]
         return [(self.mm.users[p["user_id"]]["username"], p["message"]) for p in self.mm.channel_posts(cid)]
+
+    def _dm_pair(self, bot, username):
+        return self.mm.user_by_name(bot)["id"], self.mm.user_by_name(username)["id"]
+
+    def dm_posts(self, bot, username):
+        return [(self.mm.users[p["user_id"]]["username"], p["message"])
+                for c in self.mm.direct_channels(*self._dm_pair(bot, username)) for p in self.mm.channel_posts(c["id"])]
+
+    def dm_channel_count(self, bot, username):
+        return len(self.mm.direct_channels(*self._dm_pair(bot, username)))
 
     def newest_posts(self, count):
         return [(p["id"], p["message"]) for p in reversed(self.mm.channel_posts(self._seeded))][:count]

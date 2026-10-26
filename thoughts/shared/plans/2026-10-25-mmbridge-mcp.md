@@ -146,8 +146,8 @@ Slice card: [thoughts/shared/slices/2026-10-25-s3-dm.md](../slices/2026-10-25-s3
 
 ### Success Criteria
 #### Automated Verification
-- [ ] `pytest tests -q` passes (all 16 acceptance specs + unit)
-- [ ] `python3 .eng/bin/eng-spec status .` reports no drift; `python3 .eng/bin/eng-check .` passes
+- [x] `pytest tests -q` passes (all 16 acceptance specs + unit)
+- [x] `python3 .eng/bin/eng-spec status .` reports no drift; `python3 .eng/bin/eng-check .` passes
 #### Manual Verification
 - [ ] Bot DMs Rob "hello" → Rob sees it in a DM from the bot; a second DM lands in the same conversation
 - [ ] Rob replies "ping"; bot reads DM with rob → "ping" returned

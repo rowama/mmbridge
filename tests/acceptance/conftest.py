@@ -17,7 +17,10 @@ def pytest_configure(config):
 
 def pytest_collection_modifyitems(config, items):
     ch = config.getoption("--channel")
+    here = os.path.dirname(os.path.abspath(__file__))
     for item in items:
+        if not str(item.path).startswith(here + os.sep):
+            continue  # only acceptance specs are channel-filtered (`pytest tests` must still run tests/unit)
         m = item.get_closest_marker("channels")
         if ch not in (m.args if m else ("api",)):
             item.add_marker(pytest.mark.skip(reason="not a %s-channel spec" % ch))

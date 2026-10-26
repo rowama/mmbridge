@@ -12,9 +12,9 @@ from app.auth import BearerAuth
 from app.ratelimit import RateLimiter
 
 
-def create_app(mm_transport=None) -> FastAPI:
+def create_app(mm_transport=None, limiter: RateLimiter | None = None) -> FastAPI:
     mlog.setup()
-    limiter = RateLimiter()
+    limiter = limiter or RateLimiter()
     server = mcp_server.build(limiter, mm_transport=mm_transport)
     mcp_app = server.streamable_http_app()
 

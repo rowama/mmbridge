@@ -2,7 +2,8 @@
 
 Injected into the bridge via httpx.ASGITransport. Records every call as (method, path, auth_token).
 Slice 1: users/me, users/me/teams, users/me/teams/{id}/channels.
-Slice 2: channel by name, members/me, POST /posts, channel posts, POST /users/ids. Extended in slice 3.
+Slice 2: channel by name, members/me, POST /posts, channel posts, POST /users/ids.
+Slice 3: users/username/{u}, POST /channels/direct (idempotent; creating one is a world change).
 """
 import itertools
 
@@ -34,6 +35,8 @@ class FakeMattermost:
             Route("/api/v4/channels/{channel_id}/posts", self._channel_posts),
             Route("/api/v4/posts", self._create_post, methods=["POST"]),
             Route("/api/v4/users/ids", self._users_by_ids, methods=["POST"]),
+            Route("/api/v4/users/username/{username}", self._user_by_username),
+            Route("/api/v4/channels/direct", self._direct, methods=["POST"]),
         ])
 
     # --- world setup -------------------------------------------------------------
@@ -61,6 +64,17 @@ class FakeMattermost:
     def channel_by_name(self, name, team=None):
         return next(c for c in self.channels.values()
                     if c["name"] == name and (team is None or self.teams[c["team_id"]]["name"] == team))
+
+    def direct_channel(self, user_a, user_b):
+        """Get or create the direct channel between two user ids (MM name: sorted ids joined by '__')."""
+        cid = "d-" + "__".join(sorted((user_a, user_b)))
+        if cid not in self.channels:
+            self.channels[cid] = {"id": cid, "team_id": "", "name": cid[2:], "display_name": "",
+                                  "type": "D", "members": {user_a, user_b}}
+        return self.channels[cid]
+
+    def direct_channels(self, user_a, user_b):
+        return [c for c in self.channels.values() if c["type"] == "D" and c["members"] == {user_a, user_b}]
 
     def add_post(self, channel_id, user_id, message):
         pid = "p-%d" % next(self._ids)
@@ -108,7 +122,7 @@ class FakeMattermost:
         u, err = self._auth(request)
         if err:
             return err
-        tids = {c["team_id"] for c in self.channels.values() if u["id"] in c["members"]}
+        tids = {c["team_id"] for c in self.channels.values() if u["id"] in c["members"] and c["team_id"]}
         return JSONResponse([self.teams[t] for t in sorted(tids)])
 
     async def _team_channels(self, request):
@@ -132,7 +146,7 @@ class FakeMattermost:
         if err:
             return err
         p = request.path_params
-        c = next((c for c in self.channels.values() if c["name"] == p["channel"]
+        c = next((c for c in self.channels.values() if c["name"] == p["channel"] and c["team_id"]
                   and self.teams[c["team_id"]]["name"] == p["team"]), None)
         if not c:
             return JSONResponse({"message": "not found"}, status_code=404)
@@ -176,6 +190,28 @@ class FakeMattermost:
             return err
         ids = await request.json()
         return JSONResponse([{"id": x["id"], "username": x["username"]} for i in ids if (x := self.users.get(i))])
+
+    async def _user_by_username(self, request):
+        u, err = self._auth(request)
+        if err:
+            return err
+        x = next((x for x in self.users.values() if x["username"] == request.path_params["username"]), None)
+        if not x:
+            return JSONResponse({"message": "not found"}, status_code=404)
+        return JSONResponse({"id": x["id"], "username": x["username"], "is_bot": x["is_bot"]})
+
+    async def _direct(self, request):
+        u, err = self._auth(request)
+        if err:
+            return err
+        ids = await request.json()
+        if not isinstance(ids, list) or len(ids) != 2 or u["id"] not in ids or not all(i in self.users for i in ids):
+            return JSONResponse({"message": "bad request"}, status_code=400)
+        existed = bool(self.direct_channels(*ids))
+        c = self.direct_channel(*ids)
+        if not existed:
+            self.changes.append(("direct_channel", c["id"]))
+        return JSONResponse({k: v for k, v in c.items() if k != "members"}, status_code=200 if existed else 201)
 
 
 def _tok(headers):

@@ -62,12 +62,37 @@ async def post_channel(c: Client, team: str, channel: str, message: str) -> dict
     return {"post_id": p["id"], "channel": channel, "team": team, "create_at": iso(p["create_at"])}
 
 
-async def read_channel(c: Client, team: str, channel: str, limit: int = 20) -> dict:
-    ch = await _member_channel(c, team, channel)
-    data = await c.get("/channels/%s/posts" % segment(ch["id"]), page=0, per_page=limit)
+async def _read_posts(c: Client, channel_id: str, limit: int) -> list:
+    data = await c.get("/channels/%s/posts" % segment(channel_id), page=0, per_page=limit)
     posts = sorted((data["posts"][i] for i in data.get("order", [])), key=lambda p: p["create_at"], reverse=True)[:limit]
     ids = sorted({p["user_id"] for p in posts})
     names = {u["id"]: u["username"] for u in (await c.post("/users/ids", ids) if ids else [])}
-    return {"team": team, "channel": channel,
-            "posts": [{"id": p["id"], "author": names.get(p["user_id"], p["user_id"]),
-                       "create_at": iso(p["create_at"]), "message": p.get("message", "")} for p in posts]}
+    return [{"id": p["id"], "author": names.get(p["user_id"], p["user_id"]),
+             "create_at": iso(p["create_at"]), "message": p.get("message", "")} for p in posts]
+
+
+async def read_channel(c: Client, team: str, channel: str, limit: int = 20) -> dict:
+    ch = await _member_channel(c, team, channel)
+    return {"team": team, "channel": channel, "posts": await _read_posts(c, ch["id"], limit)}
+
+
+async def _direct_channel(c: Client, username: str, me: dict) -> dict:
+    """users/username lookup (404 -> unknown_user, nothing created), then open-or-reuse the direct channel."""
+    try:
+        user = await c.get("/users/username/%s" % segment(username))
+    except MMError as e:
+        if e.status == 404:
+            raise ToolError("unknown_user", "No Mattermost user named %r." % username)
+        raise
+    return await c.post("/channels/direct", [me["id"], user["id"]])
+
+
+async def dm_send(c: Client, username: str, message: str, *, me: dict) -> dict:
+    ch = await _direct_channel(c, username, me)
+    p = await c.post("/posts", {"channel_id": ch["id"], "message": message})
+    return {"post_id": p["id"], "channel_id": ch["id"], "create_at": iso(p["create_at"])}
+
+
+async def dm_read(c: Client, username: str, limit: int = 20, *, me: dict) -> dict:
+    ch = await _direct_channel(c, username, me)
+    return {"username": username, "posts": await _read_posts(c, ch["id"], limit)}

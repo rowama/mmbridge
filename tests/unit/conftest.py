@@ -1,6 +1,7 @@
 import httpx
 import pytest
 
+from app.ratelimit import RateLimiter
 from drivers.fake_mattermost import FakeMattermost
 
 
@@ -17,9 +18,16 @@ def mm():
 
 
 @pytest.fixture
-async def bridge(mm):
+def limiter():
+    """Frozen clock: every call in a test happens in the same instant, so bucket limits don't depend on how
+    fast the machine runs the calls (refill over time is covered by the Bucket unit tests)."""
+    return RateLimiter(clock=lambda: 0.0)
+
+
+@pytest.fixture
+async def bridge(mm, limiter):
     from app.main import create_app
-    app = create_app(mm_transport=mm.transport())
+    app = create_app(mm_transport=mm.transport(), limiter=limiter)
     import asyncio
     started, stop = asyncio.Event(), asyncio.Event()
 

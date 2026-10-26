@@ -31,6 +31,7 @@ def _arg(schema: dict, description: str):
     return Annotated[Any, WithJsonSchema(schema), Field(description=description)]
 
 
+Username = _arg({"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"}, "Mattermost username (e.g. rob).")
 Team = _arg({"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"}, "Team name (URL name, e.g. rmlab).")
 Channel = _arg({"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"}, "Channel name (URL name, e.g. town-square).")
 Message = _arg({"type": "string", "minLength": 1, "maxLength": validate.MAX_MESSAGE}, "Message text (Markdown).")
@@ -43,8 +44,9 @@ def build(limiter, mm_transport=None, base_url: str = MATTERMOST_URL) -> FastMCP
                      transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False))
     identities = service.IdentityCache()
 
-    async def run(tool: str, fn, check=lambda: (), write: bool = False) -> CallToolResult:
-        """check() validates the arguments (before any MM call) and returns them for fn(client, *args)."""
+    async def run(tool: str, fn, check=lambda: (), write: bool = False, with_me: bool = False) -> CallToolResult:
+        """check() validates the arguments (before any MM call) and returns them for fn(client, *args).
+        with_me: also pass the caller's cached identity as fn(..., me=...)."""
         token = current_token.get()
         th = token_hash(token)
         fields = {"request_id": uuid.uuid4().hex[:12], "tool": tool, "token_hash": th[:8], "bot": None,
@@ -62,7 +64,7 @@ def build(limiter, mm_transport=None, base_url: str = MATTERMOST_URL) -> FastMCP
                 return tool_error("rate_limited", "Too many posts; slow down.", retry_after_s=math.ceil(ra))
             me = await identities.me(client, th)
             fields["bot"] = me["username"]
-            result = await fn(client, *args)
+            result = await (fn(client, *args, me=me) if with_me else fn(client, *args))
             fields["outcome"] = "ok"
             return tool_ok(result)
         except ToolError as e:
@@ -94,5 +96,15 @@ def build(limiter, mm_transport=None, base_url: str = MATTERMOST_URL) -> FastMCP
     async def read_channel(team: Team, channel: Channel, limit: Limit = validate.DEFAULT_LIMIT) -> CallToolResult:
         return await run("read_channel", service.read_channel, check=lambda: (
             validate.identifier("team", team), validate.identifier("channel", channel), validate.limit(limit)))
+
+    @server.tool(description="Send a direct message to a Mattermost user by username (opens or reuses the DM).")
+    async def dm_send(username: Username, message: Message) -> CallToolResult:
+        return await run("dm_send", service.dm_send, write=True, with_me=True, check=lambda: (
+            validate.identifier("username", username), validate.message(message)))
+
+    @server.tool(description="Read the newest posts (newest first) of this bot's DM with a Mattermost user.")
+    async def dm_read(username: Username, limit: Limit = validate.DEFAULT_LIMIT) -> CallToolResult:
+        return await run("dm_read", service.dm_read, with_me=True, check=lambda: (
+            validate.identifier("username", username), validate.limit(limit)))
 
     return server
