@@ -66,7 +66,7 @@ Rationale: REQ-1..8 are exactly the narrowest wedge (one bot identity: list chan
 - Out (also recorded in TODOS.md): @mention-only responding and channel/DM activity wake-ups; auto-joining channels or answering invites; multi-bot routing/registry; thread replies, reactions, file attachments. (Proposed for later increments.)
 
 ## Architecture (filled by eng-architecture-review)
-<not yet>
+See [docs/architecture/2026-10-25-mmbridge-mcp.md](../architecture/2026-10-25-mmbridge-mcp.md) (status in-review, pending CP-B) and ADR-0001..0005. Summary: per-call `Authorization: Bearer <bot token>` (never stored), httpx client to `MATTERMOST_URL`, MCP Streamable HTTP at `/mcp` with 5 tools, in-memory per-token rate limit, JSON logs without secrets, `/health` public.
 
 ## Open questions
-- For CP-B (architecture): exact credential handoff from Grok Bot to the bridge (header vs. per-bot connector config) and rate limiting.
+- Resolved in architecture (proposed, CP-B): credential handoff = ADR-0001; rate limiting = ADR-0004.

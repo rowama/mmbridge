@@ -1,7 +1,7 @@
 ---
 id: STATE
 type: project-state
-phase: discover
+phase: architecture
 status: active
 owner_agent: Eddie
 date: 2026-10-25
@@ -10,7 +10,8 @@ triage: medium            # unset | small | medium | large
 active_slice: none
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: []
+pending_approvals:
+  - "CP-B: docs/architecture/2026-10-25-mmbridge-mcp.md + docs/decisions/0001-credential-handoff-bearer-per-call.md, docs/decisions/0002-mattermost-http-client.md, docs/decisions/0003-mcp-surface-streamable-http.md, docs/decisions/0004-per-token-in-memory-rate-limit.md, docs/decisions/0005-structured-logs-public-health.md - approve architecture"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -24,7 +25,7 @@ board: none                   # none | vikunja (optional, board only; repo stays
 > Update it at the end of every session. Keep it under one screen.
 
 ## Current phase
-discover - entry/exit criteria in `.eng/PROCESS.md` section 3.
+architecture - entry/exit criteria in `.eng/PROCESS.md` section 3.
 
 ## Goal (one sentence)
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
@@ -33,7 +34,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 none
 
 ## Next action
-eng-research done (thoughts/shared/research/2026-10-25-mmbridge-current-code.md). Next: eng-architecture-review (CP-B).
+Architecture + ADR-0001..0005 proposed. Waiting on Rob for CP-B; then eng-plan.
 
 ## Blockers
 none
@@ -52,7 +53,9 @@ none
 - Definition of Done: [docs/definition-of-done.md](docs/definition-of-done.md)
 - Process feedback: [thoughts/shared/process-feedback.md](thoughts/shared/process-feedback.md)
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-25_23-11-28_research-done-next-cp-b.md](thoughts/shared/handoffs/2026-10-25_23-11-28_research-done-next-cp-b.md)
+- Architecture (in-review, CP-B): [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
+- ADRs (proposed): [docs/decisions/](docs/decisions/)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-25_23-14-03_architecture-proposed-cp-b-pending.md](thoughts/shared/handoffs/2026-10-25_23-14-03_architecture-proposed-cp-b-pending.md)
 - Research: [thoughts/shared/research/2026-10-25-mmbridge-current-code.md](thoughts/shared/research/2026-10-25-mmbridge-current-code.md)
 - Deferred work: [TODOS.md](TODOS.md)
 
