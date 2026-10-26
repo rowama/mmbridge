@@ -37,7 +37,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 Slice 1 done (verify PASS, CP-S approved 2026-10-26). Next: start slice 2 (post/read channel) on Rob's PC via `python3 .eng/bin/eng-run implement thoughts/shared/plans/2026-10-25-mmbridge-mcp.md SLICE-20261025-s2-post-read-channel` (CP-C covers start; FYI Rob). Push of local commits needs Rob's OK (push_permission: ask).
 
 ## Blockers
-none
+- 2026-10-26: slice 2 implement run couldn't execute commands (python3 .eng/bin/*, .venv/bin/pytest refused by the permission mode). Rob to allow them, then re-run. See latest handoff.
 
 ## Pending approvals
 See `pending_approvals` in the front matter (the only copy; `.eng/bin/eng-status` renders it). Do not list items here.
@@ -55,7 +55,7 @@ none
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0005: [docs/decisions/](docs/decisions/)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-26_01-10-00_s1-done-next-s2.md](thoughts/shared/handoffs/2026-10-26_01-10-00_s1-done-next-s2.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-26_09-00-00_s2-blocked-no-exec.md](thoughts/shared/handoffs/2026-10-26_09-00-00_s2-blocked-no-exec.md)
 - Plan (approved): [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md](thoughts/shared/plans/2026-10-25-mmbridge-mcp.md)
 - Verification s1 (PASS): [thoughts/shared/verification/2026-10-26-s1-verify.md](thoughts/shared/verification/2026-10-26-s1-verify.md)
 - Slices: [thoughts/shared/slices/](thoughts/shared/slices/)

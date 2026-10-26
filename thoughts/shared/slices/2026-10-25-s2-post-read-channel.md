@@ -36,6 +36,8 @@ The bot posts to and reads channels it belongs to; non-member channels are refus
 ~150-200 lines.
 
 ## Progress log
+- 2026-10-26 (claude-code): session stopped before starting. The permission mode refused every command (eng-check, eng-status, pytest), so the specs couldn't be confirmed red and nothing could be verified. No code changed. See thoughts/shared/handoffs/2026-10-26_09-00-00_s2-blocked-no-exec.md.
 
 ## Blockers / deviations from plan
-none (plan review 2026-10-25: findings 1, 7, 8 folded in; call/anon rate limits moved to slice 1)
+- 2026-10-26: implementer environment can't execute Python/pytest/eng-* scripts (permission mode). Needs Rob to allow these commands, then re-run.
+- none from plan (plan review 2026-10-25: findings 1, 7, 8 folded in; call/anon rate limits moved to slice 1)
