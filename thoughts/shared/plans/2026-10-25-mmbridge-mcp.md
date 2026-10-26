@@ -149,9 +149,9 @@ Slice card: [thoughts/shared/slices/2026-10-25-s3-dm.md](../slices/2026-10-25-s3
 - [x] `pytest tests -q` passes (all 16 acceptance specs + unit)
 - [x] `python3 .eng/bin/eng-spec status .` reports no drift; `python3 .eng/bin/eng-check .` passes
 #### Manual Verification
-- [ ] Bot DMs Rob "hello" → Rob sees it in a DM from the bot; a second DM lands in the same conversation
-- [ ] Rob replies "ping"; bot reads DM with rob → "ping" returned
-- [ ] DM to "nobody" → unknown user error
+- [x] Bot DMs Rob "hello" → Rob sees it in a DM from the bot; a second DM lands in the same conversation
+- [x] Rob replies "ping"; bot reads DM with rob → "ping" returned
+- [x] DM to "nobody" → unknown user error
 
 ## Demo script
 1. Open `https://chats.rmlab.cloud/health` → `{"ok":true}`.

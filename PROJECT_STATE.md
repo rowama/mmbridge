@@ -3,14 +3,14 @@ id: STATE
 type: project-state
 phase: implement
 status: active
-owner_agent: claude-code
+owner_agent: Eddie
 date: 2026-10-26
 links: []
 triage: medium            # unset | small | medium | large
 active_slice: thoughts/shared/slices/2026-10-25-s3-dm.md
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: ["CP-S: thoughts/shared/slices/2026-10-25-s3-dm.md - manual verification"]
+pending_approvals: []
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -31,10 +31,10 @@ implement - entry/exit criteria in `.eng/PROCESS.md` section 3.
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[thoughts/shared/slices/2026-10-25-s3-dm.md](thoughts/shared/slices/2026-10-25-s3-dm.md) (slices 1-2 done; slice 3 status review)
+[thoughts/shared/slices/2026-10-25-s3-dm.md](thoughts/shared/slices/2026-10-25-s3-dm.md) (slices 1-3 done; CP-S 2026-10-26)
 
 ## Next action
-Slice 3 verify PASS (automated) — thoughts/shared/verification/2026-10-26-s3-verify.md. Push local commits needs Rob OK, then Coolify redeploy + Phase 3 live DM checks, then CP-S. Notes N1/N2 in verify report for Rob.
+Slice 3 done (verify PASS; live DM checks 2026-10-26). All plan phases complete. Next: eng-ship (CHANGELOG/VERSION/PR -> CP-P). Uncommitted eng-process kit edits on Merkle stay out of this commit.
 
 
 ## Blockers
@@ -57,7 +57,7 @@ none
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0005: [docs/decisions/](docs/decisions/)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-26_11-35-00_s3-verify-cps-pending.md](thoughts/shared/handoffs/2026-10-26_11-35-00_s3-verify-cps-pending.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-26_13-23-35_s3-done-next-ship.md](thoughts/shared/handoffs/2026-10-26_13-23-35_s3-done-next-ship.md)
 - Plan (approved): [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md](thoughts/shared/plans/2026-10-25-mmbridge-mcp.md)
 - Verification s1 (PASS): [thoughts/shared/verification/2026-10-26-s1-verify.md](thoughts/shared/verification/2026-10-26-s1-verify.md)
 - Slices: [thoughts/shared/slices/](thoughts/shared/slices/)
@@ -70,6 +70,7 @@ none
      Pre-kit decisions: back-fill with Checkpoint "pre-kit" and Decision "approved (back-filled, pre-kit)". .eng/bin/eng-check matches rows to statuses. -->
 | Date | Checkpoint | Artifact | Decision (Rob) |
 |---|---|---|---|
+| 2026-10-26 | CP-S | thoughts/shared/slices/2026-10-25-s3-dm.md | approved (live same-channel dual DM, ping via dm_read, nobody -> unknown_user)
 | 2026-10-26 | CP-S | thoughts/shared/slices/2026-10-25-s2-post-read-channel.md | approved (live post/read/not_member)
 | 2026-10-25 | CP-A | docs/design/2026-10-25-mmbridge-mcp.md | approved (problem, REQ-1..8, acceptance examples) |
 | 2026-10-25 | CP-A (scope) | docs/design/2026-10-25-mmbridge-mcp.md | approved (scope mode hold: REQ-1..8 in; @mention wakes, auto-join, multi-bot, threads/reactions/files out) |
