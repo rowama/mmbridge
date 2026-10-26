@@ -10,7 +10,7 @@ triage: medium            # unset | small | medium | large
 active_slice: thoughts/shared/slices/2026-10-25-s2-post-read-channel.md
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: []
+pending_approvals: ["CP-S: thoughts/shared/slices/2026-10-25-s2-post-read-channel.md - manual verification"]
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -34,10 +34,12 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [thoughts/shared/slices/2026-10-25-s2-post-read-channel.md](thoughts/shared/slices/2026-10-25-s2-post-read-channel.md) (slice 1 done, CP-S 2026-10-26; slice 2 status review)
 
 ## Next action
-Slice 2 implemented (status review; unit 49 passed, acceptance non-DM 12 passed, eng-check OK, docker build OK, codex review no findings). Next: planner runs eng-verify for slice 2, then requests CP-S (manual verification needs a Coolify redeploy, so pushing local commits needs Rob's OK; push_permission: ask).
+Slice 2 verify PASS (automated) — thoughts/shared/verification/2026-10-26-s2-verify.md. Push local commits (ahead 3 + verify/handoff) needs Rob OK, then Coolify redeploy + live post/read/not_member checks, then CP-S. Codex review: no findings.
+
 
 ## Blockers
 none
+
 
 ## Pending approvals
 See `pending_approvals` in the front matter (the only copy; `.eng/bin/eng-status` renders it). Do not list items here.
@@ -55,7 +57,7 @@ none
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0005: [docs/decisions/](docs/decisions/)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-26_01-41-10_s2-implemented-review.md](thoughts/shared/handoffs/2026-10-26_01-41-10_s2-implemented-review.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-26_01-54-00_s2-verify-cps-pending.md](thoughts/shared/handoffs/2026-10-26_01-54-00_s2-verify-cps-pending.md)
 - Plan (approved): [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md](thoughts/shared/plans/2026-10-25-mmbridge-mcp.md)
 - Verification s1 (PASS): [thoughts/shared/verification/2026-10-26-s1-verify.md](thoughts/shared/verification/2026-10-26-s1-verify.md)
 - Slices: [thoughts/shared/slices/](thoughts/shared/slices/)
