@@ -5,6 +5,7 @@ import io
 import json
 import logging
 
+import anyio
 import httpx
 from anyio.from_thread import start_blocking_portal
 
@@ -25,9 +26,16 @@ class McpDriver:
         logging.getLogger("mmbridge").addHandler(self._handler)
         self._portal_cm = start_blocking_portal()
         self._portal = self._portal_cm.__enter__()
-        self._lifespan = self.app.router.lifespan_context(self.app)
-        self._portal.call(self._lifespan.__aenter__)
+        self._stop = self._portal.call(anyio.Event)
+        started = self._portal.call(anyio.Event)
+        self._held = self._portal.start_task_soon(self._hold, started)
+        self._portal.call(started.wait)
         self._id = 0
+
+    async def _hold(self, started):  # lifespan enter/exit in one task (anyio cancel scopes)
+        async with self.app.router.lifespan_context(self.app):
+            started.set()
+            await self._stop.wait()
 
     # --- given -------------------------------------------------------------------
     def given_bot(self, name):
@@ -75,7 +83,10 @@ class McpDriver:
         data = res.get("structuredContent")
         if data is None:
             text = "".join(c.get("text", "") for c in res.get("content", []))
-            data = json.loads(text) if text else {}
+            try:
+                data = json.loads(text) if text else {}
+            except ValueError:  # SDK-level error text (e.g. unknown tool)
+                data = {"code": "tool_error", "message": text}
         if "result" in data and len(data) == 1:
             data = data["result"]
         if res.get("isError"):
@@ -99,5 +110,6 @@ class McpDriver:
 
     def close(self):
         logging.getLogger("mmbridge").removeHandler(self._handler)
-        self._portal.call(self._lifespan.__aexit__, None, None, None)
+        self._portal.call(self._stop.set)
+        self._held.result()
         self._portal_cm.__exit__(None, None, None)

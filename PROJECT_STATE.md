@@ -34,7 +34,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [thoughts/shared/slices/2026-10-25-s1-auth-list-channels.md](thoughts/shared/slices/2026-10-25-s1-auth-list-channels.md)
 
 ## Next action
-Plan + 3 slice cards drafted (status draft), specs locked (sha256:8c883651b4daba66). Next: Rob/implementer runs the mandatory Codex plan review (command from .eng/bin/eng-status); planner triages findings; then CP-C. Token for real-bot test goes ONLY in the Grok Bot MCP connection (Authorization: Bearer), never Coolify/repo.
+Slice 1 implemented, status review. Rob: (1) run Codex slice review on PC (`codex review --base 277b923`), (2) docker build check, (3) Coolify redeploy + Grok Bot MCP connect per slice Manual Verification. Then planner runs eng-verify and requests CP-S. Token ONLY in the Grok Bot MCP connection header.
 
 ## Blockers
 none

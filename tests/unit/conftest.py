@@ -20,10 +20,20 @@ def mm():
 async def bridge(mm):
     from app.main import create_app
     app = create_app(mm_transport=mm.transport())
-    async with app.router.lifespan_context(app):
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app, client=("10.0.0.1", 1234)),
-                                     base_url="http://testserver") as c:
-            yield c
+    import asyncio
+    started, stop = asyncio.Event(), asyncio.Event()
+
+    async def hold():  # lifespan enter/exit in one task (anyio cancel scopes)
+        async with app.router.lifespan_context(app):
+            started.set()
+            await stop.wait()
+    task = asyncio.create_task(hold())
+    await started.wait()
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app, client=("10.0.0.1", 1234)),
+                                 base_url="http://testserver") as c:
+        yield c
+    stop.set()
+    await task
 
 
 def tok(mm, name):

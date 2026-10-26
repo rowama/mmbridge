@@ -1,27 +1,38 @@
-"""mmbridge: future MCP bridge between Grok Bots and self-hosted Mattermost.
+"""mmbridge: MCP bridge between Grok Bots and self-hosted Mattermost.
 
-Today this is a deployable skeleton: /health plus a catch-all echo.
+/health (public liveness) and /mcp (Bearer auth, MCP Streamable HTTP). Everything else 404.
 """
-from fastapi import FastAPI, Request
+import contextlib
 
-from app import mattermost, mcp  # noqa: F401  (placeholders for upcoming work)
+from fastapi import FastAPI
 
-app = FastAPI(title="mmbridge", version="0.1.0")
-
-
-@app.get("/health")
-async def health() -> dict:
-    return {"ok": True}
+from app import logging as mlog
+from app import mcp as mcp_server
+from app.auth import BearerAuth
+from app.ratelimit import RateLimiter
 
 
-@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"])
-async def echo(request: Request, path: str = "") -> dict:
-    return {
-        "service": "mmbridge",
-        "note": "Echo placeholder. This service will become the Grok Bot <-> Mattermost MCP bridge.",
-        "method": request.method,
-        "path": request.url.path,
-        "query": str(request.url.query),
-        "headers": dict(request.headers),
-        "client": request.client.host if request.client else None,
-    }
+def create_app(mm_transport=None) -> FastAPI:
+    mlog.setup()
+    limiter = RateLimiter()
+    server = mcp_server.build(limiter, mm_transport=mm_transport)
+    mcp_app = server.streamable_http_app()
+
+    @contextlib.asynccontextmanager
+    async def lifespan(_):
+        async with server.session_manager.run():
+            yield
+
+    app = FastAPI(title="mmbridge", version="0.2.0", lifespan=lifespan,
+                  docs_url=None, redoc_url=None, openapi_url=None)
+
+    @app.get("/health")
+    async def health() -> dict:
+        return {"ok": True}
+
+    app.router.routes.extend(mcp_app.routes)
+    app.add_middleware(BearerAuth, limiter=limiter)
+    return app
+
+
+app = create_app()

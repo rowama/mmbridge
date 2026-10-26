@@ -22,11 +22,11 @@ The values live in `PROJECT_STATE.md` front matter (`implementer`, `planner`, `c
 - **Owner review notes** (`thoughts/shared/review-notes/`) belong to the owner. Agents never edit them until the owner says they are ready.
 
 ## Commands
-- Install:  `<cmd>`
-- Build:    `<cmd>`
-- Test:     `<cmd>`
-- Lint/typecheck: `<cmd>`
-- Run locally: `<cmd>`
+- Install:  `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirements-dev.txt`
+- Build:    `docker build -t mmbridge .`
+- Test:     `.venv/bin/pytest tests/unit -q && .venv/bin/pytest tests/acceptance -q`
+- Lint/typecheck: none yet
+- Run locally: `MATTERMOST_URL=http://localhost:8065 .venv/bin/uvicorn app.main:app --port 8080`
 
 ## Architecture map
 <top-level dirs and what lives there, 5-10 lines>

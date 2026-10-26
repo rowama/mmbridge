@@ -96,11 +96,11 @@ Slice card: [thoughts/shared/slices/2026-10-25-s1-auth-list-channels.md](../slic
 
 ### Success Criteria
 #### Automated Verification
-- [ ] `pip install -r requirements.txt -r requirements-dev.txt` succeeds
-- [ ] `pytest tests/unit -q` passes (auth 401 with zero MM calls; invalid token → `unauthorized`; caller isolation/ContextVar cleanup/cache keying; error mapping; retry call counts; call + anon rate limits; redaction; echo gone: `GET /anything` → 404 and body lacks headers)
+- [x] `pip install -r requirements.txt -r requirements-dev.txt` succeeds
+- [x] `pytest tests/unit -q` passes (auth 401 with zero MM calls; invalid token → `unauthorized`; caller isolation/ContextVar cleanup/cache keying; error mapping; retry call counts; call + anon rate limits; redaction; echo gone: `GET /anything` → 404 and body lacks headers)
 - [ ] `pytest tests/acceptance -q -k "refused or joined_channels or invalid_credential or own_identity"` passes (REQ-1 ex2, invalid credential, caller isolation, REQ-2 ex1; the isolation spec's post step goes green in slice 2)
 - [ ] `docker build .` succeeds; container `/health` returns `{"ok": true}`
-- [ ] `python3 .eng/bin/eng-check .` passes
+- [x] `python3 .eng/bin/eng-check .` passes
 #### Manual Verification (Rob — proves auth with a real bot)
 - [ ] Coolify redeploy from `main`; `https://chats.rmlab.cloud/health` → `{"ok":true}`; `https://chats.rmlab.cloud/foo` → 404 (no headers echoed)
 - [ ] `curl -X POST https://chats.rmlab.cloud/mcp` without Authorization → 401
