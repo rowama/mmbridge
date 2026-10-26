@@ -9,3 +9,6 @@
 - **Reconcile ADR-0004 burst (10) vs implemented capacity (60)** (filed 2026-10-26, from [s1 verify](thoughts/shared/verification/2026-10-26-s1-verify.md)) — Rob to accept deviation or amend ADR. **Effort:** S. **Priority:** P2.
 - **Add a linter (ruff) to the gate** (filed 2026-10-26, from [s1 verify](thoughts/shared/verification/2026-10-26-s1-verify.md)) — no lint step exists for DoD. **Effort:** S. **Priority:** P3.
 - **Plan for mcp 2.x (FastMCP→MCPServer)** (filed 2026-10-26, from [s1 verify](thoughts/shared/verification/2026-10-26-s1-verify.md)) — pinned 1.30.0. **Effort:** S. **Priority:** P3.
+
+## Follow-ups
+- [ ] P2: Case-insensitive Bearer scheme match in auth.py (F2 accepted-risk 2026-10-26)
