@@ -1,0 +1,23 @@
+# Drop into the Mattermost compose stack on Coolify, replacing the `echo` service.
+# Coolify builds this from the Git repo's Dockerfile (no registry image needed).
+services:
+  mmbridge:
+    build:
+      context: https://github.com/rowama/mmbridge.git#main
+      dockerfile: Dockerfile
+    # Alternative if you later push an image to a registry:
+    # image: ghcr.io/rowama/mmbridge:latest
+    restart: unless-stopped
+    environment:
+      - SERVICE_FQDN_MMBRIDGE_8080=https://chats.rmlab.cloud   # Coolify domain -> container port 8080
+      - MATTERMOST_URL=http://mattermost:8065                  # private network, used later
+      # Per-bot Mattermost tokens: add later as Coolify secrets, never commit them.
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    # Same compose stack => same default network as `mattermost`, so
+    # http://mattermost:8065 resolves without exposing Mattermost publicly.

@@ -1,0 +1,12 @@
+.git
+.gitignore
+.eng
+.claude
+thoughts
+docs
+*.md
+__pycache__
+*.pyc
+.venv
+venv
+.env
