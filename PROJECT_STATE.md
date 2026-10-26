@@ -10,7 +10,7 @@ triage: medium            # unset | small | medium | large
 active_slice: thoughts/shared/slices/2026-10-25-s3-dm.md
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: []
+pending_approvals: ["CP-S: thoughts/shared/slices/2026-10-25-s3-dm.md - manual verification"]
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -34,7 +34,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [thoughts/shared/slices/2026-10-25-s3-dm.md](thoughts/shared/slices/2026-10-25-s3-dm.md) (slices 1-2 done; slice 3 status review)
 
 ## Next action
-Slice 3 (DM) implemented, status review (implementer 2026-10-26). Next: planner runs eng-verify, then CP-S manual verification (Phase 3). Push of local commits needs Rob OK.
+Slice 3 verify PASS (automated) — thoughts/shared/verification/2026-10-26-s3-verify.md. Push local commits needs Rob OK, then Coolify redeploy + Phase 3 live DM checks, then CP-S. Notes N1/N2 in verify report for Rob.
 
 
 ## Blockers
@@ -57,7 +57,7 @@ none
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0005: [docs/decisions/](docs/decisions/)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-26_02-29-17_s3-implemented-review.md](thoughts/shared/handoffs/2026-10-26_02-29-17_s3-implemented-review.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-26_11-35-00_s3-verify-cps-pending.md](thoughts/shared/handoffs/2026-10-26_11-35-00_s3-verify-cps-pending.md)
 - Plan (approved): [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md](thoughts/shared/plans/2026-10-25-mmbridge-mcp.md)
 - Verification s1 (PASS): [thoughts/shared/verification/2026-10-26-s1-verify.md](thoughts/shared/verification/2026-10-26-s1-verify.md)
 - Slices: [thoughts/shared/slices/](thoughts/shared/slices/)
