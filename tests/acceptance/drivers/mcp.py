@@ -1,6 +1,6 @@
 """MCP protocol driver (layer 3): drives the bridge app over Streamable HTTP (/mcp) in-process,
 with Mattermost replaced by a recording fake (/api/v4). Slice 1: list_channels + auth.
-Slices 2-3 extend the fake and the world/inspection helpers."""
+Slice 2: channel posts (post/read). Slice 3 extends the fake and the world/inspection helpers for DMs."""
 import io
 import json
 import logging
@@ -31,6 +31,7 @@ class McpDriver:
         self._held = self._portal.start_task_soon(self._hold, started)
         self._portal.call(started.wait)
         self._id = 0
+        self._seeded = None   # channel id of the last given_channel_posts
 
     async def _hold(self, started):  # lifespan enter/exit in one task (anyio cancel scopes)
         async with self.app.router.lifespan_context(self.app):
@@ -48,6 +49,18 @@ class McpDriver:
 
     def given_channel(self, team, channel, members):
         self.mm.add_channel(team, channel, members)
+
+    def given_channel_posts(self, team, channel, count):
+        cid = self.mm.channel_by_name(channel, team)["id"]
+        author = next((u for u in self.mm.users.values() if u["username"] == "seed-author"), None) \
+            or self.mm.add_user("seed-author")
+        for i in range(count):
+            self.mm.add_post(cid, author["id"], "seeded post %d" % (i + 1))
+        self._seeded = cid
+
+    def given_no_channel(self, team, channel):
+        self.mm.add_team(team)
+        assert not any(c["name"] == channel and c["team_id"] == "t-" + team for c in self.mm.channels.values())
 
     def given_mattermost_down(self):
         self.mm.down = True
@@ -98,6 +111,16 @@ class McpDriver:
     # --- inspection --------------------------------------------------------------
     def mattermost_calls(self):
         return [(m, p) for m, p, _ in self.mm.calls]
+
+    def channel_posts(self, channel):
+        cid = self.mm.channel_by_name(channel)["id"]
+        return [(self.mm.users[p["user_id"]]["username"], p["message"]) for p in self.mm.channel_posts(cid)]
+
+    def newest_posts(self, count):
+        return [(p["id"], p["message"]) for p in reversed(self.mm.channel_posts(self._seeded))][:count]
+
+    def world_changes(self):
+        return list(self.mm.changes)
 
     def current_token(self):
         return self._last_token

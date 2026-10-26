@@ -1,4 +1,4 @@
-"""In-memory token buckets (ADR-0004). Slice 1: calls per token hash + anonymous per IP.
+"""In-memory token buckets (ADR-0004): calls and writes per token hash, anonymous per IP.
 
 Capacity equals the per-minute limit (plan: the 61st call in a minute is limited).
 """
@@ -26,11 +26,14 @@ class Bucket:
 
 
 class RateLimiter:
-    def __init__(self, calls_per_min: int | None = None, anon_per_min: int | None = None, clock=time.monotonic):
+    def __init__(self, calls_per_min: int | None = None, anon_per_min: int | None = None,
+                 writes_per_min: int | None = None, clock=time.monotonic):
         self.calls_per_min = calls_per_min or int(os.getenv("RL_CALLS_PER_MIN", "60"))
+        self.writes_per_min = writes_per_min or int(os.getenv("RL_WRITES_PER_MIN", "20"))
         self.anon_per_min = anon_per_min or int(os.getenv("RL_ANON_PER_MIN", "30"))
         self.clock = clock
         self._calls: dict[str, Bucket] = {}
+        self._writes: dict[str, Bucket] = {}
         self._anon: dict[str, Bucket] = {}
 
     def _take(self, d, key, per_min) -> float:
@@ -43,6 +46,9 @@ class RateLimiter:
 
     def check_call(self, token_hash: str) -> float:
         return self._take(self._calls, token_hash, self.calls_per_min)
+
+    def check_write(self, token_hash: str) -> float:
+        return self._take(self._writes, token_hash, self.writes_per_min)
 
     def check_anon(self, ip: str) -> float:
         return self._take(self._anon, ip, self.anon_per_min)

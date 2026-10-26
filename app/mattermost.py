@@ -41,7 +41,7 @@ class Client:
             raise MMError("mattermost_unavailable") from None
         return self._result(r)
 
-    async def post(self, path: str, json: dict) -> dict:
+    async def post(self, path: str, json: dict | list) -> dict | list:
         try:
             r = await self._send("POST", path, json=json)
         except (httpx.TransportError, httpx.TimeoutException):

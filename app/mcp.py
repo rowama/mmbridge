@@ -1,15 +1,21 @@
-"""MCP server (ADR-0003): FastMCP, Streamable HTTP, stateless, JSON responses. Slice 1: list_channels."""
+"""MCP server (ADR-0003): FastMCP, Streamable HTTP, stateless, JSON responses.
+
+Tool arguments are typed Any with an explicit JSON schema: app/validate.py (not pydantic coercion)
+decides what is invalid, so every bad input is `invalid_argument` with zero Mattermost calls.
+"""
 import math
 import time
 import uuid
+from typing import Annotated, Any
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import CallToolResult
+from pydantic import Field, WithJsonSchema
 
-from app import service
+from app import service, validate
 from app.auth import current_token, token_hash
-from app.errors import tool_error, tool_ok
+from app.errors import ToolError, tool_error, tool_ok
 from app.logging import call_line, log
 from app.mattermost import MATTERMOST_URL, Client, MMError
 
@@ -21,12 +27,24 @@ _MESSAGES = {
 }
 
 
+def _arg(schema: dict, description: str):
+    return Annotated[Any, WithJsonSchema(schema), Field(description=description)]
+
+
+Team = _arg({"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"}, "Team name (URL name, e.g. rmlab).")
+Channel = _arg({"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"}, "Channel name (URL name, e.g. town-square).")
+Message = _arg({"type": "string", "minLength": 1, "maxLength": validate.MAX_MESSAGE}, "Message text (Markdown).")
+Limit = _arg({"type": "integer", "minimum": 1, "maximum": validate.MAX_LIMIT},
+             "How many of the newest posts to return.")
+
+
 def build(limiter, mm_transport=None, base_url: str = MATTERMOST_URL) -> FastMCP:
     server = FastMCP("mmbridge", stateless_http=True, json_response=True, streamable_http_path="/mcp",
                      transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False))
     identities = service.IdentityCache()
 
-    async def run(tool: str, fn) -> CallToolResult:
+    async def run(tool: str, fn, check=lambda: (), write: bool = False) -> CallToolResult:
+        """check() validates the arguments (before any MM call) and returns them for fn(client, *args)."""
         token = current_token.get()
         th = token_hash(token)
         fields = {"request_id": uuid.uuid4().hex[:12], "tool": tool, "token_hash": th[:8], "bot": None,
@@ -38,11 +56,18 @@ def build(limiter, mm_transport=None, base_url: str = MATTERMOST_URL) -> FastMCP
             if ra:
                 fields["outcome"] = "rate_limited"
                 return tool_error("rate_limited", "Too many calls; slow down.", retry_after_s=math.ceil(ra))
+            args = check()
+            if write and (ra := limiter.check_write(th)):
+                fields["outcome"] = "rate_limited"
+                return tool_error("rate_limited", "Too many posts; slow down.", retry_after_s=math.ceil(ra))
             me = await identities.me(client, th)
             fields["bot"] = me["username"]
-            result = await fn(client)
+            result = await fn(client, *args)
             fields["outcome"] = "ok"
             return tool_ok(result)
+        except ToolError as e:
+            fields["outcome"] = e.code
+            return tool_error(e.code, e.message, **e.extra)
         except MMError as e:
             fields["outcome"] = e.code
             extra = {"status": e.status} if e.code == "mattermost_error" else {}
@@ -59,5 +84,15 @@ def build(limiter, mm_transport=None, base_url: str = MATTERMOST_URL) -> FastMCP
     @server.tool(description="List the Mattermost channels (public and private) this bot is a member of, across its teams.")
     async def list_channels() -> CallToolResult:
         return await run("list_channels", service.list_channels)
+
+    @server.tool(description="Post a message to a Mattermost channel this bot is a member of. Never joins channels.")
+    async def post_channel(team: Team, channel: Channel, message: Message) -> CallToolResult:
+        return await run("post_channel", service.post_channel, write=True, check=lambda: (
+            validate.identifier("team", team), validate.identifier("channel", channel), validate.message(message)))
+
+    @server.tool(description="Read the newest posts (newest first) of a Mattermost channel this bot is a member of.")
+    async def read_channel(team: Team, channel: Channel, limit: Limit = validate.DEFAULT_LIMIT) -> CallToolResult:
+        return await run("read_channel", service.read_channel, check=lambda: (
+            validate.identifier("team", team), validate.identifier("channel", channel), validate.limit(limit)))
 
     return server
