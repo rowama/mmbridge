@@ -1,2 +1,6 @@
 # TODOS
 <!-- Deferred work and scope cuts. Format: - **<title>** (filed YYYY-MM-DD, from <artifact>) — <why deferred>. **Effort:** S/M/L. **Priority:** P1–P3. -->
+- **@mention-only responding and channel/DM activity wake-ups** (filed 2026-10-25, from [design scope](docs/design/2026-10-25-mmbridge-mcp.md#scope-decision-filled-by-eng-scope-review)) — needs event/websocket path and a wake callback into Grok Bot; outside v1 wedge. **Effort:** L. **Priority:** P2.
+- **Auto-join channels / handle invites** (filed 2026-10-25, from [design scope](docs/design/2026-10-25-mmbridge-mcp.md#scope-decision-filled-by-eng-scope-review)) — Rob adds bots to channels manually in v1; REQ-7 forbids implicit join. **Effort:** S. **Priority:** P3.
+- **Multi-bot routing/registry** (filed 2026-10-25, from [design scope](docs/design/2026-10-25-mmbridge-mcp.md#scope-decision-filled-by-eng-scope-review)) — v1 uses per-connection credential; no registry needed. **Effort:** M. **Priority:** P3.
+- **Thread replies, reactions, file attachments** (filed 2026-10-25, from [design scope](docs/design/2026-10-25-mmbridge-mcp.md#scope-decision-filled-by-eng-scope-review)) — Slack-parity extras, not needed for success metric. **Effort:** M. **Priority:** P2.

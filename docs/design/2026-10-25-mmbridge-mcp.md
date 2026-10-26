@@ -2,7 +2,7 @@
 id: DESIG-20261025-mmbridge-mcp
 type: design
 phase: discover
-status: in-review        # input (pre-draft from an earlier phase) | draft | in-review | approved | superseded
+status: approved        # input (pre-draft from an earlier phase) | draft | in-review | approved | superseded
 owner_agent: Eddie
 date: 2026-10-25
 links: [PROJECT_STATE.md]
@@ -59,10 +59,11 @@ One Grok Bot, one Mattermost bot identity: list the channels it belongs to, read
 | C. Pay for Slack groups / use Slack | Already works with Grok Bot | Rob explicitly rejected the cost; abandons installed Mattermost |
 
 ## Scope decision (filled by eng-scope-review)
-Baseline: the Requirements list above as approved at CP-A (REQ ids).
-Mode (relative to that baseline): <expand | selective | hold | reduce>
-- In:
-- Out (also recorded in TODOS.md): @mention-only responding and channel/DM activity wake-ups; auto-joining channels or answering invites; multi-bot routing/registry. (Proposed for later increments.)
+Baseline: the Requirements list above as approved at CP-A on 2026-10-25 (REQ-1..REQ-8).
+Mode (relative to that baseline): hold
+Rationale: REQ-1..8 are exactly the narrowest wedge (one bot identity: list channels, read/post channel, send/read DM) plus the minimum safety (credential isolation, no implicit join, clean errors). Each was challenged: REQ-1/7/8 are safety floors and cheap; REQ-2 is needed to discover channels; REQ-3..6 are the success metric itself. No cheaper version drops a REQ without breaking the success metric, and no additional REQ is cheap enough to pull in without widening the blast radius (proactive wakes need a websocket/event path and a callback into Grok Bot; auto-join needs extra permissions). Thread replies, reactions and file uploads are outside the blast radius and are deferred, not added.
+- In: REQ-1, REQ-2, REQ-3, REQ-4, REQ-5, REQ-6, REQ-7, REQ-8.
+- Out (also recorded in TODOS.md): @mention-only responding and channel/DM activity wake-ups; auto-joining channels or answering invites; multi-bot routing/registry; thread replies, reactions, file attachments. (Proposed for later increments.)
 
 ## Architecture (filled by eng-architecture-review)
 <not yet>

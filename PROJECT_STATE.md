@@ -11,7 +11,7 @@ active_slice: none
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
 pending_approvals:
-  - "CP-A: docs/design/2026-10-25-mmbridge-mcp.md - approve problem/requirements"
+  - "CP-A: docs/design/2026-10-25-mmbridge-mcp.md - approve scope mode hold (REQ-1..8 in; cuts in TODOS.md)"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -34,7 +34,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 none
 
 ## Next action
-Rob reviews docs/design/2026-10-25-mmbridge-mcp.md at CP-A (approve problem, REQ-1..8, acceptance examples). After approval: eng-scope-review.
+Rob approves the scope decision (mode hold, REQ-1..8 in, cuts in TODOS.md) in docs/design/2026-10-25-mmbridge-mcp.md. After approval: eng-research (codebase research), then eng-architecture-review (CP-B).
 
 ## Blockers
 none
@@ -52,11 +52,13 @@ none
 - Owner guide: [OWNER-GUIDE.md](OWNER-GUIDE.md)
 - Definition of Done: [docs/definition-of-done.md](docs/definition-of-done.md)
 - Process feedback: [thoughts/shared/process-feedback.md](thoughts/shared/process-feedback.md)
-- Design (CP-A pending): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
-- Latest handoff: none
+- Design (approved; scope pending Rob): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-25_23-04-24_cp-a-approved-scope-hold.md](thoughts/shared/handoffs/2026-10-25_23-04-24_cp-a-approved-scope-hold.md)
+- Deferred work: [TODOS.md](TODOS.md)
 
 ## Approval log
 <!-- One row per decision. Artifact cell names the file path(s). Decision: approved | accepted | partially accepted | deferred | rejected.
      Pre-kit decisions: back-fill with Checkpoint "pre-kit" and Decision "approved (back-filled, pre-kit)". .eng/bin/eng-check matches rows to statuses. -->
 | Date | Checkpoint | Artifact | Decision (Rob) |
 |---|---|---|---|
+| 2026-10-25 | CP-A | docs/design/2026-10-25-mmbridge-mcp.md | approved (problem, REQ-1..8, acceptance examples) |
