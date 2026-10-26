@@ -1,0 +1,46 @@
+{
+  "comment": "eng-process executable-spec lock (eng-spec lock). Approve its sha256 at CP-C: '| date | CP-C | <plan.md> | approved speclock sha256:<hex> |'. Do not edit by hand.",
+  "dsl_assertions": {
+    "tests/acceptance/dsl.py::Dsl.assert_channels": "cf83a5f34604fc7161aaa0733a7bb713452f6b9daf619b868c06283c1ea74a7c",
+    "tests/acceptance/dsl.py::Dsl.assert_credential_not_exposed": "870ce48755fecbde059db5f65ed0636d7897a055119f7c597696bfc9fcde8024",
+    "tests/acceptance/dsl.py::Dsl.assert_default_post_count": "a0e041a0081a11636a62027c8f4b7266bed6181f4cb1383577bb6094da405d5d",
+    "tests/acceptance/dsl.py::Dsl.assert_dm_contains": "e42fda5f6dd26e583e7ddb2e87580874f301869e02557cbbd264c07c24681e58",
+    "tests/acceptance/dsl.py::Dsl.assert_dm_visible": "ca4b943cc7b3c348a27a5b9ef81d537c426b7f29d821d3071794e040488c534c",
+    "tests/acceptance/dsl.py::Dsl.assert_error": "8326af90221dcaf8b7f021771265c9c85c0b47e3f53a315abf5923e049576254",
+    "tests/acceptance/dsl.py::Dsl.assert_newest_posts": "c40509e480856f12384dd27df1726de098be18db09daa005ef0e48abbb939bf5",
+    "tests/acceptance/dsl.py::Dsl.assert_nothing_posted_or_joined": "bd13c70f5860e1b2d585851e653a3e5654ddd01202aa8a39895430de9aae0181",
+    "tests/acceptance/dsl.py::Dsl.assert_post_visible": "cad6d793e375d15c3b90ba0082df2ca781bd46a6174dfd2065a2e1d26a8bbaad",
+    "tests/acceptance/dsl.py::Dsl.assert_refused": "410fc46765afd389c6045d287fdaf36365d7f3a2235e8d3788a3e26cfc734e97",
+    "tests/acceptance/dsl.py::Dsl.assert_single_dm_conversation": "8097e6ea41815b014cdb13d7141d9203b0b80aeac3a1840e12da8152c5f3d033"
+  },
+  "dsl_interface": {
+    "tests/acceptance/dsl.py::Dsl": "f35ca00c9526661260904b895e05f0fcb07b881daeeac11035591379c85d12d3",
+    "tests/acceptance/dsl.py::Dsl.__init__": "05eb5c102450ff448cb21cf9ad8e033558d73a4b2ddfe1d4301a3c44a7a9aa47",
+    "tests/acceptance/dsl.py::Dsl.assert_channels": "7130192906d78e206935ac0de37736c05a71113aa193213dee54244f2c375898",
+    "tests/acceptance/dsl.py::Dsl.assert_credential_not_exposed": "aed49ad10514e84a37c822dd9d17a7aeae6cf1bcf03547ce421d7a1e0f400a70",
+    "tests/acceptance/dsl.py::Dsl.assert_default_post_count": "307617c399bf08a7b1d3750e91141b7778c1319bf3261d5c6d67791e6c72e726",
+    "tests/acceptance/dsl.py::Dsl.assert_dm_contains": "61791510850797b83245f4b4db6b9a3439a6d61c1933f101c60c2f73a35258da",
+    "tests/acceptance/dsl.py::Dsl.assert_dm_visible": "1738e1782b4288ef2733ae2ecac50eaa3b6b5416283322e63e1d71c1bf58d2e9",
+    "tests/acceptance/dsl.py::Dsl.assert_error": "4c664da7512ce528b1e5da534fc8376a727d3b07d5ca42cc749b0eaeaffc9365",
+    "tests/acceptance/dsl.py::Dsl.assert_newest_posts": "a2b608182470f6265ea0534a10733fb17044f1f970a1ebd7323d5d5525ba4f0d",
+    "tests/acceptance/dsl.py::Dsl.assert_nothing_posted_or_joined": "b2c33b6ed69b2885606fe1b9fa352204caf92eb0c1c9be894def2f9fe066abd3",
+    "tests/acceptance/dsl.py::Dsl.assert_post_visible": "c278aea5ac5bf2e0dcc4c841bdf3670469616a0a78d49939c6547451dde5e9da",
+    "tests/acceptance/dsl.py::Dsl.assert_refused": "f26af2050c7573496ee7ca931a1dbb36cb8a9892264f792e0f3ff64f271a7691",
+    "tests/acceptance/dsl.py::Dsl.assert_single_dm_conversation": "ade054b504d6e151b6ad4c9987e851bd6eaaa88bb254b96e0b91618c14ef6880",
+    "tests/acceptance/dsl.py::Dsl.dm_read": "291724f4f21e2654d253bcddc1b8cf29ceffcdc3716b330ca129638265331250",
+    "tests/acceptance/dsl.py::Dsl.dm_send": "ead1e15c0b684fbe6a77cfe82001a3922851fd449a4213b8fb5abd80516d3adc",
+    "tests/acceptance/dsl.py::Dsl.given_bot": "532a77ecb73dfc9ba53a9831d4657e92529085621fe47dcc91ed7af5b76c1d80",
+    "tests/acceptance/dsl.py::Dsl.given_channel": "f742d4d5f1c97c2ef8c7439ccbc959408e62399648e457761d6723d601e868a3",
+    "tests/acceptance/dsl.py::Dsl.given_channel_posts": "c01ad58b6e2e19d9799e5c60208875bb3e7566d6a55b8a44680fa6ac187d5495",
+    "tests/acceptance/dsl.py::Dsl.given_dm_post": "9b4b2e9630d20d22b6fe2a23f2e8497cb2138c611c5baea678f7e1e31a5d524c",
+    "tests/acceptance/dsl.py::Dsl.given_mattermost_down": "0c9fe27c7a7bfc1fa86f04ab680f39985f37bc8f5b37a6244b1ee34f5eb62752",
+    "tests/acceptance/dsl.py::Dsl.given_user": "e5cfd546c64124e0f39d1a582c2a722e399201732a148a533c8798a0496ac543",
+    "tests/acceptance/dsl.py::Dsl.list_channels": "cc89a67c893afda81980ed983f4fc3d00ec467ba8112ef8994254f46e9a96f3e",
+    "tests/acceptance/dsl.py::Dsl.post": "499d25bfe83717e939a4f38641d1827e736a1562f8aead05f3ccad070feeb795",
+    "tests/acceptance/dsl.py::Dsl.read_channel": "ca444e945cf29daee52f04eb849b4e9a0422009eb525525a75ae093be16b76f9"
+  },
+  "kit_version": "2.5.1",
+  "specs": {
+    "tests/acceptance/specs/test_mmbridge.py": "cd0c54daf21f139dce77a75c0b7140d7fe4d2d9c4c00ac976b2e03b5fefd78cc"
+  }
+}

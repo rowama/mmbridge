@@ -2,7 +2,7 @@
 id: ARCH-20261025-mmbridge-mcp
 type: architecture
 phase: architecture
-status: in-review            # input (pre-draft from an earlier phase) | draft | in-review | approved | superseded
+status: approved            # input (pre-draft from an earlier phase) | draft | in-review | approved | superseded
 owner_agent: Eddie
 date: 2026-10-25
 links: [docs/design/2026-10-25-mmbridge-mcp.md]
@@ -97,7 +97,7 @@ JSON log line per tool call (request id, tool, bot username, token-hash prefix, 
 ## Owner legibility (standing question)
 n/a — no UI. The bridge has no frontend; Rob judges it through Mattermost (posts appear under bot names) and the acceptance examples.
 
-## ADRs (proposed, decided at CP-B)
+## ADRs (accepted at CP-B 2026-10-25)
 - [ADR-0001](../decisions/0001-credential-handoff-bearer-per-call.md) credential handoff
 - [ADR-0002](../decisions/0002-mattermost-http-client.md) Mattermost client
 - [ADR-0003](../decisions/0003-mcp-surface-streamable-http.md) MCP surface

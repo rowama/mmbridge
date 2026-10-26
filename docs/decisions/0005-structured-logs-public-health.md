@@ -2,7 +2,7 @@
 id: ADR-0005
 type: adr
 phase: architecture
-status: proposed         # proposed | accepted | partially-accepted | deferred | rejected | deprecated | superseded
+status: accepted         # proposed | accepted | partially-accepted | deferred | rejected | deprecated | superseded
 owner_agent: Eddie
 date: 2026-10-25
 links: [docs/design/2026-10-25-mmbridge-mcp.md, docs/architecture/2026-10-25-mmbridge-mcp.md]
