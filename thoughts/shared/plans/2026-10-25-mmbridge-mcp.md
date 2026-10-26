@@ -124,9 +124,9 @@ Slice card: [thoughts/shared/slices/2026-10-25-s2-post-read-channel.md](../slice
 
 ### Success Criteria
 #### Automated Verification
-- [ ] `pytest tests/unit -q` passes (shared validators: boundary values 0/1/100/101, None, bool, non-int limit; empty/16383/16384-char message; identifiers with `/`, `..`, `%2F`, spaces, uppercase, 65 chars → `invalid_argument` with zero MM calls; write bucket; not_member path (post and read) issues no POST and no posts GET)
-- [ ] `pytest tests/acceptance -q -k "not dm"` passes (REQ-1 ex1 + isolation, REQ-3, REQ-4 x2, REQ-7 non-member post/read + unknown channel, REQ-8)
-- [ ] `python3 .eng/bin/eng-check .` passes
+- [x] `pytest tests/unit -q` passes (shared validators: boundary values 0/1/100/101, None, bool, non-int limit; empty/16383/16384-char message; identifiers with `/`, `..`, `%2F`, spaces, uppercase, 65 chars → `invalid_argument` with zero MM calls; write bucket; not_member path (post and read) issues no POST and no posts GET)
+- [x] `pytest tests/acceptance -q -k "not dm"` passes (REQ-1 ex1 + isolation, REQ-3, REQ-4 x2, REQ-7 non-member post/read + unknown channel, REQ-8)
+- [x] `python3 .eng/bin/eng-check .` passes
 #### Manual Verification
 - [ ] After redeploy, bot posts "build is green" to a channel it's in; Rob sees it in Mattermost authored by the bot
 - [ ] Bot reads that channel with limit 5 → 5 newest posts with authors/times

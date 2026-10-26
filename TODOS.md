@@ -9,6 +9,7 @@
 - **Reconcile ADR-0004 burst (10) vs implemented capacity (60)** (filed 2026-10-26, from [s1 verify](thoughts/shared/verification/2026-10-26-s1-verify.md)) — Rob to accept deviation or amend ADR. **Effort:** S. **Priority:** P2.
 - **Add a linter (ruff) to the gate** (filed 2026-10-26, from [s1 verify](thoughts/shared/verification/2026-10-26-s1-verify.md)) — no lint step exists for DoD. **Effort:** S. **Priority:** P3.
 - **Plan for mcp 2.x (FastMCP→MCPServer)** (filed 2026-10-26, from [s1 verify](thoughts/shared/verification/2026-10-26-s1-verify.md)) — pinned 1.30.0. **Effort:** S. **Priority:** P3.
+- **Requirements don't install on Python 3.14** (filed 2026-10-26, from [s2 slice](thoughts/shared/slices/2026-10-25-s2-post-read-channel.md)) — fastapi 0.115.6 needs starlette<0.42, mcp 1.30.0 needs starlette>=0.48 on 3.14; the AGENTS.md install command fails with the box's python3 (3.14). Dev venv built with 3.12 via uv to match the Dockerfile. Pin the venv Python in AGENTS.md or bump fastapi. **Effort:** S. **Priority:** P2.
 
 ## Follow-ups
 - [ ] P2: Case-insensitive Bearer scheme match in auth.py (F2 accepted-risk 2026-10-26)

@@ -3,7 +3,7 @@ id: STATE
 type: project-state
 phase: implement
 status: active
-owner_agent: Eddie
+owner_agent: claude-code
 date: 2026-10-26
 links: []
 triage: medium            # unset | small | medium | large
@@ -31,13 +31,13 @@ implement - entry/exit criteria in `.eng/PROCESS.md` section 3.
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[thoughts/shared/slices/2026-10-25-s2-post-read-channel.md](thoughts/shared/slices/2026-10-25-s2-post-read-channel.md) (slice 1 done, CP-S 2026-10-26)
+[thoughts/shared/slices/2026-10-25-s2-post-read-channel.md](thoughts/shared/slices/2026-10-25-s2-post-read-channel.md) (slice 1 done, CP-S 2026-10-26; slice 2 status review)
 
 ## Next action
-Slice 1 done (verify PASS, CP-S approved 2026-10-26). Next: start slice 2 (post/read channel) on Rob's PC via `python3 .eng/bin/eng-run implement thoughts/shared/plans/2026-10-25-mmbridge-mcp.md SLICE-20261025-s2-post-read-channel` (CP-C covers start; FYI Rob). Push of local commits needs Rob's OK (push_permission: ask).
+Slice 2 implemented (status review; unit 49 passed, acceptance non-DM 12 passed, eng-check OK, docker build OK, codex review no findings). Next: planner runs eng-verify for slice 2, then requests CP-S (manual verification needs a Coolify redeploy, so pushing local commits needs Rob's OK; push_permission: ask).
 
 ## Blockers
-- 2026-10-26: slice 2 implement run couldn't execute commands (python3 .eng/bin/*, .venv/bin/pytest refused by the permission mode). Rob to allow them, then re-run. See latest handoff.
+none
 
 ## Pending approvals
 See `pending_approvals` in the front matter (the only copy; `.eng/bin/eng-status` renders it). Do not list items here.
@@ -55,7 +55,7 @@ none
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0005: [docs/decisions/](docs/decisions/)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-26_09-00-00_s2-blocked-no-exec.md](thoughts/shared/handoffs/2026-10-26_09-00-00_s2-blocked-no-exec.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-26_01-41-10_s2-implemented-review.md](thoughts/shared/handoffs/2026-10-26_01-41-10_s2-implemented-review.md)
 - Plan (approved): [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md](thoughts/shared/plans/2026-10-25-mmbridge-mcp.md)
 - Verification s1 (PASS): [thoughts/shared/verification/2026-10-26-s1-verify.md](thoughts/shared/verification/2026-10-26-s1-verify.md)
 - Slices: [thoughts/shared/slices/](thoughts/shared/slices/)
