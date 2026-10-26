@@ -35,13 +35,26 @@ class Dsl:
         """A user wrote a message to the bot in their DM."""
         self._d.given_dm_post(author, bot, message)
 
+    def given_no_user(self, username="nobody"):
+        """No Mattermost user with this username exists."""
+        self._d.given_no_user(username)
+
+    def given_no_channel(self, team="rmlab", channel="ghost"):
+        """No channel with this name exists in the team (the team itself exists)."""
+        self._d.given_no_channel(team, channel)
+
     def given_mattermost_down(self):
         """Mattermost is unreachable from the bridge."""
         self._d.given_mattermost_down()
 
     # --- When: the bot uses the bridge ---------------------------------------------
-    def list_channels(self, credential=True):
-        """The bot asks for its channels (credential=False: no Authorization header)."""
+    def as_bot(self, name):
+        """Later calls are made by this (already given) bot, with its own credential."""
+        self._d.as_bot(name)
+
+    def list_channels(self, credential="valid"):
+        """The bot asks for its channels. credential: "valid" (the bot's token), "missing"
+        (no Authorization header) or "invalid" (a Bearer token Mattermost rejects)."""
         self._last = self._d.call("list_channels", {}, credential=credential)
 
     def post(self, channel="dev", message="build is green", team="rmlab"):
@@ -65,7 +78,7 @@ class Dsl:
 
     # --- Then ------------------------------------------------------------------------
     def assert_refused(self):
-        """The call was refused for missing/invalid credential and Mattermost was never called."""
+        """The call was refused at the bridge (HTTP 401, missing/malformed credential) and Mattermost was never called."""
         assert self._last["http_status"] == 401, self._last
         assert self._d.mattermost_calls() == [], self._d.mattermost_calls()
 
@@ -80,13 +93,14 @@ class Dsl:
         assert (author, message) in self._d.channel_posts(channel), self._d.channel_posts(channel)
 
     def assert_newest_posts(self, count):
-        """Exactly `count` posts came back, newest first, each with author, time and text."""
+        """Exactly the `count` newest seeded posts came back (same ids and text), newest first, each with author, time and text."""
         posts = self._last["result"]["posts"]
         assert len(posts) == count, len(posts)
         assert all(p.get("author") and p.get("create_at") and "message" in p for p in posts), posts
         times = [p["create_at"] for p in posts]
         assert times == sorted(times, reverse=True), times
-        assert times[0] == self._d.newest_post_time(), times
+        expected = self._d.newest_posts(count)  # [(id, message)] newest first, from the fake world
+        assert [(p["id"], p["message"]) for p in posts] == expected, (posts, expected)
 
     def assert_default_post_count(self):
         """The default number (20) of newest posts came back."""
@@ -116,6 +130,10 @@ class Dsl:
         writes = [c for c in self._d.mattermost_calls() if c[0] == "POST" and
                   (c[1].endswith("/posts") or "/members" in c[1])]
         assert writes == [], writes
+
+    def assert_nothing_changed_in_mattermost(self):
+        """No post, channel, DM conversation or membership was created in the Mattermost world."""
+        assert self._d.world_changes() == [], self._d.world_changes()
 
     def assert_credential_not_exposed(self):
         """The bot's token appears nowhere in the response or the bridge logs."""

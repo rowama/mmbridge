@@ -15,8 +15,36 @@ def test_posts_appear_as_the_connecting_bot(app):
 @pytest.mark.req("REQ-1")
 def test_caller_without_credential_is_refused(app):
     app.given_bot("eddie")
-    app.list_channels(credential=False)
+    app.list_channels(credential="missing")
     app.assert_refused()
+
+
+@pytest.mark.req("REQ-1")
+def test_invalid_credential_is_rejected_and_not_exposed(app):
+    app.given_bot("eddie")
+    app.list_channels(credential="invalid")
+    app.assert_error("unauthorized")
+    app.assert_credential_not_exposed()
+
+
+@pytest.mark.req("REQ-1")
+@pytest.mark.req("REQ-2")
+def test_each_caller_sees_only_its_own_identity(app):
+    app.given_bot("eddie")
+    app.given_bot("ada")
+    app.given_channel("rmlab", "dev", members=["eddie"])
+    app.given_channel("rmlab", "ops", members=["ada"])
+    app.as_bot("eddie")
+    app.list_channels()
+    app.assert_channels(["dev"], team="rmlab")
+    app.as_bot("ada")
+    app.list_channels()
+    app.assert_channels(["ops"], team="rmlab")
+    app.post("ops", "ada here")
+    app.assert_post_visible("ops", author="ada", message="ada here")
+    app.as_bot("eddie")
+    app.list_channels()
+    app.assert_channels(["dev"], team="rmlab")
 
 
 @pytest.mark.req("REQ-2")
@@ -93,11 +121,35 @@ def test_non_member_channel_is_refused_without_join(app):
 
 
 @pytest.mark.req("REQ-7")
+def test_read_of_non_member_channel_is_refused(app):
+    app.given_bot("eddie")
+    app.given_channel("rmlab", "finance", members=[])
+    app.given_channel_posts("rmlab", "finance", 3)
+    app.read_channel("finance")
+    app.assert_error("not_member")
+    app.assert_nothing_changed_in_mattermost()
+
+
+@pytest.mark.req("REQ-7")
+def test_unknown_channel_is_refused(app):
+    app.given_bot("eddie")
+    app.given_no_channel("rmlab", "ghost")
+    app.post("ghost", "hi")
+    app.assert_error("unknown_channel")
+    app.assert_nothing_changed_in_mattermost()
+    app.read_channel("ghost")
+    app.assert_error("unknown_channel")
+    app.assert_nothing_changed_in_mattermost()
+
+
+@pytest.mark.req("REQ-7")
 def test_dm_to_unknown_user(app):
     app.given_bot("eddie")
+    app.given_no_user("nobody")
     app.dm_send("nobody", "hi")
     app.assert_error("unknown_user")
     app.assert_nothing_posted_or_joined()
+    app.assert_nothing_changed_in_mattermost()
 
 
 @pytest.mark.req("REQ-8")
