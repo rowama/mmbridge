@@ -10,7 +10,8 @@ triage: large             # unset | small | medium | large
 active_slice: SLICE-20261027-lb2-state-db-wake-queue
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: []
+pending_approvals:
+  - "CP-S: thoughts/shared/slices/2026-10-27-lb2-state-db-wake-queue.md - manual verification"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -34,7 +35,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [SLICE-20261027-lb2-state-db-wake-queue](thoughts/shared/slices/2026-10-27-lb2-state-db-wake-queue.md) (review). Previous: lb1 [done](thoughts/shared/slices/2026-10-27-lb1-bot-store-admin-cli.md)
 
 ## Next action
-lb2 implemented (status review; commits 6551dd9, dc9efe0; Codex review 1 finding fixed). NEXT: planner runs eng-verify on lb2, then requests CP-S (`admin failed`/`stats` on empty DB). Do not start lb3 before CP-S. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
+lb2 eng-verify PASS (thoughts/shared/verification/2026-10-27-lb2-state-db-wake-queue.md; 138 unit, 16 acc + 9 skipped). NEXT: Rob CP-S (`python -m app.admin failed` and `stats` on an empty DB). Do not start lb3 before CP-S. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
 
 ## Blockers
 none
