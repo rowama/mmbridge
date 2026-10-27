@@ -2,7 +2,7 @@
 
 POST <wake_url> with the wake payload as raw JSON body and headers X-MMB-Delivery (post id, idempotency key),
 X-MMB-Timestamp (unix seconds), X-MMB-Signature `v1=<hex HMAC-SHA256(secret, ts + "." + body)>`.
-Receivers: `verify(secret, headers, raw_body, now)`; constant-time, rejects |now - ts| > 300 s, unknown versions
+Receivers: `verify(secret, headers, raw_body, now)`; constant-time, rejects |now - ts| > 300 s, an X-MMB-Delivery that is missing or differs from the signed delivery_id, unknown versions
 and missing headers.
 
 Dispatcher.tick(): heartbeat the single-owner lease (standby while another owner is fresh), recover_stale,
@@ -58,7 +58,16 @@ def verify(secret: str, headers: Mapping, body: bytes, now: int, window: int = W
         return False
     if abs(now - t) > window:
         return False
-    return hmac.compare_digest(sig[3:].encode(), _mac(secret, ts, body).encode())
+    if not hmac.compare_digest(sig[3:].encode(), _mac(secret, ts, body).encode()):
+        return False
+    # X-MMB-Delivery is not signed itself: it must equal the signed delivery_id, so a captured request
+    # cannot be replayed under a new idempotency key (lb4 review 2 P2).
+    try:
+        signed_id = json.loads(body).get("delivery_id")
+    except (ValueError, AttributeError):
+        return False
+    d = h.get("x-mmb-delivery")
+    return bool(d) and isinstance(signed_id, str) and hmac.compare_digest(d.encode(), signed_id.encode())
 
 
 def _log(event: str, **fields) -> None:

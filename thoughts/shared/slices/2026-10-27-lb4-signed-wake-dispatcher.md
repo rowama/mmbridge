@@ -59,3 +59,4 @@ Queued wakes reach a receiver as signed HTTPS POSTs (HMAC-SHA256 over ts.body); 
 - Deviation (PR-2, design detail): no `cfg_gen` column. The bot identity of a wake is the `bot.user_id` already in its payload, and the dispatcher compares it with meta `bot_user_id` (written by the listener after users/me). url/secret are read from the config provider at send time, so they need no generation, and no schema migration is needed. Behaviour matches the plan's tests.
 - Deviation (small): a second dispatcher whose owner heartbeat is fresh does not exit. It stands by (`tick()` returns 0, logs `dispatcher_standby`) and takes over after the heartbeat expires (60 s). The plan says "refuses to start"; standby is a superset and still never sends.
 - Codex review not run (codex CLI unavailable here); see the progress log.
+- 2026-10-27: code-review 2 P2 (unsigned X-MMB-Delivery replay) fixed: verify() requires X-MMB-Delivery == signed body delivery_id; 4 new verify reject cases.

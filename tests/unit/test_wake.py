@@ -107,7 +107,7 @@ def _headers(ts, body, secret=SECRET, **over):
 
 
 def test_verify_accepts_valid_and_edge_of_window():
-    body, ts = b'{"x":1}', 1_800_000_000
+    body, ts = b'{"delivery_id":"p-1"}', 1_800_000_000
     assert verify(SECRET, _headers(ts, body), body, ts)
     assert verify(SECRET, _headers(ts, body), body, ts + 300)
     assert verify(SECRET, _headers(ts, body), body, ts - 300)
@@ -116,14 +116,19 @@ def test_verify_accepts_valid_and_edge_of_window():
 
 
 @pytest.mark.parametrize("case", ["bad_sig", "tampered_body", "tampered_ts", "skew_301", "future_301", "v2",
-                                  "no_sig", "no_ts", "bad_ts", "wrong_secret"])
+                                  "no_sig", "no_ts", "bad_ts", "wrong_secret",
+                                  "delivery_swapped", "no_delivery", "body_without_id", "body_not_json"])
 def test_verify_rejects(case):
-    body, ts = b'{"x":1}', 1_800_000_000
+    body, ts = b'{"delivery_id":"p-1"}', 1_800_000_000
+    if case == "body_without_id":
+        body = b'{"x":1}'
+    elif case == "body_not_json":
+        body = b'not json'
     h, b, now, secret = _headers(ts, body), body, ts, SECRET
     if case == "bad_sig":
         h["X-MMB-Signature"] = "v1=" + "0" * 64
     elif case == "tampered_body":
-        b = b'{"x":2}'
+        b = b'{"delivery_id":"p-2"}'
     elif case == "tampered_ts":
         h["X-MMB-Timestamp"] = str(ts + 1)
     elif case == "skew_301":
@@ -138,6 +143,12 @@ def test_verify_rejects(case):
         del h["X-MMB-Timestamp"]
     elif case == "bad_ts":
         h["X-MMB-Timestamp"] = "soon"
+    elif case == "delivery_swapped":
+        h["X-MMB-Delivery"] = "p-1-replay"   # replay of a valid capture under a new idempotency key
+    elif case == "no_delivery":
+        del h["X-MMB-Delivery"]
+    elif case in ("body_without_id", "body_not_json"):
+        pass
     else:
         secret = "z" * 40
     assert not verify(secret, h, b, now)
