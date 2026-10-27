@@ -29,6 +29,11 @@ pend = L.pending_list(fm)
 print("pending approvals: %s" % ("none" if not pend else ""))
 for p in pend:
     print("  - " + p)
+_sp = os.path.join(repo, "PROJECT_STATE.md")
+if os.path.isfile(_sp):
+    _nl, (_ar, _ab) = L.state_size_metrics(open(_sp, encoding="utf-8", errors="replace").read())
+    print("state size: latest-artifacts links=%d  approval-log rows=%d bytes=%d%s" % (_nl, _ar, _ab,
+          "  (WARN: approval log > 40 rows or > 3072 bytes; reopen archive design)" if _ar > 40 or _ab > 3072 else ""))
 for s in ("Next action", "Blockers"):
     print("%s: %s" % (s.lower(), sec(s).replace("\n", " | ")[:200]))
 miss = L.readiness(arts, fm.get("phase"), fm.get("triage"))
@@ -100,11 +105,11 @@ if fm.get("triage") in ("medium", "large"):
         out = pfm.get("plan_review") if isinstance(pfm.get("plan_review"), str) and pfm.get("plan_review") not in ("", "none") \
             else "thoughts/shared/verification/%s-%s-plan-review.md" % (L.now().strftime("%Y-%m-%d"), slug)
         print("-- mandatory plan review for %s: %s --" % (plan, state))
+        print("# planner starts this on the owner's PC (FYI to Rob; do not hand him the command as default):")
+        print("   python3 .eng/bin/eng-run plan-review %s" % plan)
+        print("   then: disposition findings in %s; set plan_review: %s; ask CP-C when clean" % (out, out))
+        print("# fallback if eng-run/Codex unavailable or Rob drives it — from the repo root:")
         print("# from the repo root:")
         print('codex exec "review %s and the slice cards %s against %s (REQ ids), %s and %s '
               'for gaps, wrong ordering, missing tests, and security holes; output a numbered list of '
               'findings with severity" -o %s' % (plan, sglob, design, arch, adr, out))
-        print("   or, same review via the model-agnostic runner (writes the findings file + links plan_review:):")
-        print("   python3 .eng/bin/eng-run plan-review %s" % plan)
-        print("   then: add review-findings front matter + Findings table (severity, disposition) above the raw output in %s;" % out)
-        print("   set plan_review: %s in the plan" % out)
