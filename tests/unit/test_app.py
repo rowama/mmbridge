@@ -94,3 +94,51 @@ async def test_log_line_per_call_with_hash_prefix(bridge, mm, caplog):
     assert l["tool"] == "list_channels" and l["outcome"] == "ok" and l["bot"] == "eddie"
     assert l["token_hash"] == hashlib.sha256(t.encode()).hexdigest()[:8]
     assert "latency_ms" in l and "request_id" in l
+
+
+async def test_bearer_scheme_case_insensitive_token_case_sensitive(bridge, mm):
+    t = tok(mm, "eddie")
+    for scheme in ("Bearer", "bearer", "BEARER", "bEaReR"):
+        is_err, data = payload(await call(bridge, raw_auth=f"{scheme} {t}"))
+        assert not is_err, scheme
+    assert auth.extract("bearer AbCdEfGh123") == "AbCdEfGh123"
+    is_err, data = payload(await call(bridge, raw_auth="Bearer " + t.swapcase()))
+    assert is_err and data["code"] == "unauthorized"
+
+
+async def test_forged_xff_cannot_reset_anon_rate_limit(mm, monkeypatch):
+    """Untrusted peer + X-Forwarded-For: uvicorn proxy middleware (as run in the Dockerfile, trusting only
+    FORWARDED_ALLOW_IPS, default 127.0.0.1) must key the anon limiter on the real peer IP."""
+    import httpx
+    from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+    from app.main import create_app
+    from app.ratelimit import RateLimiter
+    monkeypatch.delenv("FORWARDED_ALLOW_IPS", raising=False)
+    import os
+    trusted = os.environ.get("FORWARDED_ALLOW_IPS", "127.0.0.1")
+    limiter = RateLimiter(anon_per_min=3, clock=lambda: 0.0)
+    app = ProxyHeadersMiddleware(create_app(mm_transport=mm.transport(), limiter=limiter), trusted_hosts=trusted)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app, client=("203.0.113.9", 1234)),
+                                 base_url="http://testserver") as c:
+        codes = []
+        for i in range(5):
+            r = await c.post("/mcp", headers={"x-forwarded-for": f"1.2.3.{i}"}, json={})
+            codes.append(r.status_code)
+    assert codes == [401, 401, 401, 429, 429]
+    assert set(limiter._anon) == {"203.0.113.9"}
+    import pathlib
+    df = (pathlib.Path(__file__).parents[2] / "Dockerfile").read_text()
+    assert '"*"' not in df and "FORWARDED_ALLOW_IPS=127.0.0.1" in df
+
+
+async def test_trusted_proxy_xff_is_honoured(mm):
+    import httpx
+    from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+    from app.main import create_app
+    from app.ratelimit import RateLimiter
+    limiter = RateLimiter(anon_per_min=3, clock=lambda: 0.0)
+    app = ProxyHeadersMiddleware(create_app(mm_transport=mm.transport(), limiter=limiter), trusted_hosts="127.0.0.1")
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app, client=("127.0.0.1", 1234)),
+                                 base_url="http://testserver") as c:
+        await c.post("/mcp", headers={"x-forwarded-for": "1.2.3.4"}, json={})
+    assert set(limiter._anon) == {"1.2.3.4"}

@@ -9,6 +9,8 @@ services:
     # image: ghcr.io/rowama/mmbridge:latest
     restart: unless-stopped
     environment:
+      # Trusted proxy for X-Forwarded-For (Traefik IP/subnet on rmlab). TODO: real value from Rob; never '*'.
+      # - FORWARDED_ALLOW_IPS=<traefik-ip-or-cidr>
       - SERVICE_FQDN_MMBRIDGE_8080=https://chats.rmlab.cloud   # Coolify domain -> container port 8080
       - MATTERMOST_URL=http://mattermost:8065                  # private network, used later
       # Per-bot Mattermost tokens: add later as Coolify secrets, never commit them.

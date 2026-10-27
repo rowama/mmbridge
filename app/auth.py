@@ -10,7 +10,8 @@ import re
 from contextvars import ContextVar
 
 current_token: ContextVar[str] = ContextVar("mm_token")
-_BEARER = re.compile(r"^Bearer ([A-Za-z0-9._~+/=-]{8,512})$")
+# Scheme is case-insensitive (RFC 7235); the token itself stays case-sensitive.
+_BEARER = re.compile(r"^(?i:bearer) ([A-Za-z0-9._~+/=-]{8,512})$")
 
 
 def token_hash(token: str) -> str:

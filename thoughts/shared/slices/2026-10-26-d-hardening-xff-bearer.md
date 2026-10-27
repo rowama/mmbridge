@@ -2,7 +2,7 @@
 id: SLICE-20261026-d-hardening-xff-bearer
 type: slice
 phase: implement
-status: todo             # todo | in-progress | blocked | review | done
+status: review             # todo | in-progress | blocked | review | done
 owner_agent: claude-code
 date: 2026-10-26
 links: []
@@ -26,18 +26,18 @@ specs: none - small; unit tests in tests/unit/test_app.py
 A client sending a forged X-Forwarded-For can no longer change its rate-limit IP; "bearer <token>" (any case) authenticates like "Bearer <token>".
 
 ## Acceptance criteria
-- [ ] Dockerfile no longer uses `--forwarded-allow-ips *`; trusted proxy comes from env `FORWARDED_ALLOW_IPS` (default `127.0.0.1`; Coolify sets the Traefik network/IP). Documented in README/AGENTS.
-- [ ] Unit test: request from untrusted peer with `X-Forwarded-For: 1.2.3.4` is keyed on peer IP for the anon limiter (spoof does not reset the bucket).
-- [ ] Unit test: `bearer`, `BEARER`, `Bearer` schemes all accepted; malformed cases in test_missing_and_malformed_bearer_401_no_mm_call still 401 (drop bare `"bearer"` only if it stays 401 - it has no token).
+- [x] Dockerfile no longer uses `--forwarded-allow-ips *`; trusted proxy comes from env `FORWARDED_ALLOW_IPS` (default `127.0.0.1`; Coolify sets the Traefik network/IP). Documented in README/AGENTS.
+- [x] Unit test: request from untrusted peer with `X-Forwarded-For: 1.2.3.4` is keyed on peer IP for the anon limiter (spoof does not reset the bucket).
+- [x] Unit test: `bearer`, `BEARER`, `Bearer` schemes all accepted; malformed cases in test_missing_and_malformed_bearer_401_no_mm_call still 401 (drop bare `"bearer"` only if it stays 401 - it has no token).
 - [ ] Full `pytest tests` green; live check after deploy: /health ok, a Grok Bot list_channels still works, anon 429 still triggers.
 - [ ] Optional (only if <20 lines): `ruff check app tests` added to gate in AGENTS.md / DoD.
 
 ## Tasks
-- [ ] Write failing tests (XFF spoof, Bearer case)
-- [ ] auth.py: `_BEARER` regex with `(?i)` on scheme only (token stays case-sensitive)
-- [ ] Dockerfile: `--forwarded-allow-ips` from `${FORWARDED_ALLOW_IPS:-127.0.0.1}` (shell-form CMD or uvicorn env `FORWARDED_ALLOW_IPS`, which uvicorn reads natively)
+- [x] Write failing tests (XFF spoof, Bearer case)
+- [x] auth.py: `_BEARER` regex with `(?i)` on scheme only (token stays case-sensitive)
+- [x] Dockerfile: `--forwarded-allow-ips` from `${FORWARDED_ALLOW_IPS:-127.0.0.1}` (shell-form CMD or uvicorn env `FORWARDED_ALLOW_IPS`, which uvicorn reads natively)
 - [ ] Confirm Coolify Traefik source IP/subnet on rmlab and set the env in Coolify (Rob/Eddie)
-- [ ] Run gate; update TODOS (close XFF + F2)
+- [x] Run gate; update TODOS (close XFF + F2)
 
 ## Size check
 ~30-60 changed lines.
@@ -45,5 +45,10 @@ A client sending a forged X-Forwarded-For can no longer change its rate-limit IP
 ## Progress log
 - 2026-10-26 - grok-bot - triaged small; card created; closed conftest/ADR-0004/3.12 TODOs on evidence.
 
+- 2026-10-26 - grok-bot (implementer) - Rob confirmed size small. Tests first: test_bearer_scheme_case_insensitive_token_case_sensitive, test_forged_xff_cannot_reset_anon_rate_limit (red vs HEAD: 2 failed, 85 passed), test_trusted_proxy_xff_is_honoured. auth.py `(?i:bearer)` scheme only; Dockerfile drops `--forwarded-allow-ips *`, ENV FORWARDED_ALLOW_IPS=127.0.0.1 (uvicorn reads it natively). Docs: AGENTS.md, coolify snippet. `pytest tests -q` -> 87 passed, exit 0. Ruff skipped (not installed in venv/requirements-dev; >20 lines likely) -> TODO kept.
+- Note: bare `"bearer"` kept in malformed list (no token -> still 401).
+
 ## Blockers / deviations from plan
-- Rob to confirm size small (security). Coolify proxy IP/subnet needed for the env value.
+- Coolify Traefik IP/subnet unknown: NOT invented. Until Rob sets FORWARDED_ALLOW_IPS in Coolify, the deployed app ignores XFF and keys anon limits on the proxy peer IP (spoof-safe, but all anon callers share one bucket; authenticated per-token limits unaffected).
+- Live checks (deploy, /health, Grok Bot list_channels, anon 429) need a Coolify redeploy -> handed off for CP-S.
+- Codex advisory slice-diff review not run (no codex CLI in this session); security slice -> recommend running `eng-run code-review` before CP-S.

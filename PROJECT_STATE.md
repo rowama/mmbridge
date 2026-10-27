@@ -11,7 +11,7 @@ active_slice: thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
 pending_approvals:
-  - "CP-S: thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md - confirm triage small (security XFF) before implement"
+  - "CP-S: thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md - manual verification after Coolify redeploy (set FORWARDED_ALLOW_IPS)"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -26,20 +26,20 @@ acceptance: executable-specs   # v2.5: tests/acceptance/, see PROCESS.md 13
 > Update it at the end of every session. Keep it under one screen.
 
 ## Current phase
-implement (increment D hardening, triaged small; awaiting Rob size confirm) - PROCESS.md section 3.
+implement (increment D hardening, small confirmed; slice in review) - PROCESS.md section 3.
 
 ## Goal (one sentence)
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[D hardening: XFF + Bearer case](thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md) (todo)
+[D hardening: XFF + Bearer case](thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md) (review)
 
 ## Next action
-Rob confirms triage small for D (security). Then implementer runs eng-implement-slice on the d-hardening card; needs Coolify proxy IP/subnet for FORWARDED_ALLOW_IPS. After D ships: eng-triage A (live bots: @mentions etc.).
+D slice in review: eng-verify, then Coolify redeploy with FORWARDED_ALLOW_IPS = real Traefik IP (Rob) and CP-S live checks (/health, list_channels, anon 429). After D ships: eng-triage A.
 
 
 ## Blockers
-- Rob: confirm size small for security-touching slice (Eddie relays).
+- Rob: real Coolify Traefik IP/subnet for FORWARDED_ALLOW_IPS (Eddie asking). Redeploy needed for CP-S.
 
 
 ## Pending approvals
@@ -73,6 +73,7 @@ none
      Pre-kit decisions: back-fill with Checkpoint "pre-kit" and Decision "approved (back-filled, pre-kit)". .eng/bin/eng-check matches rows to statuses. -->
 | Date | Checkpoint | Artifact | Decision (Rob) |
 |---|---|---|---|
+| 2026-10-26 | triage (size) | thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md | approved (small confirmed, security; via Eddie) |
 | 2026-10-26 | CP-P | CHANGELOG.md (v0.2.0, commit 9946445, tag v0.2.0) | approved (release v0.2.0) |
 | 2026-10-26 | CP-S | thoughts/shared/slices/2026-10-25-s3-dm.md | approved (live same-channel dual DM, ping via dm_read, nobody -> unknown_user)
 | 2026-10-26 | CP-S | thoughts/shared/slices/2026-10-25-s2-post-read-channel.md | approved (live post/read/not_member)

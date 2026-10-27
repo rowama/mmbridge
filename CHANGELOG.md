@@ -2,6 +2,10 @@
 All notable changes to this project. Format: Keep a Changelog style; newest first.
 
 ## [Unreleased]
+<!-- id: CHANG-20261026-d-hardening-xff-bearer | owner_agent: unassigned | date: 2026-10-26 -->
+### Security
+- Forged X-Forwarded-For headers no longer bypass the anonymous rate limit (only FORWARDED_ALLOW_IPS proxies are trusted), and the Bearer scheme is matched case-insensitively.
+
 
 ## [0.2.0] - 2026-10-26
 <!-- id: CHANG-20261026-ship-0.2.0 | owner_agent: Eddie | date: 2026-10-26 -->
