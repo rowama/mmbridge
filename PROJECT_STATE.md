@@ -7,11 +7,10 @@ owner_agent: claude-code
 date: 2026-10-27
 links: []
 triage: large             # unset | small | medium | large
-active_slice: SLICE-20261027-lb3-listener-filters
+active_slice: SLICE-20261027-lb4-signed-wake-dispatcher
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals:
-  - "CP-S: thoughts/shared/slices/2026-10-27-lb3-listener-filters.md - manual verification"
+pending_approvals: []
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -32,10 +31,10 @@ implement (increment A Live bots, Large) - PROCESS.md section 3.
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[SLICE-20261027-lb3-listener-filters](thoughts/shared/slices/2026-10-27-lb3-listener-filters.md) (review). Previous: lb2 [done](thoughts/shared/slices/2026-10-27-lb2-state-db-wake-queue.md)
+[SLICE-20261027-lb4-signed-wake-dispatcher](thoughts/shared/slices/2026-10-27-lb4-signed-wake-dispatcher.md) (todo). Previous: lb3 [done](thoughts/shared/slices/2026-10-27-lb3-listener-filters.md)
 
 ## Next action
-lb3 eng-verify PASS (thoughts/shared/verification/2026-10-27-lb3-listener-filters.md; 176 unit x3, 16 acc + 9 skipped). NEXT: Rob CP-S (after redeploy: `echo "$TOKEN" | python -m app.ws_spike` in container, post in bot channel, confirm hello/posted/ping-reply shapes). Do not start lb4 before CP-S. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
+lb3 done (CP-S logged; ws_spike passed on Coolify). NEXT: implementer runs eng-run implement on lb4 (SLICE-20261027-lb4-signed-wake-dispatcher), then planner runs eng-verify. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
 
 ## Blockers
 none
@@ -80,6 +79,7 @@ none
      Pre-kit decisions: back-fill with Checkpoint "pre-kit" and Decision "approved (back-filled, pre-kit)". .eng/bin/eng-check matches rows to statuses. -->
 | Date | Checkpoint | Artifact | Decision (Rob) |
 |---|---|---|---|
+| 2026-10-27 | CP-S | thoughts/shared/slices/2026-10-27-lb3-listener-filters.md | approved (verify PASS; ws_spike hello+ping reply+posted on Coolify; via Eddie) |
 | 2026-10-27 | CP-S | thoughts/shared/slices/2026-10-27-lb2-state-db-wake-queue.md | approved (verify PASS; empty-DB admin failed/stats deferred; via Eddie) |
 | 2026-10-27 | CP-S | thoughts/shared/slices/2026-10-27-lb1-bot-store-admin-cli.md | approved (verify PASS; live container/Coolify check deferred, not yet redeployed; via Eddie) |
 | 2026-10-27 | CP-C | thoughts/shared/plans/2026-10-27-live-bots.md | approved speclock sha256:3108f1fe6a93cfae |
