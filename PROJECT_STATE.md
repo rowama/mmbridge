@@ -10,7 +10,8 @@ triage: large             # unset | small | medium | large
 active_slice: none
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: []
+pending_approvals:
+  - "CP-B: docs/architecture/2026-10-26-live-bots.md + docs/decisions/0006-encrypted-token-store.md + docs/decisions/0007-mattermost-websocket-listener.md + docs/decisions/0008-signed-wake-webhook.md + docs/decisions/0009-listener-state-persistence.md + docs/decisions/0010-acceptance-tests-live-bots.md - approve architecture (security review for stored token incl.)"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -25,7 +26,7 @@ acceptance: executable-specs   # v2.5: tests/acceptance/, see PROCESS.md 13
 > Update it at the end of every session. Keep it under one screen.
 
 ## Current phase
-research (increment A Live bots, Large; scope approved REDUCE) - PROCESS.md section 3.
+architecture (increment A Live bots, Large) - PROCESS.md section 3.
 
 ## Goal (one sentence)
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
@@ -34,7 +35,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 none (D hardening [done](thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md))
 
 ## Next action
-A Live bots: scope recorded REDUCE + defer A5 (one bot; A1, A2, A3 own-post, A4, A7, A8; hand-set channel list). Research written: [thoughts/shared/research/2026-10-26-live-bots-current-code.md](thoughts/shared/research/2026-10-26-live-bots-current-code.md). Awaiting Rob CP-R, then eng-architecture-review (new ADR for encrypted token store + security review at CP-B). No code for A yet.
+A Live bots: architecture proposed [docs/architecture/2026-10-26-live-bots.md](docs/architecture/2026-10-26-live-bots.md) + ADR-0006..0010 (proposed). Awaiting Rob CP-B. Advisory: Rob runs Codex in Claude Code (`/codex`): `codex exec "review docs/architecture/2026-10-26-live-bots.md for gaps, risks, contradictions" -o thoughts/shared/verification/2026-10-26-live-bots-arch-review.md` (stub awaiting). Deploy prerequisites before enabling: Coolify persistent volume /data (uid 10001), env secret MMB_STORE_KEY, replicas 1. After CP-B: eng-plan. No code yet.
 
 ## Blockers
 none
@@ -54,9 +55,11 @@ none
 - Process feedback: [thoughts/shared/process-feedback.md](thoughts/shared/process-feedback.md)
 - Design A Live bots (approved; scope REDUCE recorded 2026-10-26): [docs/design/2026-10-26-live-bots.md](docs/design/2026-10-26-live-bots.md)
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
+- Architecture A Live bots (CP-B pending): [docs/architecture/2026-10-26-live-bots.md](docs/architecture/2026-10-26-live-bots.md)
+- Cross-model review A (awaiting Codex): [thoughts/shared/verification/2026-10-26-live-bots-arch-review.md](thoughts/shared/verification/2026-10-26-live-bots-arch-review.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
-- ADRs 0001-0005: [docs/decisions/](docs/decisions/)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-26_23-55-00_research-done-cp-r-pending.md](thoughts/shared/handoffs/2026-10-26_23-55-00_research-done-cp-r-pending.md)
+- ADRs 0001-0010 (0006-0010 proposed): [docs/decisions/](docs/decisions/)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-26_23-57-56_architecture-proposed-cp-b-pending.md](thoughts/shared/handoffs/2026-10-26_23-57-56_architecture-proposed-cp-b-pending.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Plan (approved): [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md](thoughts/shared/plans/2026-10-25-mmbridge-mcp.md)
 - Verification s1 (PASS): [thoughts/shared/verification/2026-10-26-s1-verify.md](thoughts/shared/verification/2026-10-26-s1-verify.md)
