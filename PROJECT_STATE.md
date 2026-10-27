@@ -31,13 +31,13 @@ implement (increment A Live bots, Large) - PROCESS.md section 3.
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[SLICE-20261027-lb4-signed-wake-dispatcher](thoughts/shared/slices/2026-10-27-lb4-signed-wake-dispatcher.md) (todo). Previous: lb3 [done](thoughts/shared/slices/2026-10-27-lb3-listener-filters.md)
+[SLICE-20261027-lb4-signed-wake-dispatcher](thoughts/shared/slices/2026-10-27-lb4-signed-wake-dispatcher.md) (blocked: Issue in Phase 4). Previous: lb3 [done](thoughts/shared/slices/2026-10-27-lb3-listener-filters.md)
 
 ## Next action
-lb3 done (CP-S logged; ws_spike passed on Coolify). NEXT: implementer runs eng-run implement on lb4 (SLICE-20261027-lb4-signed-wake-dispatcher), then planner runs eng-verify. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
+lb4 implemented except a DM-only bot config: 5/7 lb4 specs green, unit 216 + MCP acceptance 16 green (commit 446047a). BLOCKED on "Issue in Phase 4" (see Blockers). Planner: take the decision to Rob, then the implementer finishes lb4. Codex review of lb4 still to run (codex not installed on the implementer PC). Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
 
 ## Blockers
-none
+- 2026-10-27 Issue in Phase 4: specs `test_dm_to_bot_wakes_bot_once` and `test_forged_wake_is_rejected` register a DM-only bot (`given_live_bot("eddie", channels=[])`), but store validation and `admin set-bot` (lb1, PR-6; `tests/unit/test_store.py:107`) reject an empty channel list. Rob decides: allow `channels: []` (suggested, ~10 lines + tests) or change the specs (speclock). Details: lb4 slice card, Blockers.
 
 ## Pending approvals
 See `pending_approvals` in the front matter (the only copy; `.eng/bin/eng-status` renders it). Do not list items here.
@@ -62,7 +62,7 @@ none
 - Cross-model review A (awaiting Codex): [thoughts/shared/verification/2026-10-26-live-bots-arch-review.md](thoughts/shared/verification/2026-10-26-live-bots-arch-review.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0010 (all accepted): [docs/decisions/](docs/decisions/)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-27_02-25-15_lb3-implemented-awaiting-verify.md](thoughts/shared/handoffs/2026-10-27_02-25-15_lb3-implemented-awaiting-verify.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-27_12-53-47_lb4-blocked-dm-only-bot.md](thoughts/shared/handoffs/2026-10-27_12-53-47_lb4-blocked-dm-only-bot.md)
 - Review lb3 (addressed, no findings): [thoughts/shared/verification/2026-10-27-slice-20261027-lb3-listener-filters-review.md](thoughts/shared/verification/2026-10-27-slice-20261027-lb3-listener-filters-review.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Plan (approved): [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md](thoughts/shared/plans/2026-10-25-mmbridge-mcp.md)
