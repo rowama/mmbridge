@@ -1,17 +1,17 @@
 ---
 id: STATE
 type: project-state
-phase: implement
+phase: discover
 status: active
 owner_agent: Eddie
 date: 2026-10-26
 links: []
-triage: small             # unset | small | medium | large
-active_slice: thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md
+triage: large             # unset | small | medium | large
+active_slice: none
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
 pending_approvals:
-  - "CP-S: thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md - manual verification after Coolify redeploy (set FORWARDED_ALLOW_IPS)"
+  - "CP-A: docs/design/2026-10-26-live-bots.md - confirm triage Large now; then problem/requirements/acceptance examples after discover"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -26,21 +26,19 @@ acceptance: executable-specs   # v2.5: tests/acceptance/, see PROCESS.md 13
 > Update it at the end of every session. Keep it under one screen.
 
 ## Current phase
-implement (increment D hardening, small confirmed; slice in review) - PROCESS.md section 3.
+discover (increment A Live bots, triaged Large; D hardening done) - PROCESS.md section 3.
 
 ## Goal (one sentence)
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[D hardening: XFF + Bearer case](thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md) (review)
+none (D hardening [done](thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md))
 
 ## Next action
-D slice in review: eng-verify, then Coolify redeploy with FORWARDED_ALLOW_IPS = real Traefik IP (Rob) and CP-S live checks (/health, list_channels, anon 429). After D ships: eng-triage A.
-
+A Live bots: Rob confirms Large; then eng-discover fills [design stub](docs/design/2026-10-26-live-bots.md) (resolve NEEDS CLARIFICATION) toward CP-A. No code for A yet.
 
 ## Blockers
-- Rob: real Coolify Traefik IP/subnet for FORWARDED_ALLOW_IPS (Eddie asking). Redeploy needed for CP-S.
-
+none
 
 ## Pending approvals
 See `pending_approvals` in the front matter (the only copy; `.eng/bin/eng-status` renders it). Do not list items here.
@@ -55,6 +53,7 @@ none
 - Owner guide: [OWNER-GUIDE.md](OWNER-GUIDE.md)
 - Definition of Done: [docs/definition-of-done.md](docs/definition-of-done.md)
 - Process feedback: [thoughts/shared/process-feedback.md](thoughts/shared/process-feedback.md)
+- Design A Live bots (draft stub, discover): [docs/design/2026-10-26-live-bots.md](docs/design/2026-10-26-live-bots.md)
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0005: [docs/decisions/](docs/decisions/)
@@ -73,6 +72,7 @@ none
      Pre-kit decisions: back-fill with Checkpoint "pre-kit" and Decision "approved (back-filled, pre-kit)". .eng/bin/eng-check matches rows to statuses. -->
 | Date | Checkpoint | Artifact | Decision (Rob) |
 |---|---|---|---|
+| 2026-10-26 | CP-S | thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md | approved (live: FORWARDED_ALLOW_IPS working, logs show public client IPs; 1 container; via Eddie) |
 | 2026-10-26 | triage (size) | thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md | approved (small confirmed, security; via Eddie) |
 | 2026-10-26 | CP-P | CHANGELOG.md (v0.2.0, commit 9946445, tag v0.2.0) | approved (release v0.2.0) |
 | 2026-10-26 | CP-S | thoughts/shared/slices/2026-10-25-s3-dm.md | approved (live same-channel dual DM, ping via dm_read, nobody -> unknown_user)
