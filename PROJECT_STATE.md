@@ -10,7 +10,8 @@ triage: large             # unset | small | medium | large
 active_slice: none
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: []
+pending_approvals:
+  - "CP-R: thoughts/shared/research/2026-10-26-live-bots-current-code.md - read and accept research"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -34,7 +35,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 none (D hardening [done](thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md))
 
 ## Next action
-A Live bots: scope decided REDUCE + defer A5 (see Approval log): one-bot v1 = REQ-A1, A2, A3 (own-post only), A4, A7, A8 with a hand-set channel list. Cut to TODOS: A6 multi-bot, A3 bot-to-bot caps, A5/A5b/A5c auto-join. Next: eng-research -> CP-R. No code for A yet.
+A Live bots: scope recorded REDUCE + defer A5 (one bot; A1, A2, A3 own-post, A4, A7, A8; hand-set channel list). Research written: [thoughts/shared/research/2026-10-26-live-bots-current-code.md](thoughts/shared/research/2026-10-26-live-bots-current-code.md). Awaiting Rob CP-R, then eng-architecture-review (new ADR for encrypted token store + security review at CP-B). No code for A yet.
 
 ## Blockers
 none
@@ -56,12 +57,13 @@ none
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0005: [docs/decisions/](docs/decisions/)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-26_21-32-04_retro-done-next-discover.md](thoughts/shared/handoffs/2026-10-26_21-32-04_retro-done-next-discover.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-26_23-55-00_research-done-cp-r-pending.md](thoughts/shared/handoffs/2026-10-26_23-55-00_research-done-cp-r-pending.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Plan (approved): [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md](thoughts/shared/plans/2026-10-25-mmbridge-mcp.md)
 - Verification s1 (PASS): [thoughts/shared/verification/2026-10-26-s1-verify.md](thoughts/shared/verification/2026-10-26-s1-verify.md)
 - Slices: [thoughts/shared/slices/](thoughts/shared/slices/)
 - Specs: [tests/acceptance/specs/test_mmbridge.py](tests/acceptance/specs/test_mmbridge.py)
+- Research A Live bots (CP-R pending): [thoughts/shared/research/2026-10-26-live-bots-current-code.md](thoughts/shared/research/2026-10-26-live-bots-current-code.md)
 - Research: [thoughts/shared/research/2026-10-25-mmbridge-current-code.md](thoughts/shared/research/2026-10-25-mmbridge-current-code.md)
 - Deferred work: [TODOS.md](TODOS.md)
 - Retro (done): [thoughts/shared/retros/2026-10-26-v0.2.0.md](thoughts/shared/retros/2026-10-26-v0.2.0.md)
