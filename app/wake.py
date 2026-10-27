@@ -8,6 +8,10 @@ and missing headers.
 Dispatcher.tick(): heartbeat the single-owner lease (standby while another owner is fresh), recover_stale,
 prune (start + every 6 h), claim_due up to 4 and POST them concurrently (5 s timeout). Config is read at
 send time (url/secret rotation applies to queued wakes); wakes of a previous bot user fail `bot_rotated`.
+Nothing is claimed until the listener has resolved the identity of the CURRENT token (meta bot_user_id +
+bot_token_fp match the config), so a stale id from a previous token/run never approves old wakes (review P1).
+Each POST has an overall deadline of TIMEOUT_S (not only per network step), so a slow-drip receiver cannot
+stall the loop and the owner heartbeat (review P2).
 2xx delivered; 408/429/5xx/timeout/connect retry (state.next_delay; failed after max attempts); other 4xx
 failed. Logs carry post id, attempt and error class only: never token, secret, signature or message text.
 """
@@ -28,6 +32,11 @@ TIMEOUT_S = 5
 CONCURRENCY = 4
 PRUNE_EVERY_S = 6 * 3600
 POLL_S = 0.5
+
+
+def token_fp(token: str) -> str:
+    """Non-secret fingerprint of the bot token, stored next to bot_user_id by the listener."""
+    return hashlib.sha256(("mmb-token-fp:" + token).encode()).hexdigest()[:16]
 
 
 def _mac(secret: str, ts: str, body: bytes) -> str:
@@ -68,6 +77,7 @@ class Dispatcher:
         self.poll_s, self.concurrency = poll_s, concurrency
         self.owner = None
         self._pruned_at = None
+        self._waiting = False
 
     async def run(self) -> None:
         while True:
@@ -88,27 +98,35 @@ class Dispatcher:
             n = await asyncio.to_thread(st.prune, 7)
             self._pruned_at = now
             _log("wakes_pruned", count=n)
+        cfg = self._cfg()
+        bot_id = await asyncio.to_thread(st.get_meta, "bot_user_id")
+        fp = await asyncio.to_thread(st.get_meta, "bot_token_fp")
+        if not bot_id or fp != token_fp(cfg.token):
+            if not self._waiting:
+                _log("dispatcher_waiting_identity", instance=st.instance_id)
+                self._waiting = True
+            return 0
+        self._waiting = False
         due = await asyncio.to_thread(st.claim_due, now, self.concurrency)
         if due:
-            bot_id = await asyncio.to_thread(st.get_meta, "bot_user_id")
-            await asyncio.gather(*(self._send(w, bot_id) for w in due))
+            await asyncio.gather(*(self._send(w, bot_id, cfg) for w in due))
         return len(due)
 
-    async def _send(self, w, bot_id: str | None) -> None:
+    async def _send(self, w, bot_id: str, cfg) -> None:
         st = self.state
-        if bot_id and (w.payload.get("bot") or {}).get("user_id") != bot_id:
+        if (w.payload.get("bot") or {}).get("user_id") != bot_id:
             await asyncio.to_thread(st.mark_failed, w.post_id, "bot_rotated")
             _log("wake_failed", post_id=w.post_id, attempt=w.attempts, error="bot_rotated")
             return
-        cfg = self._cfg()
         body = json.dumps({**w.payload, "attempt": w.attempts}, separators=(",", ":")).encode()
         ts = int(self.clock())
         headers = {"Content-Type": "application/json", "X-MMB-Delivery": w.post_id,
                    "X-MMB-Timestamp": str(ts), "X-MMB-Signature": sign(cfg.wake_secret, ts, body)}
         try:
-            r = await self.http.post(cfg.wake_url, content=body, headers=headers, timeout=TIMEOUT_S)
+            r = await asyncio.wait_for(
+                self.http.post(cfg.wake_url, content=body, headers=headers, timeout=TIMEOUT_S), TIMEOUT_S)
             status, err = r.status_code, "http_%d" % r.status_code
-        except httpx.TimeoutException:
+        except (httpx.TimeoutException, asyncio.TimeoutError):
             status, err = None, "timeout"
         except httpx.TransportError:
             status, err = None, "connect"

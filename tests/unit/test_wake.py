@@ -13,7 +13,7 @@ import pytest
 from app import store
 from app.state import State
 from app.store import BotConfig
-from app.wake import Dispatcher, sign, verify
+from app.wake import Dispatcher, sign, token_fp, verify
 from drivers.wake_receiver import WakeReceiver
 
 TOKEN = "tok-eddie-" + "x" * 20
@@ -68,7 +68,15 @@ def enqueue(state, post_id="p-1", bot_id="u-eddie"):
     state.enqueue(post_id, "c-1", payload(post_id, bot_id), post_create_at=1_800_000_000_000)
 
 
+def resolve(state, bot_id="u-eddie", token=TOKEN):
+    """What the listener records after users/me for the current token."""
+    state.set_meta("bot_user_id", bot_id)
+    state.set_meta("bot_token_fp", token_fp(token))
+
+
 def dispatcher(state, http, c=None, clk=None, **kw):
+    if state.get_meta("bot_token_fp") is None:
+        resolve(state, state.get_meta("bot_user_id") or "u-eddie")
     return Dispatcher(state, c or cfg(), http, clock=clk or state.clock, **kw)
 
 
@@ -402,3 +410,46 @@ async def test_bot_rotated_fails_old_wakes(state, rx, caplog):
     assert state.wake("p-new").status == "delivered"
     assert list(rx.accepted) == ["p-new"]
     assert any("bot_rotated" in r.getMessage() for r in caplog.records)
+
+
+# --- review P1: identity of the CURRENT token gates dispatch -------------------------------------------------------
+async def test_no_identity_sends_nothing(state, rx):
+    enqueue(state)
+    async with client(rx.transport()) as http:
+        assert await Dispatcher(state, cfg(), http, clock=state.clock).tick() == 0
+    assert rx.requests == [] and state.wake("p-1").status != "delivered" and state.wake("p-1").attempts == 0
+
+
+async def test_restart_after_token_swap_waits_then_fails_old_wakes(state, rx):
+    enqueue(state, "p-old", bot_id="u-eddie")
+    resolve(state, "u-eddie", token="tok-old-" + "y" * 20)   # stored by the previous run, previous token
+    async with client(rx.transport()) as http:
+        d = Dispatcher(state, cfg(), http, clock=state.clock)  # cfg now holds the NEW token (u-ada)
+        assert await d.tick() == 0                             # stale id must not approve old wakes
+        assert rx.requests == []
+        resolve(state, "u-ada")                                # listener resolved users/me for the new token
+        await d.tick()
+    assert (state.wake("p-old").status, state.wake("p-old").last_error) == ("failed", "bot_rotated")
+    assert rx.requests == []
+
+
+# --- review P2: overall deadline per POST ------------------------------------------------------------------------
+async def test_drip_response_hits_overall_deadline(state, monkeypatch):
+    import time
+    from app import wake
+    monkeypatch.setattr(wake, "TIMEOUT_S", 0.3)
+
+    class Drip(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            for _ in range(40):                                # each chunk well inside the per-read timeout
+                await asyncio.sleep(0.05)
+                yield b"x"
+
+    enqueue(state)
+    async with client(httpx.MockTransport(lambda r: httpx.Response(200, stream=Drip()))) as http:
+        t0 = time.monotonic()
+        await dispatcher(state, http).tick()
+        assert time.monotonic() - t0 < 1.5
+    w = state.wake("p-1")
+    assert w.status != "delivered" and w.last_error == "timeout"
+
