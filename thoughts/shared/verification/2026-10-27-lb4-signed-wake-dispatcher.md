@@ -2,50 +2,58 @@
 id: VERIF-20261027-lb4-signed-wake-dispatcher
 type: verification
 phase: verify
-status: fail
+status: pass
 owner_agent: eddie
 date: 2026-10-27
 links: [thoughts/shared/slices/2026-10-27-lb4-signed-wake-dispatcher.md, thoughts/shared/plans/2026-10-27-live-bots.md]
 plan: thoughts/shared/plans/2026-10-27-live-bots.md
-git_commit: 6fc2ce1
+git_commit: 219a9a1
 ---
 # Verification: SLICE-20261027-lb4-signed-wake-dispatcher
 
 ## Implementation status
-- [x] Phase 4: signed wake dispatcher - implemented (commits 446047a, 068ab22; unblock fix 6fc2ce1, DM-only bot `channels: []`)
+- [x] Phase 4: signed wake dispatcher - implemented (commits 446047a, 068ab22; unblock fix 6fc2ce1, DM-only bot `channels: []`; review fixes b061bc3, 1115bc2, e7d4156, 837a9c0, 219a9a1)
 
-## Automated verification (re-executed in this session on Merkle WSL)
+## Automated verification (re-executed on Merkle WSL at 219a9a1)
 | Command | Exit | Notes |
 |---|---|---|
-| .venv/bin/pytest tests/unit -q (x3) | 0 | 217 passed, 14 warnings each run (~11.7s); stable |
+| .venv/bin/pytest tests/unit -q (x3) | 0 | 229 passed, 14 warnings each run (~12.8s); stable |
 | .venv/bin/pytest tests/acceptance -q | 0 | 16 passed, 9 skipped |
-| PR-12 explicit 7 node ids (`--channel live`) | 0 | 7 passed |
-| .venv/bin/pytest -q --channel live tests/acceptance/specs/test_live_bots.py (info) | 1 | 8 passed, 1 failed: `test_post_during_connection_drop_wakes_exactly_once_after_reconnect` - reconnect is lb5 scope (drop/restore_connection not built), expected |
+| PR-12 explicit 7 node ids from card `specs:` (`--channel live`) | 0 | 7 passed |
 | python3 .eng/bin/eng-check . | 0 | 0 errors, 0 warnings |
 | python3 .eng/bin/eng-spec status . | 0 | lock approval ok; specs and DSL interface match the lock |
+
+Info (previous run, unchanged scope): full live spec file has 1 expected failure, `test_post_during_connection_drop_wakes_exactly_once_after_reconnect` (reconnect, lb5).
 
 ## Executable specs (v2.5)
 | REQ | specs | result |
 |---|---|---|
 | REQ-A1/A2/A3/A4/A8 (card specs:) | 7 PR-12 node ids in tests/acceptance/specs/test_live_bots.py | 7/7 pass |
 
-Spec lock: clean (speclock sha256:3108f1fe6a93cfae). No locked spec or DSL step edited; driver `tests/acceptance/drivers/live.py` (free layer) omits `--channels` for an empty list.
+Spec lock: clean (speclock sha256:3108f1fe6a93cfae). No locked spec or DSL step edited.
 
 ## Code review findings
-Diff 5f70402..6fc2ce1: app/wake.py (sign/verify/Dispatcher), listener meta bot_user_id, store/admin empty channel list, wake receiver + in-process live driver, fake MM mm_ids, 41 new unit tests.
-- HMAC: constant-time compare, v1 only, 300 s skew, signed bytes = sent bytes, no token in payload/headers/logs. Pass.
-- Unblock fix: `channels: []` accepted, ids still validated; `--channels ""` still refused; `--channels` omitted = DM-only. Pass.
-- Deviations on card (no cfg_gen column; standby second dispatcher) acceptable, but see Codex P1: the meta-based rotation check is what the review breaks.
+Diff 5f70402..219a9a1: app/wake.py (sign/verify/Dispatcher), listener meta identity, store/admin empty channel list + URL parse check, wake receiver + in-process live driver, fake MM mm_ids, 53 new unit tests.
+- HMAC: constant-time compare, v1 only, 300 s skew, signed bytes = sent bytes, X-MMB-Delivery bound to signed delivery_id, no token in payload/headers/logs. Pass.
+- Identity gate: dispatcher claims nothing until meta `bot_identity` = "<token_fp>:<bot_user_id>" (one row, written by the listener after users/me) matches the current token; old-bot wakes fail `bot_rotated`. Pass.
+- Robustness: overall 5 s POST deadline; malformed URL permanent `invalid_url`; any other send error retried; nothing escapes tick()/run(). Pass.
 
 ## Cross-model review
-`eng-run code-review SLICE-20261027-lb4-signed-wake-dispatcher --base 5f70402` (codex, run log thoughts/shared/runs/2026-10-27-code-review-slice-20261027-lb4-signed-wake-dispatcher-2.md). eng-run's parser recorded "No findings" in review-2.md, but Codex reported two (first run without --base reviewed an empty diff, discarded):
-- **[P1] app/wake.py:93-99** - after a token swap and restart, meta `bot_user_id` still names the previous bot until the listener's users/me completes; the dispatcher can sign old-bot queued wakes with the new bot's url/secret and send them to the new target. Missing meta (`bot_id` None) skips the check entirely. Verifier agrees: real, security-relevant (message content to the wrong receiver), not covered by tests. Fix: dispatcher must not claim/send until the current config's identity is resolved (e.g. `identity` provider from the listener; no meta -> no send) + unit test for restart-after-rotation.
-- **[P2] app/wake.py:108-112** - `timeout=5` is per network op, not total; a slow-drip receiver can stall `tick()` and heartbeats, letting another dispatcher take over and redeliver. Verifier agrees. Fix: `asyncio.wait_for(post, TIMEOUT_S)` -> retryable `timeout` + unit test.
+`eng-run code-review SLICE-20261027-lb4-signed-wake-dispatcher --base 5f70402` (codex). eng-run's parser wrote "No findings" for every run; findings below are from the terminal output.
+| Run log suffix (thoughts/shared/runs/2026-10-27-code-review-slice-20261027-lb4-signed-wake-dispatcher*.md) | Finding | Disposition |
+|---|---|---|
+| -2 | [P1] stale/missing bot_user_id let old wakes go to a new bot | fixed b061bc3 (token fingerprint gate; tests no_identity, restart_after_token_swap) |
+| -2 | [P2] timeout per network step, not total | fixed b061bc3 (asyncio.wait_for; test drip_response_hits_overall_deadline) |
+| (no suffix) | [P2] unsigned X-MMB-Delivery allows replay under a new key | fixed 1115bc2 (verify requires header == signed delivery_id; 4 reject cases) |
+| -3 | [P2] bot_user_id and fp read separately: rotation race | fixed e7d4156 (single meta row bot_identity; test identity_is_one_snapshot) |
+| -4 | [P2] malformed wake_url raised InvalidURL out of tick | fixed 837a9c0 (https_ok parses URL; invalid_url permanent; 2 tests) |
+| -5 | [P2] DecodingError escaped tick | fixed 219a9a1 (HTTPError/any error -> retry; 2 tests) |
+| -6 | none: "No actionable defects were identified" | - |
 
 ## Definition of Done
 - [x] Automated checks green (unit x3, acceptance, PR-12 7/7, eng-check, eng-spec)
-- [ ] Independent review findings resolved - P1, P2 open
-- [ ] Manual verification (Rob, CP-S) - not requested yet
+- [x] Independent review findings resolved (all fixed; final review clean)
+- [ ] Manual verification (Rob, CP-S): run the README "Wake receiver" example (added with this report) against a local dispatcher and see a signed wake accepted; a hand-tampered request (body, timestamp or X-MMB-Delivery changed) is rejected 401
 
 ## Result
-**FAIL** - back to implementer for P1 and P2 (small, app/wake.py + 2 unit tests). Not pushed. Re-verify after fix, then CP-S.
+**PASS** - pushed to main; CP-S pending (manual check above).

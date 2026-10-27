@@ -52,3 +52,29 @@ own Mattermost bot token per call.
 
 ## Process
 This repo uses the eng-process kit; start at [PROJECT_STATE.md](PROJECT_STATE.md).
+
+## Wake receiver (live bots)
+
+With live bots on, mmbridge POSTs each wake to the bot's `wake_url` with headers `X-MMB-Delivery`, `X-MMB-Timestamp` and `X-MMB-Signature: v1=<hex HMAC-SHA256(secret, ts + "." + body)>`. A receiver must check the signature before acting:
+
+```python
+# pip install fastapi uvicorn ; WAKE_SECRET=<secret printed by admin set-bot> uvicorn receiver:app --port 9000
+import os, time
+from fastapi import FastAPI, Request, Response
+from app.wake import verify          # or copy verify() from app/wake.py
+
+app, seen = FastAPI(), set()
+
+@app.post("/wake")
+async def wake(request: Request):
+    body = await request.body()
+    if not verify(os.environ["WAKE_SECRET"], request.headers, body, int(time.time())):
+        return Response(status_code=401)   # bad signature, stale timestamp, or X-MMB-Delivery != signed delivery_id
+    if request.headers["x-mmb-delivery"] in seen:
+        return Response(status_code=204)   # repeat delivery: already handled
+    seen.add(request.headers["x-mmb-delivery"])
+    print(body.decode())                   # hand the wake to your bot here
+    return Response(status_code=204)
+```
+
+Tamper test: copy a logged request, change one byte of the body, the timestamp or `X-MMB-Delivery`, and resend it; the receiver answers 401.
