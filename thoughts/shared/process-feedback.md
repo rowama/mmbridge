@@ -35,3 +35,4 @@ Format: `- YYYY-MM-DD - <confusing | redundant | missing | broken> - <what happe
 - 2026-10-26 - confusing - eng-ship text expects PR/CP-D; project ships main + tag + CP-P - handled: deferred to kit feedback, kit lesson L2
 - 2026-10-26 - confusing - CopyFromBox / PowerShell quoting friction for planner edits on Merkle - handled: deferred, kit lesson L5
 - 2026-10-26 - missing - friction lived in handoffs; this log and Design adoption were empty at retro - handled: kit lesson L6; back-filled by retro
+- 2026-10-27 - broken - `eng-run code-review` from Claude Code's non-login shell: `codex` not on PATH (installed under ~/.nvm/versions/node/*/bin); exit 127 until PATH was prefixed - handled: worked around per run (lb2); fix: add nvm bin to PATH in runner env or .eng/runners.toml

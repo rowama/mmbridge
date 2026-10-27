@@ -31,10 +31,10 @@ implement (increment A Live bots, Large) - PROCESS.md section 3.
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[SLICE-20261027-lb2-state-db-wake-queue](thoughts/shared/slices/2026-10-27-lb2-state-db-wake-queue.md) (todo). Previous: lb1 [done](thoughts/shared/slices/2026-10-27-lb1-bot-store-admin-cli.md)
+[SLICE-20261027-lb2-state-db-wake-queue](thoughts/shared/slices/2026-10-27-lb2-state-db-wake-queue.md) (review). Previous: lb1 [done](thoughts/shared/slices/2026-10-27-lb1-bot-store-admin-cli.md)
 
 ## Next action
-lb1 done (CP-S logged; live container check deferred until redeploy). NEXT: implementer runs eng-run implement on lb2 (SLICE-20261027-lb2-state-db-wake-queue), then planner runs eng-verify. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
+lb2 implemented (status review; commits 6551dd9, dc9efe0; Codex review 1 finding fixed). NEXT: planner runs eng-verify on lb2, then requests CP-S (`admin failed`/`stats` on empty DB). Do not start lb3 before CP-S. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
 
 ## Blockers
 none
@@ -56,12 +56,13 @@ none
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
 - Plan A Live bots (status in front matter): [thoughts/shared/plans/2026-10-27-live-bots.md](thoughts/shared/plans/2026-10-27-live-bots.md)
 - Plan review A (AWAITING Codex, mandatory): [thoughts/shared/verification/2026-10-27-live-bots-plan-review.md](thoughts/shared/verification/2026-10-27-live-bots-plan-review.md)
+- Review lb2 (addressed): [thoughts/shared/verification/2026-10-27-slice-20261027-lb2-state-db-wake-queue-review.md](thoughts/shared/verification/2026-10-27-slice-20261027-lb2-state-db-wake-queue-review.md)
 - Specs A: [tests/acceptance/specs/test_live_bots.py](tests/acceptance/specs/test_live_bots.py)
 - Architecture A Live bots (approved): [docs/architecture/2026-10-26-live-bots.md](docs/architecture/2026-10-26-live-bots.md)
 - Cross-model review A (awaiting Codex): [thoughts/shared/verification/2026-10-26-live-bots-arch-review.md](thoughts/shared/verification/2026-10-26-live-bots-arch-review.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0010 (all accepted): [docs/decisions/](docs/decisions/)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-27_01-37-10_lb1-implemented-awaiting-verify.md](thoughts/shared/handoffs/2026-10-27_01-37-10_lb1-implemented-awaiting-verify.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-27_02-07-31_lb2-implemented-awaiting-verify.md](thoughts/shared/handoffs/2026-10-27_02-07-31_lb2-implemented-awaiting-verify.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Plan (approved): [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md](thoughts/shared/plans/2026-10-25-mmbridge-mcp.md)
 - Verification s1 (PASS): [thoughts/shared/verification/2026-10-26-s1-verify.md](thoughts/shared/verification/2026-10-26-s1-verify.md)
