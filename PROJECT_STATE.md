@@ -10,7 +10,8 @@ triage: large             # unset | small | medium | large
 active_slice: SLICE-20261027-lb4-signed-wake-dispatcher
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: []
+pending_approvals:
+  - "CP-S: thoughts/shared/slices/2026-10-27-lb4-signed-wake-dispatcher.md - manual verification"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -31,10 +32,10 @@ implement (increment A Live bots, Large) - PROCESS.md section 3.
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[SLICE-20261027-lb4-signed-wake-dispatcher](thoughts/shared/slices/2026-10-27-lb4-signed-wake-dispatcher.md) (blocked: Issue in Phase 4). Previous: lb3 [done](thoughts/shared/slices/2026-10-27-lb3-listener-filters.md)
+[SLICE-20261027-lb4-signed-wake-dispatcher](thoughts/shared/slices/2026-10-27-lb4-signed-wake-dispatcher.md) (review: verify PASS at 219a9a1, awaiting CP-S). Previous: lb3 [done](thoughts/shared/slices/2026-10-27-lb3-listener-filters.md)
 
 ## Next action
-lb4 unblocked by allowing `channels: []` (DM-only bot, delta section 'Unblocking lb4'); implementer/verify finishing lb4. Allow-list delta: Rob's wake rules recorded in the delta; delta stays in-review because eng-check gates it on 4 high plan-review findings (F1-F4) - planner fixes them in lb4b prep, then the CP-C row is logged. After lb4 CP-S: lb4b (full allow-list removal) - do not start until the planner says. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
+lb4 verify PASS at 219a9a1 (report thoughts/shared/verification/2026-10-27-lb4-signed-wake-dispatcher.md; pushed). Waiting on Rob's CP-S manual check: run the README 'Wake receiver' example against a local dispatcher; a hand-tampered request is rejected 401. Allow-list delta stays in-review until its plan-review highs are dispositioned and the new spec lock is approved (CP-C). After lb4 CP-S: lb4b (full allow-list removal) - do not start until the planner says. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
 
 ## Blockers
 - none
