@@ -11,7 +11,7 @@ active_slice: none
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
 pending_approvals:
-  - "CP-A: docs/design/2026-10-26-live-bots.md - confirm triage Large now; then problem/requirements/acceptance examples after discover"
+  - "CP-A: docs/design/2026-10-26-live-bots.md - answer Q1-Q7 then approve problem/requirements/acceptance examples"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -35,7 +35,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 none (D hardening [done](thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md))
 
 ## Next action
-A Live bots: Rob confirms Large; then eng-discover fills [design stub](docs/design/2026-10-26-live-bots.md) (resolve NEEDS CLARIFICATION) toward CP-A. No code for A yet.
+A Live bots (Large confirmed): eng-discover drafted [design](docs/design/2026-10-26-live-bots.md); resolve Q1-Q7 with Rob one at a time (Q6 first), then CP-A. No code for A yet.
 
 ## Blockers
 none
@@ -72,6 +72,7 @@ none
      Pre-kit decisions: back-fill with Checkpoint "pre-kit" and Decision "approved (back-filled, pre-kit)". .eng/bin/eng-check matches rows to statuses. -->
 | Date | Checkpoint | Artifact | Decision (Rob) |
 |---|---|---|---|
+| 2026-10-26 | triage (size) | docs/design/2026-10-26-live-bots.md | approved (large confirmed; via Eddie) |
 | 2026-10-26 | CP-S | thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md | approved (live: FORWARDED_ALLOW_IPS working, logs show public client IPs; 1 container; via Eddie) |
 | 2026-10-26 | triage (size) | thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md | approved (small confirmed, security; via Eddie) |
 | 2026-10-26 | CP-P | CHANGELOG.md (v0.2.0, commit 9946445, tag v0.2.0) | approved (release v0.2.0) |
