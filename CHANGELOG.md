@@ -2,6 +2,10 @@
 All notable changes to this project. Format: Keep a Changelog style; newest first.
 
 ## [Unreleased]
+<!-- id: CHANG-20261027-lb1-bot-store | owner_agent: unassigned | date: 2026-10-27 -->
+### Added
+- Operator CLI `python -m app.admin set-bot | show | rotate-key` stores the live bot's token, wake URL, wake secret and channel ids Fernet-encrypted at /data/bots.enc (key MMB_STORE_KEY); the token is never printed or logged. No runtime behaviour change yet.
+
 <!-- id: CHANG-20261026-d-hardening-xff-bearer | owner_agent: unassigned | date: 2026-10-26 -->
 ### Security
 - Forged X-Forwarded-For headers no longer bypass the anonymous rate limit (only FORWARDED_ALLOW_IPS proxies are trusted), and the Bearer scheme is matched case-insensitively.

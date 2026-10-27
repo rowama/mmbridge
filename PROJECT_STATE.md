@@ -3,7 +3,7 @@ id: STATE
 type: project-state
 phase: implement
 status: active
-owner_agent: grok-bot
+owner_agent: claude-code
 date: 2026-10-27
 links: []
 triage: large             # unset | small | medium | large
@@ -31,10 +31,10 @@ implement (increment A Live bots, Large) - PROCESS.md section 3.
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[SLICE-20261027-lb1-bot-store-admin-cli](thoughts/shared/slices/2026-10-27-lb1-bot-store-admin-cli.md) (todo). Previous: D hardening [done](thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md))
+[SLICE-20261027-lb1-bot-store-admin-cli](thoughts/shared/slices/2026-10-27-lb1-bot-store-admin-cli.md) (review). Previous: D hardening [done](thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md))
 
 ## Next action
-A Live bots: plan signed off (see Approval log). NEXT: implementer runs eng-run implement on lb1 (Merkle). Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
+lb1 implemented (commit cf78905, status review; Codex slice review: no findings). NEXT: planner runs eng-verify on lb1, then requests CP-S (manual: set-bot with real token, show masked, xxd no plaintext). Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
 
 ## Blockers
 none
@@ -61,7 +61,7 @@ none
 - Cross-model review A (awaiting Codex): [thoughts/shared/verification/2026-10-26-live-bots-arch-review.md](thoughts/shared/verification/2026-10-26-live-bots-arch-review.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0010 (all accepted): [docs/decisions/](docs/decisions/)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-27_00-30-11_plan-drafted-awaiting-plan-review.md](thoughts/shared/handoffs/2026-10-27_00-30-11_plan-drafted-awaiting-plan-review.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-27_01-37-10_lb1-implemented-awaiting-verify.md](thoughts/shared/handoffs/2026-10-27_01-37-10_lb1-implemented-awaiting-verify.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Plan (approved): [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md](thoughts/shared/plans/2026-10-25-mmbridge-mcp.md)
 - Verification s1 (PASS): [thoughts/shared/verification/2026-10-26-s1-verify.md](thoughts/shared/verification/2026-10-26-s1-verify.md)
