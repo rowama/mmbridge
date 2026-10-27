@@ -10,22 +10,22 @@ plan: thoughts/shared/plans/2026-10-27-live-bots.md
 plan_phase: 5
 review: required (security + deploy: lifespan, reconnect, token secrecy end to end) - thoughts/shared/verification/2026-10-27-lb5-review.md
 reqs: [REQ-A1, REQ-A2, REQ-A3, REQ-A4, REQ-A7, REQ-A8]
-specs: [tests/acceptance/specs/test_live_bots.py::test_post_during_connection_drop_wakes_exactly_once_after_reconnect, tests/acceptance/specs/test_live_bots.py::test_bot_token_never_appears_in_logs_output_or_wakes]
+specs: [tests/acceptance/specs/test_live_bots.py::test_post_during_connection_drop_wakes_exactly_once_after_reconnect, tests/acceptance/specs/test_live_bots.py::test_post_during_drop_in_channel_on_another_team_wakes_once_after_reconnect, tests/acceptance/specs/test_live_bots.py::test_bot_token_never_appears_in_logs_output_or_wakes]
 ---
 # Slice 5: Wire-up + LIVE_BOTS_ENABLED + reconnect; acceptance green
 
 Plan: [thoughts/shared/plans/2026-10-27-live-bots.md](../plans/2026-10-27-live-bots.md) Phase 5. Architecture: docs/architecture/2026-10-26-live-bots.md. **Security-relevant: gets the cross-model review.**
 
 ## Outcome (user-visible, demoable)
-In the real container, `LIVE_BOTS_ENABLED=true` starts listener + dispatcher from FastAPI lifespan, `/health` reports listener state, drops reconnect with resume or REST catch-up (15 min window) with exactly-once wakes; full live acceptance suite green against the container.
+In the real container, `LIVE_BOTS_ENABLED=true` starts listener + dispatcher from FastAPI lifespan, `/health` reports listener state, drops reconnect with resume or REST catch-up (15 min window) with exactly-once wakes; full live acceptance suite (re-locked lb4b specs) green against the container.
 
 ## Acceptance criteria
 - [ ] `app/main.py`: lifespan starts listener+dispatcher tasks only if flag true and store+state readable; `/health` adds `listener: disabled|off|connecting|ok|degraded` and `wake_failed_24h` (no secrets); MCP path unchanged
-- [ ] `app/listener.py`: reconnect backoff 1->60 s jitter, `?connection_id&sequence_number`, new id -> REST catch-up `GET /channels/{id}/posts?since=` for chosen+DM channels within `LIVE_CATCHUP_MINUTES` (default 15), seq reset to 0; 401 -> retry every 5 min; store mtime re-read every 30 s; single-listener lease in meta
+- [ ] `app/listener.py`: reconnect backoff 1->60 s jitter, `?connection_id&sequence_number`, new id -> REST catch-up `GET /channels/{id}/posts?since=` for all member channels (all teams, paged) + DM channels within `LIVE_CATCHUP_MINUTES` (default 15), seq reset to 0; 401 -> retry every 5 min; store mtime re-read every 30 s; single-listener lease in meta
 - [ ] `tests/acceptance/drivers/live.py`: container mode (docker image, temp /data, fakes on host network) per ADR-0010; scenario log capture for token scan
 - [ ] README/OWNER-GUIDE: deploy prerequisites + receiver HMAC verification snippet; CHANGELOG Unreleased
-- [ ] (PR-2) `ConfigHolder` coordinated reload for listener+dispatcher; invalid edit keeps old config; token/channel/url/secret rotation tests
-- [ ] (PR-3) Catch-up pagination, `(create_at, post_id)` ordering for equal timestamps, DM discovery via `/users/me/channels`, atomic cursor; crash-between-pages recovery test
+- [ ] (PR-2) `ConfigHolder` coordinated reload for listener+dispatcher; invalid edit keeps old config; token/url/secret rotation tests (no channel list after lb4b)
+- [ ] (PR-3) Catch-up pagination, `(create_at, post_id)` ordering for equal timestamps, membership discovery across all teams (`/users/me/teams` + `/users/me/teams/{team}/channels`, paged) incl. DMs, refresh every `LIVE_MEMBERSHIP_REFRESH_S` and on `user_added`/`added_to_team`/`user_removed`, first-seen-channel cursor = meta `last_event_at` bounded by window, atomic cursor; tests: crash-between-pages recovery, two teams, membership change, post during an outage in a channel joined during the outage (F4; architecture 'catch-up channel discovery')
 - [ ] (PR-4) Seq-gap on resume triggers catch-up; supervisor restarts crashed listener/dispatcher (MCP stays up, health degraded); startup delivers pending wakes exactly once
 - [ ] (PR-10) `/health` `listener: disabled|off|connecting|ok|degraded` + `wake_failed_24h` per architecture (replaces `on`)
 - [ ] (PR-11) Verification report includes `eng-spec status .` and `eng-spec trace .` output
@@ -45,4 +45,4 @@ In the real container, `LIVE_BOTS_ENABLED=true` starts listener + dispatcher fro
 <!-- date - agent - what changed (file:line) -->
 
 ## Blockers / deviations from plan
-none
+- Depends on lb4b (allow-list removal + re-locked specs, CP-C). The cross-team drop spec id above exists only after lb4b applies the re-lock (draft: thoughts/shared/plans/drafts/2026-10-27-lb4b-test_live_bots.py.draft).
