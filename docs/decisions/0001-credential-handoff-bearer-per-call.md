@@ -27,4 +27,4 @@ Positive: no secret storage in the bridge; identity isolation is inherited from 
 - Expected outcome: Two bots on the same bridge post under their own names; unauthenticated calls get 401 with zero Mattermost calls; no response or log contains a token (asserted by tests).
 - Check date: after slice 1 ships
 - What would prove it wrong: Grok Bot cannot send a per-connection Authorization header, or a token string appears in any response/log.
-- Score: unscored
+- Score: right (retro 2026-10-26-v0.2.0: live Grok Bot header reaches bridge; 401 w/o auth; no token in logs)

@@ -34,7 +34,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [thoughts/shared/slices/2026-10-25-s3-dm.md](thoughts/shared/slices/2026-10-25-s3-dm.md) (slices 1-3 done; CP-S 2026-10-26)
 
 ## Next action
-v0.2.0 released (commit 9946445, tag v0.2.0; release review recorded in Approval log). Run eng-retro for the v0.2.0 increment next.
+Rob reviews retro proposals in thoughts/shared/retros/2026-10-26-v0.2.0.md (3 process changes + 6 kit lesson hypotheses, none applied). After approval: apply agreed edits, tick them, then phase -> discover or done.
 
 
 ## Blockers
@@ -65,6 +65,7 @@ none
 - Specs: [tests/acceptance/specs/test_mmbridge.py](tests/acceptance/specs/test_mmbridge.py)
 - Research: [thoughts/shared/research/2026-10-25-mmbridge-current-code.md](thoughts/shared/research/2026-10-25-mmbridge-current-code.md)
 - Deferred work: [TODOS.md](TODOS.md)
+- Retro (draft): [thoughts/shared/retros/2026-10-26-v0.2.0.md](thoughts/shared/retros/2026-10-26-v0.2.0.md)
 
 ## Approval log
 <!-- One row per decision. Artifact cell names the file path(s). Decision: approved | accepted | partially accepted | deferred | rejected.

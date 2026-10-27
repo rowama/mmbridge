@@ -27,4 +27,4 @@ Positive: standard transport, no session state. Negative: SDK churn (pin it). Ne
 - Expected outcome: A Grok Bot connector lists the five tools and passes the REQ-1..8 acceptance examples end to end.
 - Check date: after slice 1 ships (first live connector test)
 - What would prove it wrong: Grok Bot's connector cannot handshake with Streamable HTTP and needs SSE.
-- Score: unscored
+- Score: right (retro 2026-10-26-v0.2.0: live list_channels via Grok Bot Streamable HTTP connector)

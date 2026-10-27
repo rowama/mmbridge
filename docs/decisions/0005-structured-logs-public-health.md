@@ -27,4 +27,4 @@ Positive: debuggable per bot without secrets. Negative: no message content in lo
 - Expected outcome: Any failed call can be diagnosed from logs alone; grepping logs for test tokens finds nothing.
 - Check date: after slice 1 ships
 - What would prove it wrong: A token or message body is found in logs, or an incident cannot be diagnosed from logs.
-- Score: unscored
+- Score: right (retro 2026-10-26-v0.2.0: Coolify logs show username + hash prefix only)

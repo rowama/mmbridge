@@ -27,4 +27,4 @@ Positive: one small dependency, async, easy to stub with `respx`. Negative: we o
 - Expected outcome: Client module stays small (~200 lines) and all REQ-2..6 calls are covered by stubbed tests.
 - Check date: after slice 2 ships
 - What would prove it wrong: We end up reimplementing large parts of a driver (pagination, websockets) in v1.
-- Score: unscored
+- Score: right (retro 2026-10-26-v0.2.0: app/mattermost.py 62 lines; all tools stub-tested)
