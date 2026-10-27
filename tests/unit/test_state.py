@@ -239,7 +239,7 @@ def test_max_attempts_env(tmp_path, monkeypatch):
     assert State(str(tmp_path / "b.db")).max_attempts == 7
 
 
-@pytest.mark.skipif(os.geteuid() == 0, reason="root ignores directory permissions")
+@pytest.mark.skipif(os.name != "posix" or os.geteuid() == 0, reason="needs POSIX dir permissions, non-root")
 def test_unwritable_dir(tmp_path):
     ro = tmp_path / "ro"
     ro.mkdir()
