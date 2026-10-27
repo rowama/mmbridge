@@ -1,16 +1,17 @@
 ---
 id: STATE
 type: project-state
-phase: discover
+phase: implement
 status: active
 owner_agent: Eddie
 date: 2026-10-26
 links: []
-triage: medium            # unset | small | medium | large
-active_slice: none
+triage: small             # unset | small | medium | large
+active_slice: thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: []
+pending_approvals:
+  - "CP-S: thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md - confirm triage small (security XFF) before implement"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -25,20 +26,20 @@ acceptance: executable-specs   # v2.5: tests/acceptance/, see PROCESS.md 13
 > Update it at the end of every session. Keep it under one screen.
 
 ## Current phase
-discover (v0.2.0 shipped and retro done; no next increment chosen yet) - entry/exit criteria in `.eng/PROCESS.md` section 3.
+implement (increment D hardening, triaged small; awaiting Rob size confirm) - PROCESS.md section 3.
 
 ## Goal (one sentence)
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-none (v0.2.0 slices 1-3 done; last: [s3](thoughts/shared/slices/2026-10-25-s3-dm.md))
+[D hardening: XFF + Bearer case](thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md) (todo)
 
 ## Next action
-Idle until Rob picks the next increment. When he does: run eng-triage then eng-discover on it. Candidates from TODOS.md: P1 trust only the Coolify proxy for X-Forwarded-For; P2 @mention wake-ups, thread replies/reactions/files, ADR-0004 burst reconcile, Python 3.14 deps. Working agreement `push_permission: standing` (main after eng-verify PASS; tags/force-push still ask) is already applied.
+Rob confirms triage small for D (security). Then implementer runs eng-implement-slice on the d-hardening card; needs Coolify proxy IP/subnet for FORWARDED_ALLOW_IPS. After D ships: eng-triage A (live bots: @mentions etc.).
 
 
 ## Blockers
-none
+- Rob: confirm size small for security-touching slice (Eddie relays).
 
 
 ## Pending approvals
