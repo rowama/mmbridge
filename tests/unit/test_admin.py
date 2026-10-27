@@ -95,6 +95,12 @@ def test_bad_channel_spec_refused(mm, env, ch):
     assert rc != 0 and not os.path.exists(env["path"])
 
 
+def test_set_bot_without_channels_is_dm_only(mm, env):
+    rc, out = run(mm, "set-bot", "--token-stdin", "--wake-url", "https://wake.example/hook", stdin=tok(mm) + "\n")
+    assert rc == 0, out
+    assert store.load(env["path"], env["key"]).channels == []
+
+
 def test_http_wake_url_refused(mm, env):
     rc, out = set_bot(mm, url="http://wake.example/hook")
     assert rc != 0 and "https" in out and not os.path.exists(env["path"])

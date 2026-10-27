@@ -104,7 +104,6 @@ def _raw(**bot):
     ({"version": 1, "bot": _raw(wake_secret="short")}, "wake_secret"),
     ({"version": 1, "bot": _raw(wake_url="http://w.example/h")}, "wake_url"),
     ({"version": 1, "bot": _raw(channels=["town-square"])}, "channels"),
-    ({"version": 1, "bot": _raw(channels=[])}, "channels"),
     ({"version": 1}, "bot"),
     ([1, 2], "format"),
 ])
@@ -112,6 +111,11 @@ def test_load_validates(path, key, obj, detail):
     _write_raw(path, key, obj)
     e = _code(store.load, path, key)
     assert e.code == "store_unreadable" and detail in e.detail
+
+
+def test_empty_channel_list_is_a_dm_only_bot(path, key):
+    _write_raw(path, key, {"version": 1, "bot": _raw(channels=[])})
+    assert store.load(path, key).channels == []
 
 
 def test_http_wake_allowed_only_with_test_flag(path, key, monkeypatch):

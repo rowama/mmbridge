@@ -103,8 +103,8 @@ class LiveDriver:
     def given_live_bot(self, name, channels):
         u = self._user(name)
         u["is_bot"], u["token"] = True, "tok-%s-%s" % (name, secrets.token_hex(12))
-        rc, out = self._admin("set-bot", "--token-stdin", "--wake-url", WAKE_URL,
-                              "--channels", ",".join("%s/%s" % (TEAM, c) for c in channels), stdin=u["token"] + "\n")
+        chan = ["--channels", ",".join("%s/%s" % (TEAM, c) for c in channels)] if channels else []
+        rc, out = self._admin("set-bot", "--token-stdin", "--wake-url", WAKE_URL, *chan, stdin=u["token"] + "\n")
         assert rc == 0, "admin set-bot failed: %s" % out.strip()
         self.rx.secret = re.search(r"wake secret \(shown once[^)]*\): (\S+)", out).group(1)
         cfg = store.load(store.path_from_env(), os.environ["MMB_STORE_KEY"])
