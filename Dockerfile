@@ -8,7 +8,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 
-RUN useradd --create-home --uid 10001 appuser
+# /data: persistent volume for the encrypted bot store (ADR-0006); owned by the app user, private.
+RUN useradd --create-home --uid 10001 appuser && mkdir -p /data && chown 10001:10001 /data && chmod 700 /data
 USER appuser
 
 # Trusted proxy for X-Forwarded-For: uvicorn reads FORWARDED_ALLOW_IPS natively.
