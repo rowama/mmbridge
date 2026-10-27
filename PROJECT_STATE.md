@@ -1,13 +1,13 @@
 ---
 id: STATE
 type: project-state
-phase: reflect
+phase: discover
 status: active
 owner_agent: Eddie
 date: 2026-10-26
 links: []
 triage: medium            # unset | small | medium | large
-active_slice: thoughts/shared/slices/2026-10-25-s3-dm.md
+active_slice: none
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
 pending_approvals: []
@@ -25,16 +25,16 @@ acceptance: executable-specs   # v2.5: tests/acceptance/, see PROCESS.md 13
 > Update it at the end of every session. Keep it under one screen.
 
 ## Current phase
-reflect - entry/exit criteria in `.eng/PROCESS.md` section 3.
+discover (v0.2.0 shipped and retro done; no next increment chosen yet) - entry/exit criteria in `.eng/PROCESS.md` section 3.
 
 ## Goal (one sentence)
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[thoughts/shared/slices/2026-10-25-s3-dm.md](thoughts/shared/slices/2026-10-25-s3-dm.md) (slices 1-3 done; CP-S 2026-10-26)
+none (v0.2.0 slices 1-3 done; last: [s3](thoughts/shared/slices/2026-10-25-s3-dm.md))
 
 ## Next action
-Rob reviews retro proposals in thoughts/shared/retros/2026-10-26-v0.2.0.md (3 process changes + 6 kit lesson hypotheses, none applied). After approval: apply agreed edits, tick them, then phase -> discover or done.
+Idle until Rob picks the next increment. When he does: run eng-triage then eng-discover on it. Candidates from TODOS.md: P1 trust only the Coolify proxy for X-Forwarded-For; P2 @mention wake-ups, thread replies/reactions/files, ADR-0004 burst reconcile, Python 3.14 deps. Working agreement `push_permission: standing` (main after eng-verify PASS; tags/force-push still ask) is already applied.
 
 
 ## Blockers
@@ -57,7 +57,7 @@ none
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0005: [docs/decisions/](docs/decisions/)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-26_14-05-44_ship-done-next-retro.md](thoughts/shared/handoffs/2026-10-26_14-05-44_ship-done-next-retro.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-26_21-32-04_retro-done-next-discover.md](thoughts/shared/handoffs/2026-10-26_21-32-04_retro-done-next-discover.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Plan (approved): [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md](thoughts/shared/plans/2026-10-25-mmbridge-mcp.md)
 - Verification s1 (PASS): [thoughts/shared/verification/2026-10-26-s1-verify.md](thoughts/shared/verification/2026-10-26-s1-verify.md)
@@ -65,7 +65,7 @@ none
 - Specs: [tests/acceptance/specs/test_mmbridge.py](tests/acceptance/specs/test_mmbridge.py)
 - Research: [thoughts/shared/research/2026-10-25-mmbridge-current-code.md](thoughts/shared/research/2026-10-25-mmbridge-current-code.md)
 - Deferred work: [TODOS.md](TODOS.md)
-- Retro (draft): [thoughts/shared/retros/2026-10-26-v0.2.0.md](thoughts/shared/retros/2026-10-26-v0.2.0.md)
+- Retro (done): [thoughts/shared/retros/2026-10-26-v0.2.0.md](thoughts/shared/retros/2026-10-26-v0.2.0.md)
 
 ## Approval log
 <!-- One row per decision. Artifact cell names the file path(s). Decision: approved | accepted | partially accepted | deferred | rejected.
