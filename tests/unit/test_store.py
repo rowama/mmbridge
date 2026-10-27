@@ -157,3 +157,11 @@ def test_loaded_token_and_secret_redacted_in_logs(path, key, caplog):
     with caplog.at_level(logging.INFO, logger="mmbridge"):
         mlog.log.info("oops token=%s secret=%s", TOKEN, SECRET)
     assert TOKEN not in caplog.text and SECRET not in caplog.text and "[REDACTED]" in caplog.text
+
+
+def test_https_ok_rejects_unparseable_urls():
+    """Review 4 P2: admin set-bot refuses a wake URL the dispatcher could not send to."""
+    from app.store import https_ok
+    assert https_ok("https://example.org/wake") and https_ok("https://example.org:8443/wake")
+    for bad in ("https://example.org:bad/wake", "https://", "https://:443/x", "https://example.org:99999/x"):
+        assert not https_ok(bad), bad

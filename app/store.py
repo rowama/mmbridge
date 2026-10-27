@@ -4,6 +4,7 @@
 Key from env MMB_STORE_KEY; "new,old" is accepted (MultiFernet) for key rotation. Errors never carry
 key material, token or secret. Loaded/saved token and secret are registered with the log redact filter.
 """
+import httpx
 import json
 import os
 import re
@@ -67,6 +68,12 @@ def validate(cfg: BotConfig) -> None:
 
 
 def https_ok(url: str) -> bool:
+    try:                                   # must also parse as the dispatcher will send it (review 4 P2)
+        u = httpx.URL(url)
+        if not u.host or (u.port is not None and not 0 < u.port < 65536):
+            return False
+    except (httpx.InvalidURL, ValueError, TypeError):
+        return False
     if url.startswith("https://") and len(url) > 8:
         return True
     return os.getenv("LIVE_ALLOW_HTTP_WAKE", "").lower() == "true" and url.startswith("http://") and len(url) > 7

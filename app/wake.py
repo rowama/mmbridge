@@ -140,6 +140,8 @@ class Dispatcher:
             status, err = None, "timeout"
         except httpx.TransportError:
             status, err = None, "connect"
+        except (httpx.InvalidURL, ValueError):   # malformed wake_url: permanent, never kills the loop (review 4 P2)
+            status, err = 0, "invalid_url"
         if status is not None and 200 <= status < 300:
             await asyncio.to_thread(st.mark_delivered, w.post_id)
             fields = {"post_id": w.post_id, "attempt": w.attempts}

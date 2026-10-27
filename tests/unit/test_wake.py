@@ -477,3 +477,14 @@ async def test_identity_is_one_snapshot_not_split_keys(state, rx):
         await d.tick()
     assert (state.wake("p-old").status, state.wake("p-old").last_error) == ("failed", "bot_rotated")
     assert rx.requests == []
+
+
+async def test_malformed_wake_url_fails_wake_and_keeps_dispatching(state, rx):
+    """Review 4 P2: httpx.InvalidURL is permanent for that wake and does not stop Dispatcher.run()."""
+    enqueue(state, "p-1")
+    async with client(rx.transport()) as http:
+        await dispatcher(state, http, c=cfg(url="https://example.org:bad/wake")).tick()
+        assert (state.wake("p-1").status, state.wake("p-1").last_error) == ("failed", "invalid_url")
+        enqueue(state, "p-2")
+        await dispatcher(state, http).tick()
+    assert list(rx.accepted) == ["p-2"]
