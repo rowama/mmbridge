@@ -1,7 +1,7 @@
 ---
 id: STATE
 type: project-state
-phase: discover
+phase: research
 status: active
 owner_agent: grok-bot
 date: 2026-10-26
@@ -10,8 +10,7 @@ triage: large             # unset | small | medium | large
 active_slice: none
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals:
-  - "CP-A: docs/design/2026-10-26-live-bots.md - approve scope (eng-scope-review) REDUCE: one-bot v1 = REQ-A1/A2/A3(own-post)/A4/A5/A5b/A5c/A7/A8; A6 + bot-to-bot caps cut to TODOS"
+pending_approvals: []
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -26,7 +25,7 @@ acceptance: executable-specs   # v2.5: tests/acceptance/, see PROCESS.md 13
 > Update it at the end of every session. Keep it under one screen.
 
 ## Current phase
-discover (increment A Live bots, triaged Large; D hardening done) - PROCESS.md section 3.
+research (increment A Live bots, Large; scope approved REDUCE) - PROCESS.md section 3.
 
 ## Goal (one sentence)
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
@@ -35,7 +34,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 none (D hardening [done](thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md))
 
 ## Next action
-A Live bots: [design](docs/design/2026-10-26-live-bots.md) approved at CP-A. eng-scope-review proposes REDUCE: one-bot v1 (A1-A4, A5/A5b/A5c, A7, A8; A3 own-post only); A6 multi-bot + bot-to-bot caps cut to TODOS (later increment). Awaiting Rob scope approval, then eng-research. No code for A yet.
+A Live bots: scope decided REDUCE + defer A5 (see Approval log): one-bot v1 = REQ-A1, A2, A3 (own-post only), A4, A7, A8 with a hand-set channel list. Cut to TODOS: A6 multi-bot, A3 bot-to-bot caps, A5/A5b/A5c auto-join. Next: eng-research -> CP-R. No code for A yet.
 
 ## Blockers
 none
@@ -53,7 +52,7 @@ none
 - Owner guide: [OWNER-GUIDE.md](OWNER-GUIDE.md)
 - Definition of Done: [docs/definition-of-done.md](docs/definition-of-done.md)
 - Process feedback: [thoughts/shared/process-feedback.md](thoughts/shared/process-feedback.md)
-- Design A Live bots (approved; scope REDUCE pending): [docs/design/2026-10-26-live-bots.md](docs/design/2026-10-26-live-bots.md)
+- Design A Live bots (approved; scope REDUCE recorded 2026-10-26): [docs/design/2026-10-26-live-bots.md](docs/design/2026-10-26-live-bots.md)
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0005: [docs/decisions/](docs/decisions/)
@@ -72,6 +71,7 @@ none
      Pre-kit decisions: back-fill with Checkpoint "pre-kit" and Decision "approved (back-filled, pre-kit)". .eng/bin/eng-check matches rows to statuses. -->
 | Date | Checkpoint | Artifact | Decision (Rob) |
 |---|---|---|---|
+| 2026-10-26 | CP-A (scope) | docs/design/2026-10-26-live-bots.md | approved (REDUCE: In A1, A2, A3 own-post, A4, A7, A8 one bot, hand-set channels; Out A6, A3 bot-to-bot caps, A5/A5b/A5c auto-join deferred by Rob after first proposal; via Eddie) |
 | 2026-10-26 | CP-A | docs/design/2026-10-26-live-bots.md | approved (problem, REQ-A1..A8 incl. A5/A5b/A5c/A6, acceptance examples; via Eddie; later clarified: one-bot wedge = whole v1 ship, multi-bot later increment) |
 | 2026-10-26 | triage (size) | docs/design/2026-10-26-live-bots.md | accepted (large confirmed; via Eddie) |
 | 2026-10-26 | CP-S | thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md | approved (live: FORWARDED_ALLOW_IPS working, logs show public client IPs; 1 container; via Eddie) |
