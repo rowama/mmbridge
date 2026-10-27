@@ -488,3 +488,16 @@ async def test_malformed_wake_url_fails_wake_and_keeps_dispatching(state, rx):
         enqueue(state, "p-2")
         await dispatcher(state, http).tick()
     assert list(rx.accepted) == ["p-2"]
+
+
+@pytest.mark.parametrize("handler, err", [
+    (lambda r: httpx.Response(200, headers={"Content-Encoding": "gzip"}, content=b"not gzip"), "http_error"),
+    (lambda r: (_ for _ in ()).throw(RuntimeError("bug")), "error_RuntimeError"),
+])
+async def test_unexpected_send_errors_retry_and_dispatch_continues(state, handler, err):
+    """Review 5 P2: a DecodingError (or any other send error) is a retry, never an escape from tick()/run()."""
+    enqueue(state, "p-1")
+    async with client(httpx.MockTransport(handler)) as http:
+        await dispatcher(state, http).tick()
+    w = state.wake("p-1")
+    assert (w.status, w.last_error) == ("retry", err)

@@ -62,3 +62,4 @@ Queued wakes reach a receiver as signed HTTPS POSTs (HMAC-SHA256 over ts.body); 
 - 2026-10-27: code-review 2 P2 (unsigned X-MMB-Delivery replay) fixed: verify() requires X-MMB-Delivery == signed body delivery_id; 4 new verify reject cases.
 - 2026-10-27: code-review 3 P2 (split read of bot_user_id / bot_token_fp) fixed: listener writes one meta row bot_identity = "<token_fp>:<bot_user_id>"; dispatcher reads only that; test_identity_is_one_snapshot_not_split_keys.
 - 2026-10-27: code-review 4 P2 (malformed wake_url raised InvalidURL out of tick) fixed: store.https_ok parses with httpx.URL; dispatcher fails that wake permanently as invalid_url and keeps running.
+- 2026-10-27: code-review 5 P2 (httpx.DecodingError escaped tick) fixed: other httpx.HTTPError -> retry http_error; any other exception -> retry error_<Class>; send errors can no longer stop the dispatcher.
