@@ -10,7 +10,8 @@ triage: large             # unset | small | medium | large
 active_slice: SLICE-20261027-lb3-listener-filters
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: []
+pending_approvals:
+  - "CP-S: thoughts/shared/slices/2026-10-27-lb3-listener-filters.md - manual verification"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -34,7 +35,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [SLICE-20261027-lb3-listener-filters](thoughts/shared/slices/2026-10-27-lb3-listener-filters.md) (review). Previous: lb2 [done](thoughts/shared/slices/2026-10-27-lb2-state-db-wake-queue.md)
 
 ## Next action
-lb3 implemented (status review; Codex review no findings, addressed). NEXT: planner runs eng-verify on lb3 (run listener tests locally; Codex sandbox cannot bind sockets), then requests CP-S with the OQ1 spike (`echo "$TOKEN" | python -m app.ws_spike` in the container after redeploy). Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
+lb3 eng-verify PASS (thoughts/shared/verification/2026-10-27-lb3-listener-filters.md; 176 unit x3, 16 acc + 9 skipped). NEXT: Rob CP-S (after redeploy: `echo "$TOKEN" | python -m app.ws_spike` in container, post in bot channel, confirm hello/posted/ping-reply shapes). Do not start lb4 before CP-S. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
 
 ## Blockers
 none
