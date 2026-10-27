@@ -67,6 +67,7 @@ class Listener:
         try:
             me = await client.get("/users/me")
             self.bot_user_id, self._bot = me["id"], {"user_id": me["id"], "username": me["username"]}
+            await asyncio.to_thread(self.state.set_meta, "bot_user_id", me["id"])   # dispatcher: bot_rotated
             async with self.ws_connect(ws_url(self.base_url), {"Authorization": "Bearer " + self.cfg.token}) as ws:
                 pinger = asyncio.create_task(self._ping(ws))
                 try:

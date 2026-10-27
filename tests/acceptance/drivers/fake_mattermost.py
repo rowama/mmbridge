@@ -7,9 +7,11 @@ Slice 3: users/username/{u}, POST /channels/direct (idempotent; creating one is 
 Live bots lb3: GET channels/{id}, teams/{id}, users/{id}; websocket /api/v4/websocket (Bearer handshake,
 hello{connection_id}, per-connection seq, `posted` broadcast to channel members, ping action -> pong reply,
 drop/raw/seq-skip controls). `serve()` runs the app on a free localhost port for real HTTP/WS clients.
+Live bots lb4: `mm_ids=True` gives channels Mattermost-shaped 26-char ids (the bot store validates them).
 """
 import asyncio
 import contextlib
+import hashlib
 import itertools
 import json
 
@@ -22,7 +24,8 @@ from starlette.websockets import WebSocket
 
 
 class FakeMattermost:
-    def __init__(self):
+    def __init__(self, mm_ids=False):
+        self.mm_ids = mm_ids
         self.users = {}      # id -> {"id","username","token"|None,"is_bot"}
         self.teams = {}      # id -> {"id","name","display_name"}
         self.channels = {}   # id -> {"id","team_id","name","display_name","type","members":set}
@@ -73,6 +76,8 @@ class FakeMattermost:
     def add_channel(self, team, name, members=(), ctype="O"):
         tid = self.add_team(team)
         cid = "c-%s-%s" % (team, name)
+        if self.mm_ids:
+            cid = hashlib.sha1(cid.encode()).hexdigest()[:26]
         self.channels[cid] = {"id": cid, "team_id": tid, "name": name, "display_name": name.title(),
                               "type": ctype, "members": {self.user_by_name(m)["id"] for m in members}}
         return cid

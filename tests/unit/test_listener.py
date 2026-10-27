@@ -120,6 +120,7 @@ async def test_bearer_header_on_handshake_and_rest(running):
     assert ("WS", "/api/v4/websocket", tok) in m.calls
     assert lis.connection_id and state.get_meta("ws_connection_id") == lis.connection_id
     assert lis.bot_user_id == w["bot"]["id"]
+    assert state.get_meta("bot_user_id") == w["bot"]["id"]      # dispatcher fails wakes of a rotated bot (PR-2)
 
 
 @pytest.mark.parametrize("ws_level", [None, logging.DEBUG], ids=["default", "ws-debug"])
