@@ -4,14 +4,21 @@ Injected into the bridge via httpx.ASGITransport. Records every call as (method,
 Slice 1: users/me, users/me/teams, users/me/teams/{id}/channels.
 Slice 2: channel by name, members/me, POST /posts, channel posts, POST /users/ids.
 Slice 3: users/username/{u}, POST /channels/direct (idempotent; creating one is a world change).
+Live bots lb3: GET channels/{id}, teams/{id}, users/{id}; websocket /api/v4/websocket (Bearer handshake,
+hello{connection_id}, per-connection seq, `posted` broadcast to channel members, ping action -> pong reply,
+drop/raw/seq-skip controls). `serve()` runs the app on a free localhost port for real HTTP/WS clients.
 """
+import asyncio
+import contextlib
 import itertools
+import json
 
 import httpx
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from starlette.routing import Route
+from starlette.routing import Route, WebSocketRoute
+from starlette.websockets import WebSocket
 
 
 class FakeMattermost:
@@ -26,6 +33,11 @@ class FakeMattermost:
         self._ids = itertools.count(1)
         self.down = False
         self.fail_status = None   # force every response to this HTTP status
+        self.server_version = "10.11.0"
+        self.ws_sessions = []     # open websocket sessions (_WsSession)
+        self.ws_answer_pings = True
+        self.ws_pings = 0
+        self._ws_ids = itertools.count(1)
         self.app = Starlette(routes=[
             Route("/api/v4/users/me", self._me),
             Route("/api/v4/users/me/teams", self._teams),
@@ -37,6 +49,10 @@ class FakeMattermost:
             Route("/api/v4/users/ids", self._users_by_ids, methods=["POST"]),
             Route("/api/v4/users/username/{username}", self._user_by_username),
             Route("/api/v4/channels/direct", self._direct, methods=["POST"]),
+            Route("/api/v4/channels/{channel_id}", self._channel),
+            Route("/api/v4/teams/{team_id}", self._team),
+            Route("/api/v4/users/{user_id}", self._user),
+            WebSocketRoute("/api/v4/websocket", self._ws),
         ])
 
     # --- world setup -------------------------------------------------------------
@@ -76,11 +92,60 @@ class FakeMattermost:
     def direct_channels(self, user_a, user_b):
         return [c for c in self.channels.values() if c["type"] == "D" and c["members"] == {user_a, user_b}]
 
-    def add_post(self, channel_id, user_id, message):
+    def add_post(self, channel_id, user_id, message, type="", root_id=""):
+        """Create a post and broadcast `posted` to the channel members' websocket sessions (as Mattermost does,
+        including the author's own sessions)."""
         pid = "p-%d" % next(self._ids)
-        self.posts[pid] = {"id": pid, "channel_id": channel_id, "user_id": user_id, "message": message,
-                           "create_at": next(self._clock)}
-        return self.posts[pid]
+        self.posts[pid] = p = {"id": pid, "channel_id": channel_id, "user_id": user_id, "message": message,
+                               "create_at": next(self._clock), "type": type, "root_id": root_id}
+        c = self.channels[channel_id]
+        event = {"event": "posted", "broadcast": {"channel_id": channel_id, "team_id": "", "user_id": ""},
+                 "data": {"channel_display_name": c["display_name"], "channel_name": c["name"],
+                          "channel_type": c["type"], "sender_name": "@" + self.users[user_id]["username"],
+                          "team_id": c["team_id"], "post": json.dumps(p)}}
+        for s in self.ws_sessions:
+            if s.user_id in c["members"]:
+                s.push(event)
+        return p
+
+    # --- websocket controls -------------------------------------------------------
+    def ws_send_raw(self, event):
+        """Send a raw frame (dict -> JSON with the session seq; str -> as is) to every open session."""
+        for s in self.ws_sessions:
+            s.push(event) if isinstance(event, dict) else s.q.put_nowait(event)
+
+    def ws_resend_last(self):
+        """Re-send each session's last event with a fresh seq (duplicate delivery)."""
+        for s in self.ws_sessions:
+            s.push({k: v for k, v in s.last.items() if k != "seq"})
+
+    def ws_skip_seq(self, n=1):
+        for s in self.ws_sessions:
+            s.seq += n
+
+    def ws_drop(self):
+        """Close every open websocket session (connection drop)."""
+        for s in self.ws_sessions:
+            s.q.put_nowait(None)
+
+    @contextlib.asynccontextmanager
+    async def serve(self):
+        """Serve REST + websocket on 127.0.0.1:<free port>; yields the base URL (http://127.0.0.1:<port>)."""
+        import uvicorn
+        server = uvicorn.Server(uvicorn.Config(self.app, host="127.0.0.1", port=0, log_level="warning",
+                                               lifespan="off", ws="websockets"))
+        task = asyncio.create_task(server.serve())
+        while not server.started:
+            if task.done():
+                task.result()
+            await asyncio.sleep(0.01)
+        port = server.servers[0].sockets[0].getsockname()[1]
+        try:
+            yield "http://127.0.0.1:%d" % port
+        finally:
+            self.ws_drop()
+            server.should_exit = True
+            await task
 
     def channel_posts(self, channel_id):
         """Posts of a channel, oldest first."""
@@ -200,6 +265,67 @@ class FakeMattermost:
             return JSONResponse({"message": "not found"}, status_code=404)
         return JSONResponse({"id": x["id"], "username": x["username"], "is_bot": x["is_bot"]})
 
+    async def _channel(self, request):
+        u, err = self._auth(request)
+        if err:
+            return err
+        c, err = self._member_channel(u, request.path_params["channel_id"])
+        if err:
+            return err
+        return JSONResponse({k: v for k, v in c.items() if k != "members"})
+
+    async def _team(self, request):
+        u, err = self._auth(request)
+        if err:
+            return err
+        t = self.teams.get(request.path_params["team_id"])
+        return JSONResponse(t) if t else JSONResponse({"message": "not found"}, status_code=404)
+
+    async def _user(self, request):
+        u, err = self._auth(request)
+        if err:
+            return err
+        x = self.users.get(request.path_params["user_id"])
+        if not x:
+            return JSONResponse({"message": "not found"}, status_code=404)
+        return JSONResponse({"id": x["id"], "username": x["username"], "is_bot": x["is_bot"]})
+
+    async def _ws(self, ws: WebSocket):
+        tok = _tok(ws.headers)
+        self.calls.append(("WS", ws.url.path, tok))
+        user = next((u for u in self.users.values() if tok and u["token"] == tok), None)
+        if not user or self.fail_status:
+            await ws.close(code=1008)          # before accept: the handshake is refused (HTTP 403)
+            return
+        await ws.accept()
+        s = _WsSession(user["id"], "conn-%d" % next(self._ws_ids))
+        s.push({"event": "hello", "data": {"connection_id": s.connection_id, "server_version": self.server_version},
+                "broadcast": {"user_id": user["id"]}})
+        self.ws_sessions.append(s)
+
+        async def writer():
+            while (m := await s.q.get()) is not None:
+                await ws.send_text(m if isinstance(m, str) else json.dumps(m))
+
+        async def reader():
+            while True:
+                msg = json.loads(await ws.receive_text())
+                if msg.get("action") == "ping":
+                    self.ws_pings += 1
+                    if self.ws_answer_pings:
+                        s.q.put_nowait({"status": "OK", "seq_reply": msg.get("seq"),
+                                        "data": {"text": "pong", "version": self.server_version}})
+        tasks = [asyncio.create_task(writer()), asyncio.create_task(reader())]
+        try:
+            await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            for t in tasks:
+                t.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            self.ws_sessions.remove(s)
+            with contextlib.suppress(Exception):
+                await ws.close()
+
     async def _direct(self, request):
         u, err = self._auth(request)
         if err:
@@ -212,6 +338,20 @@ class FakeMattermost:
         if not existed:
             self.changes.append(("direct_channel", c["id"]))
         return JSONResponse({k: v for k, v in c.items() if k != "members"}, status_code=200 if existed else 201)
+
+
+class _WsSession:
+    """One websocket connection: outgoing queue (None closes it) and the per-connection seq (hello is 0)."""
+
+    def __init__(self, user_id, connection_id):
+        self.user_id, self.connection_id = user_id, connection_id
+        self.q = asyncio.Queue()
+        self.seq, self.last = 0, None
+
+    def push(self, event):
+        self.last = {**event, "seq": self.seq}
+        self.seq += 1
+        self.q.put_nowait(self.last)
 
 
 def _tok(headers):
