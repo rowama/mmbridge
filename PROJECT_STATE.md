@@ -11,7 +11,7 @@ active_slice: none
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
 pending_approvals:
-  - "CP-A: docs/design/2026-10-26-live-bots.md - answer Q1-Q7 then approve problem/requirements/acceptance examples"
+  - "CP-A: docs/design/2026-10-26-live-bots.md - approve problem/requirements/acceptance examples (Q1-Q7 resolved)"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -35,7 +35,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 none (D hardening [done](thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md))
 
 ## Next action
-A Live bots (Large confirmed): eng-discover drafted [design](docs/design/2026-10-26-live-bots.md); resolve Q1-Q7 with Rob one at a time (Q6 first), then CP-A. No code for A yet.
+A Live bots (Large confirmed): [design](docs/design/2026-10-26-live-bots.md) in-review, Q1-Q7 resolved (Q4: auto-accept invites); awaiting Rob CP-A approval of problem/requirements/acceptance examples, then eng-scope-review. No code for A yet.
 
 ## Blockers
 none
@@ -53,7 +53,7 @@ none
 - Owner guide: [OWNER-GUIDE.md](OWNER-GUIDE.md)
 - Definition of Done: [docs/definition-of-done.md](docs/definition-of-done.md)
 - Process feedback: [thoughts/shared/process-feedback.md](thoughts/shared/process-feedback.md)
-- Design A Live bots (draft stub, discover): [docs/design/2026-10-26-live-bots.md](docs/design/2026-10-26-live-bots.md)
+- Design A Live bots (in-review, CP-A pending): [docs/design/2026-10-26-live-bots.md](docs/design/2026-10-26-live-bots.md)
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0005: [docs/decisions/](docs/decisions/)
