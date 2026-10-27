@@ -159,3 +159,50 @@ def test_rotate_key_missing_env(mm, env):
     set_bot(mm)
     rc, out = run(mm, "rotate-key", "--new-key-env", "NOPE_UNSET", "--old-key-env", "MMB_STORE_KEY")
     assert rc != 0 and "store_key_missing" in out
+
+
+# --- lb2: failed / stats (state.db) ---
+
+def _state(env):
+    from app.state import State
+    import os
+    return State(os.path.join(os.path.dirname(env["path"]), "state.db"), instance_id="d1")
+
+
+def test_failed_and_stats_on_empty_db(mm, env):
+    rc, out = run(mm, "failed")
+    assert rc == 0 and "no failed wakes" in out
+    rc, out = run(mm, "stats")
+    assert rc == 0 and "no wakes yet" in out
+
+
+def test_failed_lists_and_retry_requeues(mm, env):
+    s = _state(env)
+    s.enqueue("postfailed1", TOWN, {"message": "hello there"})
+    s.enqueue("postok", TOWN, {})
+    s.claim_due(2_000_000_000)
+    s.mark_failed("postfailed1", "http_401")
+    rc, out = run(mm, "failed")
+    assert rc == 0 and "postfailed1" in out and "http_401" in out and TOWN in out
+    assert "postok" not in out and "hello there" not in out          # message text not echoed
+    rc, out = run(mm, "failed", "--retry", "postfailed1")
+    assert rc == 0 and "requeued postfailed1" in out
+    assert s.wake("postfailed1").status == "queued"
+    rc, out = run(mm, "failed", "--retry", "postfailed1")
+    assert rc == 1 and "not_found" in out
+
+
+def test_stats_counts_and_latency(mm, env):
+    s = _state(env)
+    s.enqueue("a", TOWN, {}, post_create_at=0)
+    s.enqueue("b", TOWN, {})
+    s.claim_due(2_000_000_000)
+    s.mark_delivered("a")
+    rc, out = run(mm, "stats")
+    assert rc == 0 and "delivered: 1" in out and "in_flight: 1" in out and "p95" in out
+
+
+def test_failed_unwritable_data_dir(mm, env, monkeypatch, tmp_path):
+    monkeypatch.setenv("MMB_DATA_DIR", str(tmp_path / "missing"))
+    rc, out = run(mm, "failed")
+    assert rc == 1 and "state_unwritable" in out

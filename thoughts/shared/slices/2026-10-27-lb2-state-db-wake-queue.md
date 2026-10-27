@@ -2,7 +2,7 @@
 id: SLICE-20261027-lb2-state-db-wake-queue
 type: slice
 phase: implement
-status: todo             # todo | in-progress | blocked | review | done
+status: in-progress      # todo | in-progress | blocked | review | done
 owner_agent: claude-code
 date: 2026-10-27
 links: [thoughts/shared/plans/2026-10-27-live-bots.md]

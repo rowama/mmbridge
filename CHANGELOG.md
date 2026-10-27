@@ -2,6 +2,10 @@
 All notable changes to this project. Format: Keep a Changelog style; newest first.
 
 ## [Unreleased]
+<!-- id: CHANG-20261027-lb2-state-db | owner_agent: unassigned | date: 2026-10-27 -->
+### Added
+- Live bots: durable wake ledger and queue in /data/state.db (one wake per post, retries with 2-32 s backoff, crash-safe claims); `python -m app.admin failed [--retry POST_ID]` and `stats` for operators.
+
 <!-- id: CHANG-20261027-lb1-bot-store | owner_agent: unassigned | date: 2026-10-27 -->
 ### Added
 - Operator CLI `python -m app.admin set-bot | show | rotate-key` stores the live bot's token, wake URL, wake secret and channel ids Fernet-encrypted at /data/bots.enc (key MMB_STORE_KEY); the token is never printed or logged. No runtime behaviour change yet.
