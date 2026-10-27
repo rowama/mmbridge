@@ -6,7 +6,7 @@ status: in-review
 owner_agent: grok-bot
 date: 2026-10-27
 links: [thoughts/shared/plans/2026-10-27-live-bots.md, docs/design/2026-10-26-live-bots.md, docs/architecture/2026-10-26-live-bots.md, tests/acceptance/specs/test_live_bots.py]
-plan_review: thoughts/shared/verification/2026-10-27-live-bots-delta-no-allowlist-plan-review.md
+plan_review: thoughts/shared/verification/2026-10-27-live-bots-delta-no-allowlist-plan-review-2.md
 ---
 # Plan delta: drop the channel allow-list (Live bots v1)
 
@@ -73,7 +73,7 @@ Changes per the touch-point table above.
 ### Success Criteria
 #### Automated Verification
 - [ ] `.venv/bin/pytest tests/unit -q` exit 0 incl. member-channel/@channel/thread-reply filter cases and legacy-`channels`-key load test
-- [ ] `.venv/bin/pytest -q --channel live <lb4b card specs: node ids>` (in-process; drop/reconnect + token specs stay in lb5) exit 0; `python3 .eng/bin/eng-spec status .` matches the new lock; `python3 .eng/bin/eng-check .` exit 0
+- [ ] `.venv/bin/pytest -q --channel live <the 10 node ids listed in the lb4b card Tasks; 12 passed>` (in-process; drop/reconnect + token specs stay in lb5) exit 0; `python3 .eng/bin/eng-spec status .` matches the new lock; `python3 .eng/bin/eng-check .` exit 0
 #### Manual Verification
 - [ ] Rob (in-process demo at lb4b CP-S; deployed demo in lb5): `set-bot` without `--channels`; a plain post and an `@channel` post in a member channel each wake once; a thread reply wakes with root_id; a DM wakes.
 
@@ -88,5 +88,5 @@ Codex plan review (8 findings, advisory; `thoughts/shared/verification/2026-10-2
 - F7 lb4b uses explicit node ids + in-process demo; full container suite stays in lb5.
 - F8 ask Rob to confirm live-only acceptance per ADR-0010.
 
-Status 2026-10-27: F1 drafted (above; hash approval pending Rob), F2 done (design Amendments, architecture 'catch-up channel discovery', ADR-0007 Amendment), F3 done (lb4b card; lb5 card + plan refs), F4 done (architecture + lb5 PR-3), F5/F6 in drafts, F7 in lb4b card; F8 open for Rob.
+Status 2026-10-27: F1 drafted (above; hash approval pending Rob), F2 done (design Amendments, architecture 'catch-up channel discovery', ADR-0007 Amendment), F3 done (lb4b card; lb5 card + plan refs), F4 done (architecture + lb5 PR-3), F5/F6 in drafts, F7 in lb4b card; F8 open for Rob. Re-review (plan-review-2, supersedes the first): the REQ-A1/examples amendment needs a new CP-A row by Rob (with the CP-C); until then eng-check reports design-changed-after-approval.
 
