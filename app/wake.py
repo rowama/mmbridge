@@ -8,8 +8,8 @@ and missing headers.
 Dispatcher.tick(): heartbeat the single-owner lease (standby while another owner is fresh), recover_stale,
 prune (start + every 6 h), claim_due up to 4 and POST them concurrently (5 s timeout). Config is read at
 send time (url/secret rotation applies to queued wakes); wakes of a previous bot user fail `bot_rotated`.
-Nothing is claimed until the listener has resolved the identity of the CURRENT token (meta bot_user_id +
-bot_token_fp match the config), so a stale id from a previous token/run never approves old wakes (review P1).
+Nothing is claimed until the listener has resolved the identity of the CURRENT token (meta bot_identity =
+"<token_fp>:<bot_user_id>", one row, matches the config), so a stale id from a previous token/run never approves old wakes (review P1).
 Each POST has an overall deadline of TIMEOUT_S (not only per network step), so a slow-drip receiver cannot
 stall the loop and the owner heartbeat (review P2).
 2xx delivered; 408/429/5xx/timeout/connect retry (state.next_delay; failed after max attempts); other 4xx
@@ -35,7 +35,7 @@ POLL_S = 0.5
 
 
 def token_fp(token: str) -> str:
-    """Non-secret fingerprint of the bot token, stored next to bot_user_id by the listener."""
+    """Non-secret fingerprint of the bot token, stored with bot_user_id in meta bot_identity by the listener."""
     return hashlib.sha256(("mmb-token-fp:" + token).encode()).hexdigest()[:16]
 
 
@@ -108,8 +108,9 @@ class Dispatcher:
             self._pruned_at = now
             _log("wakes_pruned", count=n)
         cfg = self._cfg()
-        bot_id = await asyncio.to_thread(st.get_meta, "bot_user_id")
-        fp = await asyncio.to_thread(st.get_meta, "bot_token_fp")
+        # One meta row "<token_fp>:<bot_user_id>", written in one statement by the listener: the id and the
+        # token it belongs to are always read as one snapshot (review 3 P2: no split-read race on rotation).
+        fp, _, bot_id = (await asyncio.to_thread(st.get_meta, "bot_identity") or "").partition(":")
         if not bot_id or fp != token_fp(cfg.token):
             if not self._waiting:
                 _log("dispatcher_waiting_identity", instance=st.instance_id)

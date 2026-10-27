@@ -71,11 +71,11 @@ def enqueue(state, post_id="p-1", bot_id="u-eddie"):
 def resolve(state, bot_id="u-eddie", token=TOKEN):
     """What the listener records after users/me for the current token."""
     state.set_meta("bot_user_id", bot_id)
-    state.set_meta("bot_token_fp", token_fp(token))
+    state.set_meta("bot_identity", token_fp(token) + ":" + bot_id)
 
 
 def dispatcher(state, http, c=None, clk=None, **kw):
-    if state.get_meta("bot_token_fp") is None:
+    if state.get_meta("bot_identity") is None:
         resolve(state, state.get_meta("bot_user_id") or "u-eddie")
     return Dispatcher(state, c or cfg(), http, clock=clk or state.clock, **kw)
 
@@ -464,3 +464,16 @@ async def test_drip_response_hits_overall_deadline(state, monkeypatch):
     w = state.wake("p-1")
     assert w.status != "delivered" and w.last_error == "timeout"
 
+
+async def test_identity_is_one_snapshot_not_split_keys(state, rx):
+    """Review 3 P2: a stale bot_user_id next to a fresh fingerprint must never approve old wakes."""
+    enqueue(state, "p-old", bot_id="u-eddie")
+    state.set_meta("bot_user_id", "u-eddie")                        # stale id from the previous token
+    state.set_meta("bot_token_fp", token_fp(TOKEN))                  # split keys are not trusted
+    async with client(rx.transport()) as http:
+        d = Dispatcher(state, cfg(), http, clock=state.clock)
+        assert await d.tick() == 0 and rx.requests == []
+        state.set_meta("bot_identity", token_fp(TOKEN) + ":u-ada")   # listener publishes id + token together
+        await d.tick()
+    assert (state.wake("p-old").status, state.wake("p-old").last_error) == ("failed", "bot_rotated")
+    assert rx.requests == []

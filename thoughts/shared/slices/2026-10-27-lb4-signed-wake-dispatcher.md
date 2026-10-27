@@ -60,3 +60,4 @@ Queued wakes reach a receiver as signed HTTPS POSTs (HMAC-SHA256 over ts.body); 
 - Deviation (small): a second dispatcher whose owner heartbeat is fresh does not exit. It stands by (`tick()` returns 0, logs `dispatcher_standby`) and takes over after the heartbeat expires (60 s). The plan says "refuses to start"; standby is a superset and still never sends.
 - Codex review not run (codex CLI unavailable here); see the progress log.
 - 2026-10-27: code-review 2 P2 (unsigned X-MMB-Delivery replay) fixed: verify() requires X-MMB-Delivery == signed body delivery_id; 4 new verify reject cases.
+- 2026-10-27: code-review 3 P2 (split read of bot_user_id / bot_token_fp) fixed: listener writes one meta row bot_identity = "<token_fp>:<bot_user_id>"; dispatcher reads only that; test_identity_is_one_snapshot_not_split_keys.
