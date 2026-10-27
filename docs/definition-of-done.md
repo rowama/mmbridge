@@ -25,3 +25,5 @@ A slice/increment is Done only when every applicable item holds, proven by comma
 - [ ] Verification report written with verdict PASS.
 - [ ] PROJECT_STATE.md updated and a handoff written.
 <!-- Project-specific additions below -->
+- [ ] `pytest tests` from the repo root runs unit + acceptance with zero silent collection skips (collected count matches).
+- [ ] Time/rate-dependent tests use an injected/frozen clock, never wall clock.

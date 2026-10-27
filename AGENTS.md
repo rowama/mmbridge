@@ -39,4 +39,9 @@ The values live in `PROJECT_STATE.md` front matter (`implementer`, `planner`, `c
 - Durable decisions go in `docs/decisions/` (ADR). Deferred work goes in `TODOS.md`.
 - Don't touch: <paths / systems off-limits>
 
+## Runtime facts
+- Container listens on **8080** (Coolify `SERVICE_FQDN_MMBRIDGE_8080`; local `docker run -p <host>:8080`), not 8000.
+- Dev venv uses **Python 3.12** to match the Dockerfile: `uv venv -p 3.12` (3.14 install fails).
+- After a redeploy that changes the MCP tool list, restart the Grok Bot MCP servers before manual checks (clients cache tool lists).
+
 ## Gotchas
