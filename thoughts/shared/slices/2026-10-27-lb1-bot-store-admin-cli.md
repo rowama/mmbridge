@@ -2,7 +2,7 @@
 id: SLICE-20261027-lb1-bot-store-admin-cli
 type: slice
 phase: implement
-status: review           # todo | in-progress | blocked | review | done
+status: done             # todo | in-progress | blocked | review | done
 owner_agent: claude-code
 date: 2026-10-27
 links: [thoughts/shared/plans/2026-10-27-live-bots.md]

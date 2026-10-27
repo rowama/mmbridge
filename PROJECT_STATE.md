@@ -7,11 +7,10 @@ owner_agent: claude-code
 date: 2026-10-27
 links: []
 triage: large             # unset | small | medium | large
-active_slice: SLICE-20261027-lb1-bot-store-admin-cli
+active_slice: SLICE-20261027-lb2-state-db-wake-queue
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals:
-  - "CP-S: thoughts/shared/slices/2026-10-27-lb1-bot-store-admin-cli.md - manual verification"
+pending_approvals: []
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -32,10 +31,10 @@ implement (increment A Live bots, Large) - PROCESS.md section 3.
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[SLICE-20261027-lb1-bot-store-admin-cli](thoughts/shared/slices/2026-10-27-lb1-bot-store-admin-cli.md) (review). Previous: D hardening [done](thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md))
+[SLICE-20261027-lb2-state-db-wake-queue](thoughts/shared/slices/2026-10-27-lb2-state-db-wake-queue.md) (todo). Previous: lb1 [done](thoughts/shared/slices/2026-10-27-lb1-bot-store-admin-cli.md)
 
 ## Next action
-lb1 implemented (commit cf78905, status review; Codex slice review: no findings). NEXT: planner runs eng-verify on lb1, then requests CP-S (manual: set-bot with real token, show masked, xxd no plaintext). Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
+lb1 done (CP-S logged; live container check deferred until redeploy). NEXT: implementer runs eng-run implement on lb2 (SLICE-20261027-lb2-state-db-wake-queue), then planner runs eng-verify. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
 
 ## Blockers
 none
@@ -78,6 +77,7 @@ none
      Pre-kit decisions: back-fill with Checkpoint "pre-kit" and Decision "approved (back-filled, pre-kit)". .eng/bin/eng-check matches rows to statuses. -->
 | Date | Checkpoint | Artifact | Decision (Rob) |
 |---|---|---|---|
+| 2026-10-27 | CP-S | thoughts/shared/slices/2026-10-27-lb1-bot-store-admin-cli.md | approved (verify PASS; live container/Coolify check deferred, not yet redeployed; via Eddie) |
 | 2026-10-27 | CP-C | thoughts/shared/plans/2026-10-27-live-bots.md | approved speclock sha256:3108f1fe6a93cfae |
 | 2026-10-27 | CP-B | docs/architecture/2026-10-26-live-bots.md | approved (incl. stored-token security review) |
 | 2026-10-27 | CP-B | docs/decisions/0006-encrypted-token-store.md, docs/decisions/0007-mattermost-websocket-listener.md, docs/decisions/0008-signed-wake-webhook.md, docs/decisions/0009-listener-state-persistence.md, docs/decisions/0010-acceptance-tests-live-bots.md | accepted (ADR-0006..0010) |
