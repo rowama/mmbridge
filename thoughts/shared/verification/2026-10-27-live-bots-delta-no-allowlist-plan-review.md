@@ -1,0 +1,43 @@
+---
+id: PLANREV-20261027-live-bots-delta-no-allowlist-plan-review
+type: review-findings
+phase: plan
+status: open
+owner_agent: eng-run
+date: 2026-10-27
+links: [thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md]
+review_kind: plan
+subject: "thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md + slice cards"
+diff: n.a.
+reviewer: codex
+command: "codex exec --sandbox read-only -o thoughts/shared/runs/2026-10-27-plan-review-live-bots-delta-no-allowlist.last-message.txt '<prompt: see run log>'"
+run_log: thoughts/shared/runs/2026-10-27-plan-review-live-bots-delta-no-allowlist.md
+---
+# Independent review: plan-review live-bots-delta-no-allowlist
+<!-- Written by eng-run (prompt plan-review v2). Each finding row starts 'open': set disposition fixed (where) |
+     accepted-risk (ONLY with Rob's approval, e.g. "Rob 2026-10-27") | rejected (reason). Plan reviews gate
+     implementation (medium/large); slice reviews are advisory. -->
+
+## Findings
+| # | Severity | Location | Finding | Disposition | Reason / approval |
+|---|---|---|---|---|---|
+| 1 | high | thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md:12,52-59 | The delta claims CP-C approval, but PROJECT_STATE records only the original plan and original speclock; revised specs and DSL are deferred until implementation - Draft the revised specs and DSL before implementation, generate the new lock, and have Rob approve the concrete delta and hash after review. | open | |
+| 2 | high | thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md:34-38 | The approved design still requires chosen channels, including an acceptance example explicitly forbidding the behavior this delta introduces; architecture and ADR-0007 also retain chosen-channel catch-up - Reconcile the requirement, acceptance examples, scope text, architecture, and ADR amendment records before implementing the changed contract. | open | |
+| 3 | high | thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md:64-67; thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md | No lb4b slice card exists, placement remains “own slice or fold into lb5,” and existing cards retain chosen-channel behavior and obsolete spec references - Choose the sequence, create the lb4b card with reqs, specs, security review, and exact verification commands, and update dependent cards and plan references. | open | |
+| 4 | high | thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md:36,47 | Catch-up expands to all member channels without defining complete cross-team discovery, pagination, refresh timing, or handling of newly discovered channels; a team-scoped endpoint alone cannot establish complete coverage - Specify discovery across all memberships plus DMs, preserve first-start semantics, and test multiple teams, membership changes, and posts during an outage in a newly discovered channel. | open | |
+| 5 | medium | thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md:45-58 | Removing the allow-list leaves membership as the disclosure boundary, but planned tests only prove positive delivery - Add behavioral coverage proving posts in non-member private channels produce no wake or implicit join, while member private-channel posts wake; retain system, own-post, and group-DM exclusion coverage. | open | |
+| 6 | medium | thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md:58; tests/acceptance/dsl.py | The proposed thread spec needs thread creation, replying, and correlation assertions, but the DSL provides none; asserting root_id alone would test payload structure without proving the intended conversation behavior - Define domain steps for replying to a bot’s thread and asserting the wake identifies that thread, then draft the REQ-A1-tagged scenario before locking. | open | |
+| 7 | medium | thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md:71-73 | lb4b requires the entire live suite and a deployed demo before lb5 supplies reconnect, container mode, and application startup wiring - Use explicit lb4b-supported node ids and an in-process demo, then require the full container suite and deployed demo in lb5. | open | |
+| 8 | medium | tests/acceptance/specs/test_live_bots.py:6; docs/decisions/0010-acceptance-tests-live-bots.md | All live specs run exclusively on the live channel; there is no API-channel execution or Playwright journey required by the requested large-work criteria, although ADR-0010 explicitly exempts UI - Record Rob’s explicit disposition of this deviation and clarify whether live satisfies API coverage, or add the required channels and journey. | open | |
+
+## Reviewer raw output
+```
+1. [high] thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md:12,52-59 - The delta claims CP-C approval, but PROJECT_STATE records only the original plan and original speclock; revised specs and DSL are deferred until implementation - Draft the revised specs and DSL before implementation, generate the new lock, and have Rob approve the concrete delta and hash after review.
+2. [high] thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md:34-38 - The approved design still requires chosen channels, including an acceptance example explicitly forbidding the behavior this delta introduces; architecture and ADR-0007 also retain chosen-channel catch-up - Reconcile the requirement, acceptance examples, scope text, architecture, and ADR amendment records before implementing the changed contract.
+3. [high] thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md:64-67; thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md - No lb4b slice card exists, placement remains “own slice or fold into lb5,” and existing cards retain chosen-channel behavior and obsolete spec references - Choose the sequence, create the lb4b card with reqs, specs, security review, and exact verification commands, and update dependent cards and plan references.
+4. [high] thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md:36,47 - Catch-up expands to all member channels without defining complete cross-team discovery, pagination, refresh timing, or handling of newly discovered channels; a team-scoped endpoint alone cannot establish complete coverage - Specify discovery across all memberships plus DMs, preserve first-start semantics, and test multiple teams, membership changes, and posts during an outage in a newly discovered channel.
+5. [medium] thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md:45-58 - Removing the allow-list leaves membership as the disclosure boundary, but planned tests only prove positive delivery - Add behavioral coverage proving posts in non-member private channels produce no wake or implicit join, while member private-channel posts wake; retain system, own-post, and group-DM exclusion coverage.
+6. [medium] thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md:58; tests/acceptance/dsl.py - The proposed thread spec needs thread creation, replying, and correlation assertions, but the DSL provides none; asserting root_id alone would test payload structure without proving the intended conversation behavior - Define domain steps for replying to a bot’s thread and asserting the wake identifies that thread, then draft the REQ-A1-tagged scenario before locking.
+7. [medium] thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md:71-73 - lb4b requires the entire live suite and a deployed demo before lb5 supplies reconnect, container mode, and application startup wiring - Use explicit lb4b-supported node ids and an in-process demo, then require the full container suite and deployed demo in lb5.
+8. [medium] tests/acceptance/specs/test_live_bots.py:6; docs/decisions/0010-acceptance-tests-live-bots.md - All live specs run exclusively on the live channel; there is no API-channel execution or Playwright journey required by the requested large-work criteria, although ADR-0010 explicitly exempts UI - Record Rob’s explicit disposition of this deviation and clarify whether live satisfies API coverage, or add the required channels and journey.
+```

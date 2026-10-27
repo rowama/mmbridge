@@ -34,10 +34,10 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [SLICE-20261027-lb4-signed-wake-dispatcher](thoughts/shared/slices/2026-10-27-lb4-signed-wake-dispatcher.md) (blocked: Issue in Phase 4). Previous: lb3 [done](thoughts/shared/slices/2026-10-27-lb3-listener-filters.md)
 
 ## Next action
-lb4 implemented except a DM-only bot config: 5/7 lb4 specs green, unit 216 + MCP acceptance 16 green (commit 446047a). BLOCKED on "Issue in Phase 4" (see Blockers). Planner: take the decision to Rob, then the implementer finishes lb4. Codex review of lb4 still to run (codex not installed on the implementer PC). Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
+lb4 unblocked by allowing `channels: []` (DM-only bot, delta section 'Unblocking lb4'); implementer/verify finishing lb4. Allow-list delta: Rob's wake rules recorded in the delta; delta stays in-review because eng-check gates it on 4 high plan-review findings (F1-F4) - planner fixes them in lb4b prep, then the CP-C row is logged. After lb4 CP-S: lb4b (full allow-list removal) - do not start until the planner says. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
 
 ## Blockers
-- 2026-10-27 Issue in Phase 4: specs `test_dm_to_bot_wakes_bot_once` and `test_forged_wake_is_rejected` register a DM-only bot (`given_live_bot("eddie", channels=[])`), but store validation and `admin set-bot` (lb1, PR-6; `tests/unit/test_store.py:107`) reject an empty channel list. Rob decides: allow `channels: []` (suggested, ~10 lines + tests) or change the specs (speclock). Details: lb4 slice card, Blockers.
+- none
 
 ## Pending approvals
 See `pending_approvals` in the front matter (the only copy; `.eng/bin/eng-status` renders it). Do not list items here.
