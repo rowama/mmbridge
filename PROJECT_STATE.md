@@ -31,10 +31,10 @@ implement (increment A Live bots, Large) - PROCESS.md section 3.
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[SLICE-20261027-lb3-listener-filters](thoughts/shared/slices/2026-10-27-lb3-listener-filters.md) (todo). Previous: lb2 [done](thoughts/shared/slices/2026-10-27-lb2-state-db-wake-queue.md)
+[SLICE-20261027-lb3-listener-filters](thoughts/shared/slices/2026-10-27-lb3-listener-filters.md) (review). Previous: lb2 [done](thoughts/shared/slices/2026-10-27-lb2-state-db-wake-queue.md)
 
 ## Next action
-lb2 done (CP-S logged; empty-DB admin check deferred). NEXT: implementer runs eng-run implement on lb3 (SLICE-20261027-lb3-listener-filters), then planner runs eng-verify. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
+lb3 implemented (status review; Codex review no findings, addressed). NEXT: planner runs eng-verify on lb3 (run listener tests locally; Codex sandbox cannot bind sockets), then requests CP-S with the OQ1 spike (`echo "$TOKEN" | python -m app.ws_spike` in the container after redeploy). Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
 
 ## Blockers
 none
@@ -62,7 +62,8 @@ none
 - Cross-model review A (awaiting Codex): [thoughts/shared/verification/2026-10-26-live-bots-arch-review.md](thoughts/shared/verification/2026-10-26-live-bots-arch-review.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0010 (all accepted): [docs/decisions/](docs/decisions/)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-27_02-07-31_lb2-implemented-awaiting-verify.md](thoughts/shared/handoffs/2026-10-27_02-07-31_lb2-implemented-awaiting-verify.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-27_02-25-15_lb3-implemented-awaiting-verify.md](thoughts/shared/handoffs/2026-10-27_02-25-15_lb3-implemented-awaiting-verify.md)
+- Review lb3 (addressed, no findings): [thoughts/shared/verification/2026-10-27-slice-20261027-lb3-listener-filters-review.md](thoughts/shared/verification/2026-10-27-slice-20261027-lb3-listener-filters-review.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Plan (approved): [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md](thoughts/shared/plans/2026-10-25-mmbridge-mcp.md)
 - Verification s1 (PASS): [thoughts/shared/verification/2026-10-26-s1-verify.md](thoughts/shared/verification/2026-10-26-s1-verify.md)
