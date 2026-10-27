@@ -2,7 +2,7 @@
 id: RESEA-20261026-live-bots-current-code
 type: research
 phase: research
-status: in-review
+status: approved
 owner_agent: grok-bot
 date: 2026-10-26
 links: [docs/design/2026-10-26-live-bots.md]
