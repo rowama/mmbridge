@@ -7,7 +7,7 @@ from dsl import Dsl
 
 def pytest_addoption(parser):
     parser.addoption("--channel", default=os.environ.get("ACCEPTANCE_CHANNEL", "mcp"),
-                     choices=["api", "ui", "mcp"], help="protocol driver to run the specs through")
+                     choices=["api", "ui", "mcp", "live"], help="protocol driver to run the specs through")
 
 
 def pytest_configure(config):
@@ -36,6 +36,10 @@ def driver(request):
     elif ch == "ui":
         from drivers.ui import UiDriver
         d = UiDriver(base, page=request.getfixturevalue("page"))   # page fixture from pytest-playwright
+    elif ch == "live":
+        # Live bots (ADR-0010): container + fake MM websocket + wake receiver; built in slices 3-5.
+        from drivers.live import LiveDriver
+        d = LiveDriver()
     else:
         # In-process bridge (app.main:app) over Streamable HTTP + fake Mattermost; built in slice 1.
         from drivers.mcp import McpDriver

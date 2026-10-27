@@ -4,13 +4,14 @@ type: project-state
 phase: plan
 status: active
 owner_agent: grok-bot
-date: 2026-10-26
+date: 2026-10-27
 links: []
 triage: large             # unset | small | medium | large
 active_slice: none
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: []
+pending_approvals:
+  - "CP-C: thoughts/shared/plans/2026-10-27-live-bots.md - approve plan (approved speclock sha256:3108f1fe6a93cfae) - ONLY after mandatory Codex plan-review is run and has no open critical/high"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -34,7 +35,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 none (D hardening [done](thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md))
 
 ## Next action
-A Live bots: architecture done (see Approval log). Planning in progress: Eddie getting Rob buy-in on slice outline/order, then eng-plan writes thoughts/shared/plans/ (CP-C). Deploy prerequisites before enabling: Coolify persistent volume /data (uid 10001), env secret MMB_STORE_KEY, replicas 1. Advisory Codex arch review still optional (stub awaiting). No plan or code yet.
+A Live bots: plan drafted (5 slices lb1..lb5, specs locked sha256:3108f1fe6a93cfae). BLOCKED ON mandatory Codex plan review (not run): Rob runs `python3 .eng/bin/eng-run plan-review thoughts/shared/plans/2026-10-27-live-bots.md` (or the codex exec command in the review stub). Planner then fills Findings dispositions, fixes plan/cards; only then ask CP-C. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
 
 ## Blockers
 none
@@ -54,11 +55,14 @@ none
 - Process feedback: [thoughts/shared/process-feedback.md](thoughts/shared/process-feedback.md)
 - Design A Live bots (approved; scope REDUCE recorded 2026-10-26): [docs/design/2026-10-26-live-bots.md](docs/design/2026-10-26-live-bots.md)
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
+- Plan A Live bots (draft, CP-C pending after plan review): [thoughts/shared/plans/2026-10-27-live-bots.md](thoughts/shared/plans/2026-10-27-live-bots.md)
+- Plan review A (AWAITING Codex, mandatory): [thoughts/shared/verification/2026-10-27-live-bots-plan-review.md](thoughts/shared/verification/2026-10-27-live-bots-plan-review.md)
+- Specs A: [tests/acceptance/specs/test_live_bots.py](tests/acceptance/specs/test_live_bots.py)
 - Architecture A Live bots (approved): [docs/architecture/2026-10-26-live-bots.md](docs/architecture/2026-10-26-live-bots.md)
 - Cross-model review A (awaiting Codex): [thoughts/shared/verification/2026-10-26-live-bots-arch-review.md](thoughts/shared/verification/2026-10-26-live-bots-arch-review.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0010 (all accepted): [docs/decisions/](docs/decisions/)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-26_23-57-56_architecture-proposed-cp-b-pending.md](thoughts/shared/handoffs/2026-10-26_23-57-56_architecture-proposed-cp-b-pending.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-27_00-30-11_plan-drafted-awaiting-plan-review.md](thoughts/shared/handoffs/2026-10-27_00-30-11_plan-drafted-awaiting-plan-review.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Plan (approved): [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md](thoughts/shared/plans/2026-10-25-mmbridge-mcp.md)
 - Verification s1 (PASS): [thoughts/shared/verification/2026-10-26-s1-verify.md](thoughts/shared/verification/2026-10-26-s1-verify.md)

@@ -140,3 +140,67 @@ class Dsl:
         tok = self._d.current_token()
         assert tok not in repr(self._last), "token in response"
         assert tok not in self._d.bridge_logs(), "token in logs"
+
+    # --- Live bots (REQ-A1..A8, ADR-0010): listener -> signed wake at a receiver ----------
+    # Driven by the "live" channel: real container image + fake Mattermost (REST + websocket)
+    # + local wake receiver that captures and HMAC-verifies every wake. Bot set up via admin CLI.
+    def given_live_bot(self, name="eddie", channels=()):
+        """Bot `name` is the registered live bot (via the admin CLI), listening on the chosen
+        channels (names; the bot must be a member). Listener is enabled and connected."""
+        self._d.given_live_bot(name, list(channels))
+
+    def given_member_channel(self, channel="town-square", members=(), team="rmlab"):
+        """A channel exists; listed bots/users are members (no choice made by this)."""
+        self._d.given_channel(team, channel, list(members))
+
+    def given_wake_target_down(self):
+        """The bot's wake receiver fails every request (HTTP 503) from now on."""
+        self._d.given_wake_target_down()
+
+    def post_in(self, channel="town-square", message="hello", as_user="rob"):
+        """A Mattermost user (or bot) posts in a channel; the listener sees it live."""
+        self._d.post_in(channel, message, as_user)
+
+    def dm(self, bot="eddie", message="ping", as_user="ulrik"):
+        """A user sends a direct message to the bot."""
+        self._d.dm(bot, message, as_user)
+
+    def drop_connection(self, seconds=30):
+        """Mattermost drops the listener's websocket and refuses reconnects for `seconds`
+        (simulated); posts made meanwhile are only reachable by catch-up after reconnect."""
+        self._d.drop_connection(seconds)
+
+    def restore_connection(self):
+        """Mattermost accepts connections again; the listener reconnects on its own."""
+        self._d.restore_connection()
+
+    def send_forged_wake(self):
+        """Someone posts a wake to the receiver without a valid signature."""
+        self._last = self._d.send_forged_wake()
+
+    def assert_woken_once(self, bot="eddie", channel="town-square", sender="rob", message=None):
+        """Exactly one correctly signed wake for this post reached the bot's receiver, naming
+        channel, sender, message text and post id (within the 10 s metric)."""
+        self._d.assert_woken_once(bot, channel, sender, message)
+
+    def assert_not_woken(self, bot="eddie", message=None):
+        """No wake (for this message, or at all when message is None) reached the receiver
+        within the settle time."""
+        self._d.assert_not_woken(bot, message)
+
+    def assert_forged_wake_rejected(self):
+        """The receiver rejected the unsigned/forged wake (signature check failed)."""
+        self._d.assert_forged_wake_rejected(self._last)
+
+    def assert_no_token_anywhere(self, bot="eddie"):
+        """The bot's Mattermost token appears in no log line, admin CLI output, or wake
+        payload/header captured during the scenario."""
+        self._d.assert_no_token_anywhere(bot)
+
+    def assert_wake_retried(self, minimum=2):
+        """The receiver saw at least `minimum` delivery attempts for the same delivery id."""
+        self._d.assert_wake_retried(minimum)
+
+    def assert_failed_wake_visible(self, message=None):
+        """After retries are exhausted the operator sees the failed wake (admin CLI `failed`)."""
+        self._d.assert_failed_wake_visible(message)
