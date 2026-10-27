@@ -10,7 +10,8 @@ triage: large             # unset | small | medium | large
 active_slice: SLICE-20261027-lb1-bot-store-admin-cli
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: []
+pending_approvals:
+  - "CP-S: thoughts/shared/slices/2026-10-27-lb1-bot-store-admin-cli.md - manual verification"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
