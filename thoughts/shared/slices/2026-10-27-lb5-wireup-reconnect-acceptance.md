@@ -20,14 +20,19 @@ Plan: [thoughts/shared/plans/2026-10-27-live-bots.md](../plans/2026-10-27-live-b
 In the real container, `LIVE_BOTS_ENABLED=true` starts listener + dispatcher from FastAPI lifespan, `/health` reports listener state, drops reconnect with resume or REST catch-up (15 min window) with exactly-once wakes; full live acceptance suite green against the container.
 
 ## Acceptance criteria
-- [ ] `app/main.py`: lifespan starts listener+dispatcher tasks only if flag true and store+state readable; `/health` adds `listener: on|off|disabled|degraded` (no secrets); MCP path unchanged
+- [ ] `app/main.py`: lifespan starts listener+dispatcher tasks only if flag true and store+state readable; `/health` adds `listener: disabled|off|connecting|ok|degraded` and `wake_failed_24h` (no secrets); MCP path unchanged
 - [ ] `app/listener.py`: reconnect backoff 1->60 s jitter, `?connection_id&sequence_number`, new id -> REST catch-up `GET /channels/{id}/posts?since=` for chosen+DM channels within `LIVE_CATCHUP_MINUTES` (default 15), seq reset to 0; 401 -> retry every 5 min; store mtime re-read every 30 s; single-listener lease in meta
 - [ ] `tests/acceptance/drivers/live.py`: container mode (docker image, temp /data, fakes on host network) per ADR-0010; scenario log capture for token scan
 - [ ] README/OWNER-GUIDE: deploy prerequisites + receiver HMAC verification snippet; CHANGELOG Unreleased
+- [ ] (PR-2) `ConfigHolder` coordinated reload for listener+dispatcher; invalid edit keeps old config; token/channel/url/secret rotation tests
+- [ ] (PR-3) Catch-up pagination, `(create_at, post_id)` ordering for equal timestamps, DM discovery via `/users/me/channels`, atomic cursor; crash-between-pages recovery test
+- [ ] (PR-4) Seq-gap on resume triggers catch-up; supervisor restarts crashed listener/dispatcher (MCP stays up, health degraded); startup delivers pending wakes exactly once
+- [ ] (PR-10) `/health` `listener: disabled|off|connecting|ok|degraded` + `wake_failed_24h` per architecture (replaces `on`)
+- [ ] (PR-11) Verification report includes `eng-spec status .` and `eng-spec trace .` output
 - [ ] Plan Phase 5 Automated Verification all exit 0; existing MCP suite (`.venv/bin/pytest tests/unit -q && .venv/bin/pytest tests/acceptance -q`) still green
 
 ## Tasks
-- [ ] Run this slice's executable specs (specs:) and confirm they fail for the right reason (red) (`.venv/bin/pytest tests/acceptance --channel live -q -k <names>`)
+- [ ] Run this slice's executable specs (specs:) and confirm they fail for the right reason (red) (`.venv/bin/pytest -q --channel live <node ids from specs:>`)
 - [ ] Write failing unit tests (tests/unit/) for the behaviours above
 - [ ] Implement
 - [ ] Run Phase 5 automated verification (plan), including this slice's specs (now green)

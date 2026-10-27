@@ -2,7 +2,7 @@
 id: PLANREV-20261027-live-bots
 type: review-findings
 phase: plan
-status: open             # open | addressed | closed
+status: closed           # superseded by 2026-10-27-live-bots-plan-review-2.md (canonical)
 owner_agent: grok-bot
 date: 2026-10-27
 links: [thoughts/shared/plans/2026-10-27-live-bots.md]

@@ -25,6 +25,7 @@ Against a fake Mattermost websocket, the listener authenticates, tracks seq, and
 - [ ] Spike (OQ1): confirm hello/seq/posted shape against Rob's Mattermost version; record result in progress log
 - [ ] `tests/acceptance/drivers/fake_mattermost.py`: websocket endpoint (hello, seq, posted, drop) - reusable by the live driver
 - [ ] `requirements.txt`: pin `websockets` explicitly (ADR-0007)
+- [ ] (PR-3) Listener persists via `state.enqueue_and_advance`
 - [ ] Plan Phase 3 Automated Verification all exit 0; existing MCP suite (`.venv/bin/pytest tests/unit -q && .venv/bin/pytest tests/acceptance -q`) still green
 
 ## Tasks

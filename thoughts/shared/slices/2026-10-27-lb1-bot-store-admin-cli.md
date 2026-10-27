@@ -25,6 +25,8 @@ Operator can `python -m app.admin set-bot/show` inside the container; config sit
 - [ ] Logs `store_updated` with field names only; `app/logging.py` redact filter extended to the stored token/secret
 - [ ] `requirements.txt`: pin `cryptography`; Dockerfile creates /data owned by uid 10001
 - [ ] No listener, no state DB, no HTTP surface change; `/health` unchanged
+- [ ] (PR-7) `admin rotate-key` via MultiFernet (ADR-0006); `MMB_STORE_KEY` accepts `new,old`; tests per plan Phase 1
+- [ ] (PR-6) Config validation on load/set-bot: version==1, required fields, https wake_url, channel id format, wake secret >= 32 chars; tests per plan Phase 1
 - [ ] Plan Phase 1 Automated Verification all exit 0; existing MCP suite (`.venv/bin/pytest tests/unit -q && .venv/bin/pytest tests/acceptance -q`) still green
 
 ## Tasks

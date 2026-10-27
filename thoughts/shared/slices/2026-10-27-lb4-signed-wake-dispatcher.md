@@ -23,10 +23,15 @@ Queued wakes reach a receiver as signed HTTPS POSTs (HMAC-SHA256 over ts.body); 
 - [ ] `app/wake.py`: `sign(secret, ts, body) -> 'v1=<hex>'`; `verify(secret, headers, body, now, window=300) -> bool` (constant-time; used by test receiver and documented for receivers); `Dispatcher(state, cfg, http)` loop: claim_due -> POST with `X-MMB-Delivery/Timestamp/Signature`, 5 s timeout, concurrency 4; 2xx delivered; 408/429/5xx/timeout/connect retry; other 4xx failed; log `wake_failed`; payload has no token
 - [ ] `tests/acceptance/drivers/live.py` + wake receiver: in-process mode (listener + dispatcher tasks against fake MM + receiver); admin CLI invoked as subprocess/function
 - [ ] Test-only fast backoff via env (`WAKE_BACKOFF_SCALE`) so A8 spec runs in seconds
+- [ ] (PR-1) Dispatcher: atomic claim with instance id, `recover_stale` at start + each loop, owner heartbeat; crash-mid-POST and two-dispatcher tests
+- [ ] (PR-2) Sign/POST with current config at send time; bot-id rotation fails old wakes `bot_rotated`; rotation tests
+- [ ] (PR-5) Bridge-generated signature tests (independent recompute, ts skew, byte-identical body) + tamper/skew/unknown-version/missing-header rejection
+- [ ] (PR-8) Runtime prune scheduling (start + every 6 h) with fake-clock test
+- [ ] (PR-12) Phase 4 acceptance run uses explicit node ids (see plan), expects exactly 7 passed
 - [ ] Plan Phase 4 Automated Verification all exit 0; existing MCP suite (`.venv/bin/pytest tests/unit -q && .venv/bin/pytest tests/acceptance -q`) still green
 
 ## Tasks
-- [ ] Run this slice's executable specs (specs:) and confirm they fail for the right reason (red) (`.venv/bin/pytest tests/acceptance --channel live -q -k <names>`)
+- [ ] Run this slice's executable specs (specs:) and confirm they fail for the right reason (red) (`.venv/bin/pytest -q --channel live <node ids from specs:>`)
 - [ ] Write failing unit tests (tests/unit/) for the behaviours above
 - [ ] Implement
 - [ ] Run Phase 4 automated verification (plan), including this slice's specs (now green)

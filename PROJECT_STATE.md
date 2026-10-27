@@ -11,7 +11,7 @@ active_slice: none
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
 pending_approvals:
-  - "CP-C: thoughts/shared/plans/2026-10-27-live-bots.md - approve plan (approved speclock sha256:3108f1fe6a93cfae) - ONLY after mandatory Codex plan-review is run and has no open critical/high"
+  - "CP-C: thoughts/shared/plans/2026-10-27-live-bots.md - approve plan (approved speclock sha256:3108f1fe6a93cfae) - Codex plan-review done (thoughts/shared/verification/2026-10-27-live-bots-plan-review-2.md, 12 findings all fixed, 0 open critical/high)"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -35,7 +35,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 none (D hardening [done](thoughts/shared/slices/2026-10-26-d-hardening-xff-bearer.md))
 
 ## Next action
-A Live bots: plan drafted (5 slices lb1..lb5, specs locked sha256:3108f1fe6a93cfae). BLOCKED ON mandatory Codex plan review (not run): Rob runs `python3 .eng/bin/eng-run plan-review thoughts/shared/plans/2026-10-27-live-bots.md` (or the codex exec command in the review stub). Planner then fills Findings dispositions, fixes plan/cards; only then ask CP-C. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
+A Live bots: Codex plan review done; all 12 findings fixed in plan + lb1..lb5 cards (no spec changes; speclock sha256:3108f1fe6a93cfae unchanged). NEXT: ask Rob CP-C on the live-bots plan (speclock 3108f1fe6a93cfae, see pending_approvals). Then implement lb1. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
 
 ## Blockers
 none

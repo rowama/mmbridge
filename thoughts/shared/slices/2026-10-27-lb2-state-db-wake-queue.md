@@ -24,6 +24,10 @@ Plan: [thoughts/shared/plans/2026-10-27-live-bots.md](../plans/2026-10-27-live-b
 - [ ] Backoff helper `next_delay(attempt) -> 2,4,8,16,32 s`, `WAKE_MAX_ATTEMPTS` default 5
 - [ ] `app/admin.py`: `failed [--retry POST_ID]`, `stats` (counts, p95 enqueue->delivered latency)
 - [ ] Unwritable /data -> `StateError('state_unwritable')`
+- [ ] (PR-1) Atomic `claim_due` (BEGIN IMMEDIATE + in_flight + claimed_by + lease), `recover_stale`, claimer-checked `mark_*`, `meta.dispatcher_owner` heartbeat; concurrency/crash tests per plan Phase 2
+- [ ] (PR-3) `enqueue_and_advance` atomic enqueue+cursor, cursor `(create_at, post_id)` forward-only
+- [ ] (PR-9) store `post_create_at`/`delivered_at`; `stats` latency = delivered_at - post_create_at
+- [ ] (PR-8) `prune(7)` terminal-only; tests keep non-terminal rows
 - [ ] Plan Phase 2 Automated Verification all exit 0; existing MCP suite (`.venv/bin/pytest tests/unit -q && .venv/bin/pytest tests/acceptance -q`) still green
 
 ## Tasks
