@@ -2,6 +2,10 @@
 All notable changes to this project. Format: Keep a Changelog style; newest first.
 
 ## [Unreleased]
+<!-- id: CHANG-20261027-lb4b-drop-allowlist | owner_agent: unassigned | date: 2026-10-27 -->
+### Changed
+- Live bots: no channel allow-list. `python -m app.admin set-bot` takes only the token and wake URL (`--channels` is refused as no longer used; existing /data/bots.enc files with channel ids still load), and the bot wakes on every post by someone else in public or private channels it is a Mattermost member of, plus DMs; thread replies carry root_id. The bridge never joins channels.
+
 <!-- id: CHANG-20261027-lb2-state-db | owner_agent: unassigned | date: 2026-10-27 -->
 ### Added
 - Live bots: durable wake ledger and queue in /data/state.db (one wake per post, retries with 2-32 s backoff, crash-safe claims); `python -m app.admin failed [--retry POST_ID]` and `stats` for operators.

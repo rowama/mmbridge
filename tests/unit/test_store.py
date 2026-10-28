@@ -8,13 +8,13 @@ from cryptography.fernet import Fernet
 from app import store
 from app.store import BotConfig, StoreError
 
-CH = "abcdefghijklmnopqrstuvwxyz"   # 26-char Mattermost id
+CH = "abcdefghijklmnopqrstuvwxyz"   # 26-char Mattermost id (legacy channels key)
 TOKEN = "mmtoken-abcdefghijklmnop-9876"
 SECRET = "s" * 43
 
 
 def cfg(**kw):
-    d = dict(token=TOKEN, wake_url="https://wake.example/hook", wake_secret=SECRET, channels=[CH])
+    d = dict(token=TOKEN, wake_url="https://wake.example/hook", wake_secret=SECRET)
     d.update(kw)
     return BotConfig(**d)
 
@@ -93,7 +93,7 @@ def _write_raw(path, key, obj):
 
 
 def _raw(**bot):
-    b = {"token": TOKEN, "wake_url": "https://w.example/h", "wake_secret": SECRET, "channels": [CH]}
+    b = {"token": TOKEN, "wake_url": "https://w.example/h", "wake_secret": SECRET}
     b.update(bot)
     return b
 
@@ -103,7 +103,6 @@ def _raw(**bot):
     ({"version": 1, "bot": {k: v for k, v in _raw().items() if k != "token"}}, "token"),
     ({"version": 1, "bot": _raw(wake_secret="short")}, "wake_secret"),
     ({"version": 1, "bot": _raw(wake_url="http://w.example/h")}, "wake_url"),
-    ({"version": 1, "bot": _raw(channels=["town-square"])}, "channels"),
     ({"version": 1}, "bot"),
     ([1, 2], "format"),
 ])
@@ -113,9 +112,21 @@ def test_load_validates(path, key, obj, detail):
     assert e.code == "store_unreadable" and detail in e.detail
 
 
-def test_empty_channel_list_is_a_dm_only_bot(path, key):
-    _write_raw(path, key, {"version": 1, "bot": _raw(channels=[])})
-    assert store.load(path, key).channels == []
+@pytest.mark.parametrize("legacy", [[CH], [], ["town-square"], "not-a-list"])
+def test_legacy_channels_key_loads_and_is_ignored(path, key, legacy):
+    # pre-lb4b /data/bots.enc files carry a "channels" list; membership is the filter now (delta plan)
+    _write_raw(path, key, {"version": 1, "bot": _raw(channels=legacy)})
+    cfg = store.load(path, key)
+    assert cfg == BotConfig(token=TOKEN, wake_url="https://w.example/h", wake_secret=SECRET)
+    assert not hasattr(cfg, "channels")
+
+
+def test_save_writes_no_channels_key(path, key):
+    import json
+    store.save(path, key, cfg())
+    doc = json.loads(Fernet(key.encode()).decrypt(open(path, "rb").read()))
+    assert doc == {"version": 1, "bot": {"token": TOKEN, "wake_url": "https://wake.example/hook",
+                                         "wake_secret": SECRET}}
 
 
 def test_http_wake_allowed_only_with_test_flag(path, key, monkeypatch):

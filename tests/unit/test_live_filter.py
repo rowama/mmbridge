@@ -1,4 +1,5 @@
-"""live_filter.decide: architecture Filter rules (REQ-A1 chosen channels, A2 DMs, A3 own posts)."""
+"""live_filter.decide: architecture Filter rules (REQ-A1 member channels, A2 DMs, A3 own posts). Membership is the
+channel filter: Mattermost only sends the bot `posted` events for channels it is a member of."""
 import json
 import logging
 
@@ -7,7 +8,6 @@ import pytest
 from app.live_filter import WakeIntent, decide
 
 BOT = "u-eddie"
-CHOSEN = {"c-main-town-square"}
 
 
 def posted(channel_id="c-main-town-square", ctype="O", user_id="u-rob", ptype="", root_id="", message="hi",
@@ -20,53 +20,66 @@ def posted(channel_id="c-main-town-square", ctype="O", user_id="u-rob", ptype=""
             "broadcast": {"channel_id": channel_id}}
 
 
-def test_chosen_channel_wakes():
-    w = decide(posted(), BOT, CHOSEN)
+def test_member_channel_post_wakes():
+    w = decide(posted(), BOT)
     assert isinstance(w, WakeIntent)
     assert (w.post_id, w.channel_id, w.channel_type, w.user_id, w.message, w.create_at, w.root_id) == (
         "p-1", "c-main-town-square", "O", "u-rob", "hi", 1_700_000_000_000, None)
 
 
 @pytest.mark.parametrize("ctype", ["O", "P"])
-def test_non_chosen_open_or_private_channel_drops(ctype):
-    assert decide(posted(channel_id="c-main-other", ctype=ctype), BOT, CHOSEN) is None
+def test_any_open_or_private_channel_post_wakes(ctype):
+    w = decide(posted(channel_id="c-main-other", ctype=ctype), BOT)
+    assert w is not None and (w.channel_id, w.channel_type) == ("c-main-other", ctype)
 
 
-def test_chosen_private_channel_wakes():
-    assert decide(posted(ctype="P"), BOT, CHOSEN) is not None
+@pytest.mark.parametrize("wide", ["@channel", "@here", "@all"])
+def test_channel_wide_mention_wakes(wide):
+    w = decide(posted(message=wide + " standup in 5"), BOT)
+    assert w is not None and w.message == wide + " standup in 5"
 
 
-def test_dm_wakes_without_being_chosen():
-    w = decide(posted(channel_id="d-u-eddie__u-rob", ctype="D"), BOT, CHOSEN)
+def test_post_without_mention_wakes():
+    assert decide(posted(message="eddie is great"), BOT) is not None
+
+
+def test_dm_wakes():
+    w = decide(posted(channel_id="d-u-eddie__u-rob", ctype="D"), BOT)
     assert w is not None and w.channel_type == "D"
 
 
-def test_group_dm_drops_even_if_chosen():
-    assert decide(posted(ctype="G"), BOT, CHOSEN) is None
+def test_group_dm_drops():
+    assert decide(posted(ctype="G"), BOT) is None
+
+
+def test_decide_takes_no_channel_set():
+    with pytest.raises(TypeError):
+        decide(posted(), BOT, {"c-main-town-square"})
 
 
 @pytest.mark.parametrize("ctype", ["O", "D"])
 def test_own_post_drops(ctype):
-    assert decide(posted(ctype=ctype, user_id=BOT), BOT, CHOSEN) is None
+    assert decide(posted(ctype=ctype, user_id=BOT), BOT) is None
 
 
 @pytest.mark.parametrize("ptype", ["system_join_channel", "system_add_to_channel", "system_header_change"])
 def test_system_post_drops(ptype):
-    assert decide(posted(ptype=ptype), BOT, CHOSEN) is None
+    assert decide(posted(ptype=ptype), BOT) is None
 
 
-def test_thread_reply_wakes_with_root_id():
-    w = decide(posted(root_id="p-root"), BOT, CHOSEN)
+@pytest.mark.parametrize("ctype", ["O", "P", "D"])
+def test_thread_reply_wakes_with_root_id(ctype):
+    w = decide(posted(root_id="p-root", ctype=ctype), BOT)
     assert w is not None and w.root_id == "p-root"
 
 
 def test_post_given_as_dict_is_accepted():
-    assert decide(posted(post_as_str=False), BOT, CHOSEN) is not None
+    assert decide(posted(post_as_str=False), BOT) is not None
 
 
 def test_non_posted_event_is_ignored_silently(caplog):
     with caplog.at_level(logging.INFO, logger="mmbridge"):
-        assert decide({"event": "typing", "data": {}, "seq": 2}, BOT, CHOSEN) is None
+        assert decide({"event": "typing", "data": {}, "seq": 2}, BOT) is None
     assert "event_invalid" not in caplog.text
 
 
@@ -88,6 +101,6 @@ def _broken():
 @pytest.mark.parametrize("label,event", list(_broken()), ids=[x[0] for x in _broken()])
 def test_malformed_event_drops_and_logs_event_invalid(label, event, caplog):
     with caplog.at_level(logging.INFO, logger="mmbridge"):
-        assert decide(event, BOT, CHOSEN) is None
+        assert decide(event, BOT) is None
     assert "event_invalid" in caplog.text
     assert "m-private-text" not in caplog.text   # message text never logged

@@ -6,6 +6,7 @@ localhost port, MM-shaped channel ids), the real Listener and Dispatcher, and an
 The bot is configured with the real admin CLI (`app.admin.main`, as `python -m app.admin` would run it) on a
 temp /data with a fresh MMB_STORE_KEY; the printed wake secret is handed to the receiver. Backoff is scaled
 by WAKE_BACKOFF_SCALE so retry specs run in seconds.
+lb4b: no channel list in set-bot; the fake only sends `posted` to channel members, so membership is the filter.
 lb5 adds container mode (real image) and drop/restore connection.
 """
 import asyncio
@@ -62,6 +63,7 @@ class LiveDriver:
         self.rx = WakeReceiver()
         self.outputs = []              # admin CLI stdout
         self.posts = {}                # message -> post id (latest)
+        self.teams = {}                # channel name -> team (given_channel)
         self._last_post = None
         self._tasks = []
         self.state = None
@@ -89,10 +91,14 @@ class LiveDriver:
         except StopIteration:
             return self.mm.add_user(name)
 
-    def given_channel(self, team, channel, members):
+    def given_channel(self, team, channel, members, private=False):
         for m in members:
             self._user(m)
-        self.mm.add_channel(team, channel, members)
+        self.mm.add_channel(team, channel, members, ctype="P" if private else "O")
+        self.teams[channel] = team
+
+    def _channel(self, channel):
+        return self.mm.channel_by_name(channel, self.teams.get(channel, TEAM))
 
     def _admin(self, *argv, stdin=""):
         out = io.StringIO()
@@ -100,11 +106,10 @@ class LiveDriver:
         self.outputs.append(out.getvalue())
         return rc, out.getvalue()
 
-    def given_live_bot(self, name, channels):
+    def given_live_bot(self, name):
         u = self._user(name)
         u["is_bot"], u["token"] = True, "tok-%s-%s" % (name, secrets.token_hex(12))
-        chan = ["--channels", ",".join("%s/%s" % (TEAM, c) for c in channels)] if channels else []
-        rc, out = self._admin("set-bot", "--token-stdin", "--wake-url", WAKE_URL, *chan, stdin=u["token"] + "\n")
+        rc, out = self._admin("set-bot", "--token-stdin", "--wake-url", WAKE_URL, stdin=u["token"] + "\n")
         assert rc == 0, "admin set-bot failed: %s" % out.strip()
         self.rx.secret = re.search(r"wake secret \(shown once[^)]*\): (\S+)", out).group(1)
         cfg = store.load(store.path_from_env(), os.environ["MMB_STORE_KEY"])
@@ -128,13 +133,16 @@ class LiveDriver:
     def given_wake_target_down(self):
         self.rx.down = True
 
-    def _post(self, channel_id, user, message):
-        p = self._call(self.mm.add_post, channel_id, self._user(user)["id"], message)
+    def _post(self, channel_id, user, message, root_id=""):
+        p = self._call(self.mm.add_post, channel_id, self._user(user)["id"], message, "", root_id)
         self.posts[message], self._last_post = p["id"], p["id"]
         return p
 
     def post_in(self, channel, message, as_user):
-        self._post(self.mm.channel_by_name(channel, TEAM)["id"], as_user, message)
+        self._post(self._channel(channel)["id"], as_user, message)
+
+    def reply_in_thread(self, channel, to_message, message, as_user):
+        self._post(self._channel(channel)["id"], as_user, message, root_id=self.posts[to_message])
 
     def dm(self, bot, message, as_user):
         c = self.mm.direct_channel(self._user(bot)["id"], self._user(as_user)["id"])
@@ -173,7 +181,7 @@ class LiveDriver:
     def _delivered(self, post_id):
         return [r for r in self.rx.attempts(post_id) if r["status"] == 204]
 
-    def assert_woken_once(self, bot, channel, sender, message):
+    def assert_woken_once(self, bot, channel, sender, message, thread=None):
         pid = self.posts[message]
         self._wait(lambda: self._delivered(pid), WAKE_WITHIN_S, "wake for %r" % message)
         time.sleep(SETTLE_S)
@@ -186,7 +194,10 @@ class LiveDriver:
         if channel is None:
             assert w["channel"]["type"] == "D"
         else:
-            assert w["channel"]["name"] == channel and w["channel"]["type"] in ("O", "P")
+            assert w["channel"]["name"] == channel and w["channel"]["type"] == self._channel(channel)["type"]
+            assert w["channel"]["type"] in ("O", "P")
+        if thread is not None:
+            assert w["post"]["root_id"] == self.posts[thread], "wake does not name the thread %r" % thread
 
     def assert_not_woken(self, bot, message):
         # Barrier: a DM posted after the scenario is woken; anything before it has been processed by then.
@@ -200,6 +211,12 @@ class LiveDriver:
         if message is not None:
             others = [r for r in others if json.loads(r["body"]).get("post", {}).get("message") == message]
         assert not others, "unexpected wake(s): %s" % [r["headers"].get("x-mmb-delivery") for r in others]
+
+    def assert_not_member(self, bot, channel):
+        c = self._channel(channel)
+        assert self._user(bot)["id"] not in c["members"], "%s is a member of %s" % (bot, channel)
+        joins = [x for x in self.mm.calls if x[0] != "GET" and ("/members" in x[1] or c["id"] in x[1])]
+        assert joins == [] and self.mm.changes == [], "Mattermost writes: %s %s" % (joins, self.mm.changes)
 
     def assert_forged_wake_rejected(self, last):
         assert last["status"] == 401, "receiver accepted a forged wake (HTTP %s)" % last["status"]

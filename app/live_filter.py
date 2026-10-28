@@ -1,8 +1,9 @@
 """Which Mattermost websocket events wake the live bot (architecture Filter rules, REQ-A1/A2/A3).
 
-Pure apart from the `event_invalid` log line: no I/O, no state. Drop own posts (A3), system posts (type set),
-group DMs (G) and open/private channels not chosen (A1); wake on DMs (D, A2) and chosen channels. Thread
-replies are new posts and wake, carrying root_id. Malformed `posted` events drop and log `event_invalid`
+Pure apart from the `event_invalid` log line: no I/O, no state. Drop own posts (A3), system posts (type set) and
+group DMs (G); wake on DMs (D, A2) and every other post in open/private channels (A1). Membership is the channel
+filter: Mattermost only sends the bot `posted` events for channels it is a member of, so there is no allow-list.
+Thread replies are new posts and wake, carrying root_id. Malformed `posted` events drop and log `event_invalid`
 (reason only; never the message text).
 """
 import json
@@ -37,7 +38,7 @@ def _post(data: dict) -> dict | None:
     return post if isinstance(post, dict) else None
 
 
-def decide(event: dict, bot_user_id: str, chosen: set[str]) -> WakeIntent | None:
+def decide(event: dict, bot_user_id: str) -> WakeIntent | None:
     if not isinstance(event, dict):
         _invalid("not_object")
         return None
@@ -67,8 +68,6 @@ def decide(event: dict, bot_user_id: str, chosen: set[str]) -> WakeIntent | None
         return None
 
     if post["user_id"] == bot_user_id or post.get("type") or ctype == "G":
-        return None
-    if ctype in ("O", "P") and post["channel_id"] not in chosen:
         return None
     hints = {k: data.get(k) for k in ("channel_name", "channel_display_name", "sender_name", "team_id")}
     return WakeIntent(post["id"], post["channel_id"], ctype, post["user_id"], message, create_at,

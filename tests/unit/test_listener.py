@@ -21,9 +21,10 @@ def world():
     m.add_team("main")
     chosen = m.add_channel("main", "town-square", ["eddie", "rob"])
     other = m.add_channel("main", "off-topic", ["eddie", "rob"])
+    hr = m.add_channel("main", "hr", ["rob"], ctype="P")          # bot is not a member
     group = m.add_channel("main", "gdm", ["eddie", "rob"], ctype="G")
     dm = m.direct_channel(bot["id"], rob["id"])["id"]
-    return m, {"bot": bot, "rob": rob, "chosen": chosen, "other": other, "group": group, "dm": dm}
+    return m, {"bot": bot, "rob": rob, "chosen": chosen, "other": other, "hr": hr, "group": group, "dm": dm}
 
 
 @pytest.fixture
@@ -35,8 +36,7 @@ async def served(world):
 
 def make(served, tmp_path, **kw):
     m, w, base = served
-    cfg = BotConfig(token=w["bot"]["token"], wake_url="https://wake.example/hook", wake_secret="s" * 40,
-                    channels=[w["chosen"]])
+    cfg = BotConfig(token=w["bot"]["token"], wake_url="https://wake.example/hook", wake_secret="s" * 40)
     state = State(str(tmp_path / "state.db"))
     lis = Listener(cfg, state, lambda tok: Client(tok, base_url=base), base_url=base, **kw)
     return lis, state
@@ -69,7 +69,8 @@ async def test_qualifying_posts_land_once_in_state(running):
     m, w, lis, state = running
     rob, bot = w["rob"]["id"], w["bot"]["id"]
     wake1 = m.add_post(w["chosen"], rob, "eddie is great")
-    m.add_post(w["other"], rob, "not chosen")
+    other = m.add_post(w["other"], rob, "@channel any member channel wakes")
+    m.add_post(w["hr"], rob, "salary review")             # non-member: Mattermost never sends it to the bot
     m.add_post(w["chosen"], bot, "my own post")
     m.add_post(w["chosen"], rob, "rob joined", type="system_join_channel")
     m.add_post(w["group"], rob, "group dm")
@@ -78,9 +79,11 @@ async def test_qualifying_posts_land_once_in_state(running):
     m.ws_resend_last()                      # duplicate delivery of the reply event: dedupe gate
     marker = m.add_post(w["dm"], rob, "marker")
     await until(lambda: state.wake(marker["id"]) is not None)
-    assert [x.post_id for x in state.wakes()] == [wake1["id"], wake2["id"], reply["id"], marker["id"]]
+    assert [x.post_id for x in state.wakes()] == [wake1["id"], other["id"], wake2["id"], reply["id"],
+                                                  marker["id"]]
     assert all(x.status == "queued" for x in state.wakes())
     assert state.get_cursor(w["chosen"]) == (reply["create_at"], reply["id"])
+    assert state.get_cursor(w["hr"]) is None
     assert state.get_cursor(w["dm"]) == (marker["create_at"], marker["id"])
     assert state.wake(reply["id"]).payload["post"]["root_id"] == wake1["id"]
     assert state.wake(wake1["id"]).post_create_at == wake1["create_at"]

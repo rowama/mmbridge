@@ -105,7 +105,7 @@ class Listener:
                 _log("ws_connected", connection_id=self.connection_id,
                      server_version=(ev.get("data") or {}).get("server_version"))
                 continue
-            intent = decide(ev, self.bot_user_id, set(self.cfg.channels))
+            intent = decide(ev, self.bot_user_id)
             if intent:
                 payload = await self._payload(intent, client)
                 new = await asyncio.to_thread(self.state.enqueue_and_advance, intent.post_id, intent.channel_id,

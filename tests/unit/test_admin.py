@@ -49,8 +49,8 @@ def tok(mm, name="eddie"):
     return mm.user_by_name(name)["token"]
 
 
-def set_bot(mm, channels="main/town-square,main/dev", url="https://wake.example/hook", stdin=None):
-    return run(mm, "set-bot", "--token-stdin", "--wake-url", url, "--channels", channels,
+def set_bot(mm, url="https://wake.example/hook", stdin=None):
+    return run(mm, "set-bot", "--token-stdin", "--wake-url", url,
                stdin=stdin if stdin is not None else tok(mm) + "\n")
 
 
@@ -59,13 +59,16 @@ def test_set_bot_stores_resolved_ids_and_prints_secret_once(mm, env, caplog):
         rc, out = set_bot(mm)
     assert rc == 0, out
     cfg = store.load(env["path"], env["key"])
-    assert cfg.token == tok(mm) and cfg.channels == [TOWN, DEV] and cfg.wake_url == "https://wake.example/hook"
+    assert cfg.token == tok(mm) and cfg.wake_url == "https://wake.example/hook"
     assert len(cfg.wake_secret) >= 32 and out.count(cfg.wake_secret) == 1
     assert tok(mm) not in out and tok(mm) not in caplog.text and cfg.wake_secret not in caplog.text
     assert "store_updated" in caplog.text
-    for f in ("token", "wake_url", "wake_secret", "channels"):
+    for f in ("token", "wake_url", "wake_secret"):
         assert f in caplog.text
+    assert "channels" not in caplog.text and "channels" not in out
+    assert "bot @eddie stored: wake_url https://wake.example/hook" in out
     assert not [c for c in mm.changes]   # never joins / changes the world
+    assert [c for c in mm.calls if "/channels" in c[1]] == []   # no channel lookups: membership is the filter
 
 
 def test_show_masks_token_never_prints_secret(mm, env):
@@ -74,31 +77,29 @@ def test_show_masks_token_never_prints_secret(mm, env):
     rc, out = run(mm, "show")
     assert rc == 0
     assert tok(mm) not in out and cfg.wake_secret not in out
-    assert tok(mm)[-4:] in out and TOWN in out and DEV in out and "https://wake.example/hook" in out
+    assert tok(mm)[-4:] in out and "https://wake.example/hook" in out
+    assert "channels" not in out and TOWN not in out
 
 
-def test_non_member_channel_refused_without_join(mm, env):
-    rc, out = set_bot(mm, channels="main/town-square,main/ops")
-    assert rc != 0 and "not_member" in out
+@pytest.mark.parametrize("ch", ["main/town-square", "main/ops", ""])
+def test_channels_option_refused_as_no_longer_used(mm, env, ch):
+    rc, out = run(mm, "set-bot", "--token-stdin", "--wake-url", "https://wake.example/hook", "--channels", ch,
+                  stdin=tok(mm) + "\n")
+    assert rc != 0 and "invalid_argument: channels no longer used" in out
     assert not os.path.exists(env["path"])
-    assert not [c for c in mm.calls if c[0] == "POST"] and mm.changes == []
+    assert mm.calls == [] and mm.changes == []   # refused before touching Mattermost
 
 
-def test_unknown_channel_refused(mm, env):
-    rc, out = set_bot(mm, channels="main/nope")
-    assert rc != 0 and "unknown_channel" in out and not os.path.exists(env["path"])
-
-
-@pytest.mark.parametrize("ch", ["town-square", "main/", "/x", "a/b/c", ""])
-def test_bad_channel_spec_refused(mm, env, ch):
-    rc, out = set_bot(mm, channels=ch)
-    assert rc != 0 and not os.path.exists(env["path"])
-
-
-def test_set_bot_without_channels_is_dm_only(mm, env):
-    rc, out = run(mm, "set-bot", "--token-stdin", "--wake-url", "https://wake.example/hook", stdin=tok(mm) + "\n")
+def test_set_bot_keeps_legacy_store_loadable_and_drops_channels(mm, env):
+    import json
+    open(env["path"], "wb").write(Fernet(env["key"].encode()).encrypt(json.dumps({"version": 1, "bot": {
+        "token": "old-token-xxxxxxxx", "wake_url": "https://old.example/h", "wake_secret": "o" * 40,
+        "channels": [TOWN]}}).encode()))
+    rc, out = run(mm, "show")
+    assert rc == 0 and "https://old.example/h" in out and TOWN not in out
+    rc, out = set_bot(mm)
     assert rc == 0, out
-    assert store.load(env["path"], env["key"]).channels == []
+    assert TOWN.encode() not in Fernet(env["key"].encode()).decrypt(open(env["path"], "rb").read())
 
 
 def test_http_wake_url_refused(mm, env):
@@ -128,14 +129,14 @@ def test_missing_key_refused(mm, env, monkeypatch):
 def test_supplied_wake_secret(mm, env):
     secret = "k" * 40
     rc, out = run(mm, "set-bot", "--token-stdin", "--wake-secret-stdin", "--wake-url", "https://w.example/h",
-                  "--channels", "main/town-square", stdin="%s\n%s\n" % (tok(mm), secret))
+                  stdin="%s\n%s\n" % (tok(mm), secret))
     assert rc == 0, out
     assert store.load(env["path"], env["key"]).wake_secret == secret and secret not in out
 
 
 def test_short_wake_secret_refused(mm, env):
     rc, out = run(mm, "set-bot", "--token-stdin", "--wake-secret-stdin", "--wake-url", "https://w.example/h",
-                  "--channels", "main/town-square", stdin="%s\n%s\n" % (tok(mm), "k" * 31))
+                  stdin="%s\n%s\n" % (tok(mm), "k" * 31))
     assert rc != 0 and "wake_secret" in out and not os.path.exists(env["path"])
 
 

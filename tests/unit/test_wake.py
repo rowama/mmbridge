@@ -51,7 +51,7 @@ def rx(clk):
 
 
 def cfg(url=URL, secret=SECRET):
-    return BotConfig(token=TOKEN, wake_url=url, wake_secret=secret, channels=["a" * 26])
+    return BotConfig(token=TOKEN, wake_url=url, wake_secret=secret)
 
 
 def payload(post_id="p-1", bot_id="u-eddie"):

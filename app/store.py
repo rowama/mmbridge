@@ -1,13 +1,14 @@
-"""Encrypted store for the ONE live bot's config (ADR-0006): token, wake URL, wake secret, channel ids.
+"""Encrypted store for the ONE live bot's config (ADR-0006): token, wake URL, wake secret. No channel list:
+Mattermost membership decides which channel posts can wake the bot (delta plan 2026-10-27).
 
 /data/bots.enc is the Fernet ciphertext of {"version": 1, "bot": {...}}, mode 0600, written atomically.
 Key from env MMB_STORE_KEY; "new,old" is accepted (MultiFernet) for key rotation. Errors never carry
 key material, token or secret. Loaded/saved token and secret are registered with the log redact filter.
+A legacy `channels` key (pre-lb4b stores) is ignored on load and dropped on the next save.
 """
 import httpx
 import json
 import os
-import re
 import tempfile
 from dataclasses import dataclass
 
@@ -17,7 +18,6 @@ from app import logging as mlog
 
 VERSION = 1
 MIN_SECRET = 32
-_CHANNEL_ID = re.compile(r"[a-z0-9]{26}")
 
 
 def path_from_env() -> str:
@@ -41,12 +41,11 @@ class BotConfig:
     token: str
     wake_url: str
     wake_secret: str
-    channels: list[str]
     version: int = VERSION
 
     def __repr__(self) -> str:  # never show token or secret
-        return "BotConfig(token=%s, wake_url=%r, wake_secret=****, channels=%r, version=%d)" % (
-            _mask(self.token), self.wake_url, self.channels, self.version)
+        return "BotConfig(token=%s, wake_url=%r, wake_secret=****, version=%d)" % (
+            _mask(self.token), self.wake_url, self.version)
 
     __str__ = __repr__
 
@@ -62,9 +61,6 @@ def validate(cfg: BotConfig) -> None:
         raise ValueError("wake_url: must be https")
     if len(cfg.wake_secret) < MIN_SECRET:
         raise ValueError("wake_secret: must be at least %d characters" % MIN_SECRET)
-    if (not isinstance(cfg.channels, list)
-            or not all(isinstance(c, str) and _CHANNEL_ID.fullmatch(c) for c in cfg.channels)):
-        raise ValueError("channels: must be a list of 26-char channel ids (empty = DMs only)")
 
 
 def https_ok(url: str) -> bool:
@@ -103,7 +99,7 @@ def _decode(plain: bytes) -> BotConfig:
         raise StoreError("store_unreadable", "bot: required")
     try:
         cfg = BotConfig(token=bot.get("token"), wake_url=bot.get("wake_url"), wake_secret=bot.get("wake_secret"),
-                        channels=bot.get("channels"), version=doc["version"])
+                        version=doc["version"])
         validate(cfg)
     except ValueError as e:
         raise StoreError("store_unreadable", str(e)) from None
@@ -159,7 +155,7 @@ def save(path: str, key: str | None, cfg: BotConfig) -> None:
         raise StoreError("store_invalid", str(e)) from None
     _register(cfg)
     doc = {"version": cfg.version, "bot": {"token": cfg.token, "wake_url": cfg.wake_url,
-                                           "wake_secret": cfg.wake_secret, "channels": list(cfg.channels)}}
+                                           "wake_secret": cfg.wake_secret}}
     _write(path, f.encrypt(json.dumps(doc).encode()))
 
 
