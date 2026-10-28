@@ -25,7 +25,7 @@ acceptance: executable-specs   # v2.5: tests/acceptance/, see PROCESS.md 13
 > Update it at the end of every session. Keep it under one screen.
 
 ## Current phase
-reflect (increment A Live bots shipped: v0.3.0 at 93b4f7d, tag v0.3.0 pushed 2026-10-28; CP-P approved by Rob) - PROCESS.md section 3.
+reflect (increment A Live bots shipped: v0.3.0 at 93b4f7d, tag v0.3.0 pushed 2026-10-28; see Approval log) - PROCESS.md section 3.
 
 ## Goal (one sentence)
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
