@@ -18,3 +18,4 @@
 
 ## Follow-ups
 - [x] P2: Case-insensitive Bearer scheme match in auth.py (F2 accepted-risk 2026-10-26) -> slice d-hardening
+- (2026-10-28, lb5 CP-S) Live check deferred by Rob: restart Mattermost mid-demo on Coolify to confirm real-Mattermost websocket resume (seq on hello) and REST catch-up deliver exactly one wake per missed post; covers the lb5 fake-drift note. Rollback (LIVE_BOTS_ENABLED=false) also not exercised.

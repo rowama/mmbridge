@@ -10,8 +10,7 @@ triage: large             # unset | small | medium | large
 active_slice: SLICE-20261027-lb5-wireup-reconnect-acceptance
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals:
-  - "CP-S: thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md - manual verification"
+pending_approvals: []
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -26,16 +25,16 @@ acceptance: executable-specs   # v2.5: tests/acceptance/, see PROCESS.md 13
 > Update it at the end of every session. Keep it under one screen.
 
 ## Current phase
-implement (increment A Live bots, Large; lb5 verified, CP-S pending) - PROCESS.md section 3.
+implement (increment A Live bots, Large; all slices lb1-lb5 done, lb5 CP-S logged 2026-10-28; next eng-ship) - PROCESS.md section 3.
 
 ## Goal (one sentence)
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[SLICE-20261027-lb5-wireup-reconnect-acceptance](thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md) (verified PASS at 8f987e7, awaiting CP-S). Previous: lb4b [done](thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md)
+[SLICE-20261027-lb5-wireup-reconnect-acceptance](thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md) (done; CP-S logged 2026-10-28, verify PASS 8f987e7). Previous: lb4b [done](thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md)
 
 ## Next action
-lb5 eng-verify PASS (8f987e7; Codex review rounds 2-6 fixed, round 6 clean). Next: Rob CP-S lb5 on Coolify (deploy main, set-bot, LIVE_BOTS_ENABLED=true, demo, restart Mattermost mid-demo) - steps in the latest handoff. Then eng-ship. OWNER-GUIDE pointer waits for Rob's uncommitted OWNER-GUIDE edits (TODOS).
+lb5 CP-S done 2026-10-28, see Approval log (steps 1-4, 6 good; step 5 Mattermost-restart resume/catch-up check deferred by Rob - see TODOS; rollback not done, LIVE_BOTS_ENABLED left on). Next: eng-ship increment A Live bots (CHANGELOG/VERSION; tag asks Rob). OWNER-GUIDE pointer waits for Rob's uncommitted OWNER-GUIDE edits (TODOS).
 
 ## Blockers
 - none
@@ -84,6 +83,7 @@ none
      Pre-kit decisions: back-fill with Checkpoint "pre-kit" and Decision "approved (back-filled, pre-kit)". .eng/bin/eng-check matches rows to statuses. -->
 | Date | Checkpoint | Artifact | Decision (Rob) |
 |---|---|---|---|
+| 2026-10-28 | CP-S | thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md | approved (verify PASS 8f987e7; Coolify steps 1-4 and 6 good; step 5 restart Mattermost mid-demo / real-MM resume+catch-up check deferred by Rob; rollback not exercised, LIVE_BOTS_ENABLED left on; via Eddie) |
 | 2026-10-28 | CP-S | thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md | approved (verify PASS 14ecd18; demo set-bot + --channels reject; live Mattermost->receiver e2e deferred until listener/dispatcher wired in lb5) |
 | 2026-10-27 | CP-C | thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md | approved speclock sha256:ea6a99cbd5601d05 |
 | 2026-10-27 | CP-A | docs/design/2026-10-26-live-bots.md | approved amendment: drop allow-list sha256:0f250a0276b5 (via Eddie) |

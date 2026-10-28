@@ -2,7 +2,7 @@
 id: SLICE-20261027-lb5-wireup-reconnect-acceptance
 type: slice
 phase: implement
-status: review           # todo | in-progress | blocked | review | done
+status: done             # todo | in-progress | blocked | review | done
 owner_agent: claude-code
 date: 2026-10-28
 links: [thoughts/shared/plans/2026-10-27-live-bots.md]
@@ -49,6 +49,7 @@ In the real container, `LIVE_BOTS_ENABLED=true` starts listener + dispatcher fro
 - 2026-10-28 - claude-code - slice-diff Codex review NOT run: `codex` CLI is not installed in the implementer's WSL shell (`eng-run code-review` exit 1). Security-relevant slice: planner/Rob to run `python3 .eng/bin/eng-run code-review SLICE-20261027-lb5-wireup-reconnect-acceptance` where Codex is available.
 - 2026-10-28 - grok-bot - Codex slice review on --base 3ed94b4 (eng-run parser printed "No findings" each time; raw output read by hand): review-2 P1+2xP2 -> 54ae627 (catch-up pages by post id with before=, MM ignores paging with since; seq/alive advance only after commit; recovery pending until catch-up done); review-3 P2 -> 0a50e87 (restore _alive_at on failed frame); review-4 P2 -> 9bdff90 (team-less bot finds DMs via GET /users/{id}/channels); review-5 2xP2 -> 8f987e7 (reconnect when token rotates mid-connect; cap backoff/restart exponent, app/live.py restart_delay); review-6 clean. Every fix test-first (red -> green).
 - 2026-10-28 - grok-bot - eng-verify PASS at 8f987e7: unit 267, acceptance 16/15 skipped, container + inprocess live 15/16 skipped, pytest tests 283+15=298 collected, eng-spec status clean, eng-check OK. Report: thoughts/shared/verification/2026-10-28-lb5-wireup-reconnect-acceptance-verify.md. Awaiting CP-S.
+- 2026-10-28 - grok-bot - CP-S approved by Rob (via Eddie): Coolify steps 1-4 and 6 good; step 5 (restart Mattermost mid-demo: real-MM resume/catch-up and the fake-drift check below) SKIPPED/deferred to TODOS; rollback not done, LIVE_BOTS_ENABLED left on. Slice done.
 
 ## Blockers / deviations from plan
 - Runtime wiring lives in a new module `app/live.py` (plan named only app/main.py); main.py just calls it.
