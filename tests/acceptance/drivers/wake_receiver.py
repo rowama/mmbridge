@@ -3,8 +3,11 @@
 POST /wake: records every request (headers, raw body, status), verifies the signature with app.wake.verify
 (401 when invalid), drops repeats of X-MMB-Delivery (idempotency key) and answers 204. Controls: `down`
 (503 to everything), `hang` (asyncio.Event the handler waits on, to cancel a dispatcher mid-POST).
-`transport()` routes an httpx.AsyncClient to it in-process.
+`transport()` routes an httpx.AsyncClient to it in-process; `serve()` (lb5) serves it on 127.0.0.1:<free port>
+for a dispatcher in another process (the container).
 """
+import asyncio
+import contextlib
 import json
 import time
 
@@ -46,3 +49,21 @@ class WakeReceiver:
 
     def transport(self) -> httpx.AsyncBaseTransport:
         return httpx.ASGITransport(app=self.app)
+
+    @contextlib.asynccontextmanager
+    async def serve(self):
+        """Yields the wake URL http://127.0.0.1:<port>/wake."""
+        import uvicorn
+        server = uvicorn.Server(uvicorn.Config(self.app, host="127.0.0.1", port=0, log_level="warning",
+                                               lifespan="off"))
+        task = asyncio.create_task(server.serve())
+        while not server.started:
+            if task.done():
+                task.result()
+            await asyncio.sleep(0.01)
+        port = server.servers[0].sockets[0].getsockname()[1]
+        try:
+            yield "http://127.0.0.1:%d/wake" % port
+        finally:
+            server.should_exit = True
+            await task

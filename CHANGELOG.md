@@ -2,6 +2,10 @@
 All notable changes to this project. Format: Keep a Changelog style; newest first.
 
 ## [Unreleased]
+<!-- id: CHANG-20261028-lb5-wireup-reconnect | owner_agent: unassigned | date: 2026-10-28 -->
+### Added
+- Live bots go live with LIVE_BOTS_ENABLED=true: the listener and wake dispatcher start with the bridge, /health reports listener (disabled|off|connecting|ok|degraded) and wake_failed_24h, dropped Mattermost connections reconnect and catch up missed posts (all member channels on all teams and DMs, 15 min window) with exactly one wake per post, and store edits (token, wake URL, secret) apply without a redeploy.
+
 <!-- id: CHANG-20261027-lb4b-drop-allowlist | owner_agent: unassigned | date: 2026-10-27 -->
 ### Changed
 - Live bots: no channel allow-list. `python -m app.admin set-bot` takes only the token and wake URL (`--channels` is refused as no longer used; existing /data/bots.enc files with channel ids still load), and the bot wakes on every post by someone else in public or private channels it is a Mattermost member of, plus DMs; thread replies carry root_id. The bridge never joins channels.

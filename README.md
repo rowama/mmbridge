@@ -53,6 +53,27 @@ own Mattermost bot token per call.
 ## Process
 This repo uses the eng-process kit; start at [PROJECT_STATE.md](PROJECT_STATE.md).
 
+## Live bots (deploy)
+Off by default: with `LIVE_BOTS_ENABLED` unset the bridge is the MCP bridge only and `/health` says
+`"listener": "disabled"`. To turn it on (Coolify):
+1. Persistent volume mounted at `/data` (writable by uid 10001; the image's `/data` already is). Replicas stay 1.
+2. Env secret `MMB_STORE_KEY`: generate one with
+   `python -c "from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())"`.
+3. Container terminal: `python -m app.admin set-bot --token-stdin --wake-url https://<receiver>/wake`, paste the
+   bot token at the prompt. Copy the printed wake secret into your receiver (shown once). No channel list: add the
+   bot to channels in Mattermost; it wakes on every post by someone else in those channels and on DMs.
+4. Env `LIVE_BOTS_ENABLED=true`, redeploy. `curl https://chats.rmlab.cloud/health` shows
+   `{"ok": true, "listener": "ok", "wake_failed_24h": 0}`.
+
+`listener` is `disabled` (flag off), `off` (store key wrong/missing, no bot stored, or `/data` not writable; see the
+`store_unreadable` / `state_unwritable` log line; fix it, then restart: e.g. the flag was on before the first
+`set-bot`), `connecting`, `ok`, or `degraded` (bot token refused by
+Mattermost, retried every 5 min, or a crashed task restarting). Drops reconnect on their own (1-60 s backoff);
+posts made while disconnected are caught up from the REST API (window `LIVE_CATCHUP_MINUTES`, default 15) and
+still wake exactly once. Edits made with `admin set-bot` while running are picked up within 30 s (a new token
+reconnects); a store that no longer decrypts keeps the previous config and logs `store_reload_failed`.
+`python -m app.admin failed` lists wakes the receiver never accepted; `--retry <post_id>` sends one again.
+
 ## Wake receiver (live bots)
 
 With live bots on, mmbridge POSTs each wake to the bot's `wake_url` with headers `X-MMB-Delivery`, `X-MMB-Timestamp` and `X-MMB-Signature: v1=<hex HMAC-SHA256(secret, ts + "." + body)>`. A receiver must check the signature before acting:

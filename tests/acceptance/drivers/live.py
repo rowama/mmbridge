@@ -1,13 +1,21 @@
 """Live-bots protocol driver (layer 3, ADR-0010). Drivers are not locked; edit freely.
 
-lb4: in-process mode. A background event loop runs the fake Mattermost (REST + websocket, served on a free
-localhost port, MM-shaped channel ids), the real Listener and Dispatcher, and an HMAC-verifying wake receiver
-(drivers/wake_receiver.py, reached through an in-process httpx transport at https://receiver.test/wake).
-The bot is configured with the real admin CLI (`app.admin.main`, as `python -m app.admin` would run it) on a
-temp /data with a fresh MMB_STORE_KEY; the printed wake secret is handed to the receiver. Backoff is scaled
-by WAKE_BACKOFF_SCALE so retry specs run in seconds.
-lb4b: no channel list in set-bot; the fake only sends `posted` to channel members, so membership is the filter.
-lb5 adds container mode (real image) and drop/restore connection.
+A background event loop serves the fake Mattermost (REST + websocket, MM-shaped channel ids, real-time post
+clock) and the HMAC-verifying wake receiver (drivers/wake_receiver.py) on free 127.0.0.1 ports. The bot is set up
+with the real admin CLI (token on stdin, wake URL); the printed wake secret is handed to the receiver.
+Backoff is scaled by WAKE_BACKOFF_SCALE so retry specs run in seconds; LIVE_ALLOW_HTTP_WAKE=true lets the wake
+URL be the plain-HTTP local receiver (tests only).
+
+SUT mode (env LIVE_MODE):
+- `container` (default, lb5, ADR-0010 layer 4): the real image (env LIVE_IMAGE, default mmbridge:lb5; build it
+  first with `docker build -t mmbridge:lb5 .`) on `--network host` with a fresh named volume at /data, a fresh
+  MMB_STORE_KEY and LIVE_BOTS_ENABLED=true. `python -m app.admin set-bot` runs in a one-off container on the same
+  volume before the server starts (as an operator would before enabling the flag); `admin failed` runs through
+  `docker exec`; `/health` tells when the listener is connected; `docker logs` is the log capture for the token
+  scan.
+- `inprocess` (lb4): app.admin.main and app.live.LiveRuntime in this process; logs captured from the loggers.
+drop_connection: the fake closes the websocket (no resume: a new connection id) and refuses REST + websocket
+until restore_connection, so posts made meanwhile are reachable only by the listener's REST catch-up.
 """
 import asyncio
 import hashlib
@@ -19,6 +27,8 @@ import os
 import re
 import secrets
 import shutil
+import socket
+import subprocess
 import tempfile
 import threading
 import time
@@ -26,20 +36,18 @@ import time
 import httpx
 from cryptography.fernet import Fernet
 
-from app import admin, store
+from app import admin
 from app import logging as mlog
-from app.listener import Listener
-from app.mattermost import Client
-from app.state import State
-from app.wake import Dispatcher
+from app.live import LiveRuntime
 from drivers.fake_mattermost import FakeMattermost
 from drivers.wake_receiver import WakeReceiver
 
-WAKE_URL = "https://receiver.test/wake"
 TEAM = "rmlab"
 WAKE_WITHIN_S = 10.0       # design metric: wake within 10 s
 SETTLE_S = 0.3
+START_S = 30.0             # container start + listener connect
 MARKER_USER = "zz-marker"
+LOGGERS = ("mmbridge", "mmbridge.ws", "httpx", "websockets")
 
 
 class _Capture(logging.Handler):
@@ -52,29 +60,131 @@ class _Capture(logging.Handler):
         self.lines.append(self.format(record))
 
 
+def _free_port() -> int:
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+class _InProcess:
+    """app.admin.main + app.live.LiveRuntime on the driver's event loop."""
+
+    def __init__(self, drv, env):
+        self.drv, self.env, self.runtime = drv, env, None
+        self._saved = {k: os.environ.get(k) for k in env}
+        os.environ.update(env)
+        self._log = _Capture()
+        for name in LOGGERS:
+            logging.getLogger(name).addHandler(self._log)
+
+    def admin(self, argv, stdin=""):
+        out = io.StringIO()
+        rc = admin.main(list(argv), stdin=io.StringIO(stdin), stdout=out, transport=self.drv.mm.transport())
+        return rc, out.getvalue()
+
+    def start(self):
+        self.runtime = LiveRuntime(env=dict(os.environ), base_url=self.drv.base, poll_s=0.05)
+        self.drv._run(self.runtime.start())
+
+    def listener(self):
+        return self.runtime.listener_status() if self.runtime else "off"
+
+    def logs(self):
+        return "\n".join(self._log.lines)
+
+    def close(self):
+        try:
+            if self.runtime:
+                self.drv._run(self.runtime.stop())
+        finally:
+            for name in LOGGERS:
+                logging.getLogger(name).removeHandler(self._log)
+            for k, v in self._saved.items():
+                os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
+
+
+class _Container:
+    """The real image (ADR-0010): one-off admin containers + the server container on a fresh /data volume."""
+
+    def __init__(self, drv, env):
+        self.drv, self.env = drv, env
+        self.image = os.environ.get("LIVE_IMAGE", "mmbridge:lb5")
+        self.name = "mmb-live-" + secrets.token_hex(4)
+        self.volume = self.name + "-data"
+        self.port = _free_port()
+        self.started = False
+        if self._docker("image", "inspect", self.image).returncode != 0:
+            raise AssertionError("image %s not found: run `docker build -t %s .` first" % (self.image, self.image))
+        self._docker("volume", "create", self.volume, check=True)
+
+    def _docker(self, *args, stdin="", check=False, timeout=60):
+        r = subprocess.run(["docker", *args], input=stdin, capture_output=True, text=True, timeout=timeout)
+        if check and r.returncode != 0:
+            raise AssertionError("docker %s failed: %s" % (args[0], r.stderr.strip()))
+        return r
+
+    def _env_args(self):
+        return [a for k, v in self.env.items() for a in ("-e", "%s=%s" % (k, v))]
+
+    def admin(self, argv, stdin=""):
+        if self.started:
+            r = self._docker("exec", "-i", self.name, "python", "-m", "app.admin", *argv, stdin=stdin)
+        else:
+            r = self._docker("run", "--rm", "-i", "--network", "host", "-v", self.volume + ":/data",
+                             *self._env_args(), self.image, "python", "-m", "app.admin", *argv, stdin=stdin)
+        return r.returncode, r.stdout + r.stderr
+
+    def start(self):
+        # Same image and entrypoint as production; only the port differs (host network: avoid clashes on 8080).
+        self._docker("run", "-d", "--name", self.name, "--network", "host", "-v", self.volume + ":/data",
+                     *self._env_args(), "-e", "LIVE_BOTS_ENABLED=true", self.image,
+                     "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(self.port), "--proxy-headers",
+                     check=True)
+        self.started = True
+
+    def listener(self):
+        try:
+            return httpx.get("http://127.0.0.1:%d/health" % self.port, timeout=2).json()["listener"]
+        except (httpx.HTTPError, ValueError, KeyError):
+            return "starting"
+
+    def logs(self):
+        if not self.started:
+            return ""
+        r = self._docker("logs", self.name)
+        return r.stdout + r.stderr
+
+    def close(self):
+        if self.started:
+            if os.environ.get("LIVE_SHOW_LOGS"):
+                print(self.logs())
+            self._docker("rm", "-f", self.name)
+        self._docker("volume", "rm", "-f", self.volume)
+
+
 class LiveDriver:
     def __init__(self):
-        self._tmp = tempfile.mkdtemp(prefix="mmb-live-")
-        env = {"MMB_DATA_DIR": self._tmp, "MMB_STORE_KEY": Fernet.generate_key().decode(),
-               "WAKE_BACKOFF_SCALE": "0.05", "WAKE_MAX_ATTEMPTS": "5"}
-        self._env_saved = {k: os.environ.get(k) for k in env}
-        os.environ.update(env)
-        self.mm = FakeMattermost(mm_ids=True)
+        self.mm = FakeMattermost(mm_ids=True, clock=time.time)
         self.rx = WakeReceiver()
         self.outputs = []              # admin CLI stdout
         self.posts = {}                # message -> post id (latest)
         self.teams = {}                # channel name -> team (given_channel)
         self._last_post = None
-        self._tasks = []
-        self.state = None
-        self._log = _Capture()
-        for name in ("mmbridge", "mmbridge.ws", "httpx", "websockets"):
-            logging.getLogger(name).addHandler(self._log)
         self._loop = asyncio.new_event_loop()
         self._thread = threading.Thread(target=self._loop.run_forever, daemon=True)
         self._thread.start()
-        self._serving = self.mm.serve()
-        self.base = self._run(self._serving.__aenter__())
+        self._serving = [self.mm.serve(), self.rx.serve()]
+        self.base, self.wake_url = (self._run(cm.__aenter__()) for cm in self._serving)
+        env = {"MMB_STORE_KEY": Fernet.generate_key().decode(), "MATTERMOST_URL": self.base,
+               "WAKE_BACKOFF_SCALE": "0.05", "WAKE_MAX_ATTEMPTS": "5", "LIVE_ALLOW_HTTP_WAKE": "true"}
+        mode = os.environ.get("LIVE_MODE", "container")
+        assert mode in ("container", "inprocess"), "LIVE_MODE must be container or inprocess"
+        self._tmp = None
+        if mode == "inprocess":
+            self._tmp = tempfile.mkdtemp(prefix="mmb-live-")
+            self.sut = _InProcess(self, {**env, "MMB_DATA_DIR": self._tmp, "LIVE_BOTS_ENABLED": "true"})
+        else:
+            self.sut = _Container(self, env)
 
     def _run(self, coro, timeout=20):
         return asyncio.run_coroutine_threadsafe(coro, self._loop).result(timeout)
@@ -101,34 +211,18 @@ class LiveDriver:
         return self.mm.channel_by_name(channel, self.teams.get(channel, TEAM))
 
     def _admin(self, *argv, stdin=""):
-        out = io.StringIO()
-        rc = admin.main(list(argv), stdin=io.StringIO(stdin), stdout=out, transport=self.mm.transport())
-        self.outputs.append(out.getvalue())
-        return rc, out.getvalue()
+        rc, out = self.sut.admin(argv, stdin)
+        self.outputs.append(out)
+        return rc, out
 
     def given_live_bot(self, name):
         u = self._user(name)
         u["is_bot"], u["token"] = True, "tok-%s-%s" % (name, secrets.token_hex(12))
-        rc, out = self._admin("set-bot", "--token-stdin", "--wake-url", WAKE_URL, stdin=u["token"] + "\n")
+        rc, out = self._admin("set-bot", "--token-stdin", "--wake-url", self.wake_url, stdin=u["token"] + "\n")
         assert rc == 0, "admin set-bot failed: %s" % out.strip()
         self.rx.secret = re.search(r"wake secret \(shown once[^)]*\): (\S+)", out).group(1)
-        cfg = store.load(store.path_from_env(), os.environ["MMB_STORE_KEY"])
-        self._run(self._start(cfg))
-
-    async def _start(self, cfg):
-        self.state = State(os.path.join(self._tmp, "state.db"))
-        self.listener = Listener(cfg, self.state, lambda tok: Client(tok, base_url=self.base), base_url=self.base)
-        self.http = httpx.AsyncClient(transport=self.rx.transport())
-        path, key = store.path_from_env(), os.environ["MMB_STORE_KEY"]
-        self.dispatcher = Dispatcher(self.state, lambda: store.load(path, key), self.http, poll_s=0.05)
-        self._tasks = [asyncio.create_task(self.listener.run()), asyncio.create_task(self.dispatcher.run())]
-        for _ in range(500):
-            if self.listener.status == "ok":
-                return
-            if self._tasks[0].done():
-                self._tasks[0].result()
-            await asyncio.sleep(0.01)
-        raise AssertionError("listener did not connect")
+        self.sut.start()
+        self._wait(lambda: self.sut.listener() == "ok", START_S, "listener ok in /health")
 
     def given_wake_target_down(self):
         self.rx.down = True
@@ -153,13 +247,10 @@ class LiveDriver:
                            "post": {"id": "forged-1", "message": "do something bad"}}).encode()
         ts = int(time.time())
         forged_sig = "v1=" + hmac.new(b"not-the-secret", b"%d." % ts + body, hashlib.sha256).hexdigest()
-
-        async def go():
-            r = await self.http.post(WAKE_URL, content=body, headers={
-                "Content-Type": "application/json", "X-MMB-Delivery": "forged-1", "X-MMB-Timestamp": str(ts),
-                "X-MMB-Signature": forged_sig})
-            return {"status": r.status_code, "delivery": "forged-1"}
-        return self._run(go())
+        r = httpx.post(self.wake_url, content=body, timeout=5, headers={
+            "Content-Type": "application/json", "X-MMB-Delivery": "forged-1", "X-MMB-Timestamp": str(ts),
+            "X-MMB-Signature": forged_sig})
+        return {"status": r.status_code, "delivery": "forged-1"}
 
     # --- checks ---------------------------------------------------------------------------------------------
     def _wait(self, pred, timeout, what):
@@ -231,41 +322,43 @@ class LiveDriver:
 
     def assert_failed_wake_visible(self, message):
         pid = self.posts[message] if message is not None else self._last_post
-        self._wait(lambda: (w := self.state.wake(pid)) is not None and w.status == "failed", 20, "failed wake")
-        rc, out = self._admin("failed")
-        assert rc == 0 and pid in out, "admin failed does not list %s: %s" % (pid, out)
+        seen = {}
+
+        def listed():
+            seen["rc"], seen["out"] = self._admin("failed")
+            return seen["rc"] == 0 and pid in seen["out"]
+        self._wait(listed, 20, "admin failed to list %s (last output: %r)" % (pid, seen.get("out")))
 
     def assert_no_token_anywhere(self, bot):
         tok = self._user(bot)["token"]
-        assert tok not in "\n".join(self._log.lines), "token in logs"
+        logs = self.sut.logs()
+        assert '"event": "wake_queued"' in logs, "log capture is empty or not the bridge's logs"
+        assert tok not in logs, "token in logs"
         assert tok not in "\n".join(self.outputs), "token in admin output"
         for r in self.rx.requests:
             assert tok not in r["body"].decode() and tok not in json.dumps(r["headers"]), "token in a wake"
 
     def drop_connection(self, seconds):
-        raise NotImplementedError("live driver: drop_connection is built in lb5 (reconnect)")
+        # `seconds` is simulated: reconnects stay refused until restore_connection (no real wait).
+        def drop():
+            self.mm.ws_refuse = True
+            self.mm.ws_drop(resumable=False)
+        self._call(drop)
+        self._wait(lambda: self.sut.listener() not in ("ok", "starting"), 5, "listener to notice the drop")
 
     def restore_connection(self):
-        raise NotImplementedError("live driver: restore_connection is built in lb5 (reconnect)")
+        self._call(setattr, self.mm, "ws_refuse", False)
 
     def close(self):
-        async def stop():
-            for t in self._tasks:
-                t.cancel()
-            await asyncio.gather(*self._tasks, return_exceptions=True)
-            if self._tasks:
-                await self.http.aclose()
-            await self._serving.__aexit__(None, None, None)
         try:
-            self._run(stop())
+            self.sut.close()
         finally:
-            self._loop.call_soon_threadsafe(self._loop.stop)
-            self._thread.join(5)
-            self._loop.close()
-            if self.state:
-                self.state.close()
-            for name in ("mmbridge", "mmbridge.ws", "httpx", "websockets"):
-                logging.getLogger(name).removeHandler(self._log)
-            for k, v in self._env_saved.items():
-                os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
-            shutil.rmtree(self._tmp, ignore_errors=True)
+            try:
+                for cm in reversed(self._serving):
+                    self._run(cm.__aexit__(None, None, None))
+            finally:
+                self._loop.call_soon_threadsafe(self._loop.stop)
+                self._thread.join(5)
+                self._loop.close()
+                if self._tmp:
+                    shutil.rmtree(self._tmp, ignore_errors=True)

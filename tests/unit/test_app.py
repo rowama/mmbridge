@@ -7,7 +7,7 @@ from app import auth
 
 async def test_health_unchanged(bridge):
     r = await bridge.get("/health")
-    assert r.status_code == 200 and r.json() == {"ok": True}
+    assert r.status_code == 200 and r.json() == {"ok": True, "listener": "disabled", "wake_failed_24h": 0}
 
 
 async def test_echo_gone(bridge):

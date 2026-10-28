@@ -8,12 +8,18 @@ Live bots lb3: GET channels/{id}, teams/{id}, users/{id}; websocket /api/v4/webs
 hello{connection_id}, per-connection seq, `posted` broadcast to channel members, ping action -> pong reply,
 drop/raw/seq-skip controls). `serve()` runs the app on a free localhost port for real HTTP/WS clients.
 Live bots lb4: `mm_ids=True` gives channels Mattermost-shaped 26-char ids (the bot store validates them).
+Live bots lb5: `clock` (seconds callable, e.g. time.time) stamps posts with real ms (catch-up windows); channel
+posts honour `since`; /users/me/teams and team channels page (`page`/`per_page`) and team channel lists include
+the user's D/G channels (as Mattermost does); `ws_refuse` (REST 503 + websocket handshake 503, an MM restart);
+resume: a dropped session stays resumable (`ws_drop(resumable=True)`), keeps receiving its events in a dead
+queue, and a reconnect with `?connection_id&sequence_number` gets hello (same id, no seq) + the missed events.
 """
 import asyncio
 import contextlib
 import hashlib
 import itertools
 import json
+from urllib.parse import parse_qs
 
 import httpx
 from starlette.applications import Starlette
@@ -24,8 +30,8 @@ from starlette.websockets import WebSocket
 
 
 class FakeMattermost:
-    def __init__(self, mm_ids=False):
-        self.mm_ids = mm_ids
+    def __init__(self, mm_ids=False, clock=None):
+        self.mm_ids, self.clock = mm_ids, clock
         self.users = {}      # id -> {"id","username","token"|None,"is_bot"}
         self.teams = {}      # id -> {"id","name","display_name"}
         self.channels = {}   # id -> {"id","team_id","name","display_name","type","members":set}
@@ -40,6 +46,9 @@ class FakeMattermost:
         self.ws_sessions = []     # open websocket sessions (_WsSession)
         self.ws_answer_pings = True
         self.ws_pings = 0
+        self.ws_refuse = False    # Mattermost unreachable: REST 503, websocket handshake 503
+        self.ws_dead = {}         # connection_id -> resumable dropped _WsSession (dead queue)
+        self.ws_resumes = 0
         self._ws_ids = itertools.count(1)
         self.app = Starlette(routes=[
             Route("/api/v4/users/me", self._me),
@@ -97,21 +106,34 @@ class FakeMattermost:
     def direct_channels(self, user_a, user_b):
         return [c for c in self.channels.values() if c["type"] == "D" and c["members"] == {user_a, user_b}]
 
-    def add_post(self, channel_id, user_id, message, type="", root_id=""):
+    def _now_ms(self):
+        if self.clock is None:
+            return next(self._clock)
+        self._last_ms = max(int(self.clock() * 1000), getattr(self, "_last_ms", 0) + 1)
+        return self._last_ms
+
+    def add_post(self, channel_id, user_id, message, type="", root_id="", create_at=None):
         """Create a post and broadcast `posted` to the channel members' websocket sessions (as Mattermost does,
-        including the author's own sessions)."""
+        including the author's own sessions; dead resumable sessions queue it)."""
         pid = "p-%d" % next(self._ids)
         self.posts[pid] = p = {"id": pid, "channel_id": channel_id, "user_id": user_id, "message": message,
-                               "create_at": next(self._clock), "type": type, "root_id": root_id}
+                               "create_at": self._now_ms() if create_at is None else create_at, "type": type,
+                               "root_id": root_id}
         c = self.channels[channel_id]
         event = {"event": "posted", "broadcast": {"channel_id": channel_id, "team_id": "", "user_id": ""},
                  "data": {"channel_display_name": c["display_name"], "channel_name": c["name"],
                           "channel_type": c["type"], "sender_name": "@" + self.users[user_id]["username"],
                           "team_id": c["team_id"], "post": json.dumps(p)}}
-        for s in self.ws_sessions:
+        for s in self.ws_sessions + list(self.ws_dead.values()):
             if s.user_id in c["members"]:
                 s.push(event)
         return p
+
+    def ws_event(self, user_id, event, data, broadcast=None):
+        """Send a non-post event (user_added, added_to_team, user_removed, ...) to the user's sessions."""
+        for s in self.ws_sessions:
+            if s.user_id == user_id:
+                s.push({"event": event, "data": data, "broadcast": broadcast or {"user_id": user_id}})
 
     # --- websocket controls -------------------------------------------------------
     def ws_send_raw(self, event):
@@ -125,13 +147,17 @@ class FakeMattermost:
             s.push({k: v for k, v in s.last.items() if k != "seq"})
 
     def ws_skip_seq(self, n=1):
-        for s in self.ws_sessions:
+        for s in self.ws_sessions + list(self.ws_dead.values()):
             s.seq += n
 
-    def ws_drop(self):
-        """Close every open websocket session (connection drop)."""
+    def ws_drop(self, resumable=False):
+        """Close every open websocket session (connection drop). resumable: the server keeps each session's
+        dead queue so a reconnect with its connection_id resumes; otherwise reconnects get a new id."""
         for s in self.ws_sessions:
+            s.resumable = resumable
             s.q.put_nowait(None)
+        if not resumable:
+            self.ws_dead.clear()
 
     @contextlib.asynccontextmanager
     async def serve(self):
@@ -175,6 +201,8 @@ class FakeMattermost:
     def _auth(self, request: Request):
         tok = _tok(request.headers)
         self.calls.append((request.method, request.url.path, tok))
+        if self.ws_refuse:
+            return None, JSONResponse({"message": "unavailable"}, status_code=503)
         if self.fail_status:
             return None, JSONResponse({"message": "forced"}, status_code=self.fail_status)
         user = next((u for u in self.users.values() if tok and u["token"] == tok), None)
@@ -193,15 +221,16 @@ class FakeMattermost:
         if err:
             return err
         tids = {c["team_id"] for c in self.channels.values() if u["id"] in c["members"] and c["team_id"]}
-        return JSONResponse([self.teams[t] for t in sorted(tids)])
+        return JSONResponse(_page(request, [self.teams[t] for t in sorted(tids)]))
 
     async def _team_channels(self, request):
         u, err = self._auth(request)
         if err:
             return err
         tid = request.path_params["team_id"]
-        return JSONResponse([{k: v for k, v in c.items() if k != "members"}
-                             for c in self.channels.values() if c["team_id"] == tid and u["id"] in c["members"]])
+        return JSONResponse(_page(request, [{k: v for k, v in c.items() if k != "members"}
+                                            for c in self.channels.values()
+                                            if c["team_id"] in (tid, "") and u["id"] in c["members"]]))
 
     def _member_channel(self, u, cid):
         c = self.channels.get(cid)
@@ -239,7 +268,9 @@ class FakeMattermost:
         if err:
             return err
         page, per_page = int(request.query_params.get("page", 0)), int(request.query_params.get("per_page", 60))
-        newest = list(reversed(self.channel_posts(c["id"])))[page * per_page:(page + 1) * per_page]
+        since = int(request.query_params.get("since", 0))
+        newest = [p for p in reversed(self.channel_posts(c["id"])) if p["create_at"] > since]
+        newest = newest[page * per_page:(page + 1) * per_page]
         return JSONResponse({"order": [p["id"] for p in newest], "posts": {p["id"]: p for p in newest}})
 
     async def _create_post(self, request):
@@ -299,13 +330,29 @@ class FakeMattermost:
         tok = _tok(ws.headers)
         self.calls.append(("WS", ws.url.path, tok))
         user = next((u for u in self.users.values() if tok and u["token"] == tok), None)
+        if self.ws_refuse:
+            await ws.send_denial_response(JSONResponse({"message": "unavailable"}, status_code=503))
+            return
         if not user or self.fail_status:
             await ws.close(code=1008)          # before accept: the handshake is refused (HTTP 403)
             return
         await ws.accept()
-        s = _WsSession(user["id"], "conn-%d" % next(self._ws_ids))
-        s.push({"event": "hello", "data": {"connection_id": s.connection_id, "server_version": self.server_version},
-                "broadcast": {"user_id": user["id"]}})
+        q = parse_qs(ws.url.query)
+        cid, seq = (q.get("connection_id") or [""])[0], (q.get("sequence_number") or [""])[0]
+        dead = self.ws_dead.pop(cid, None)
+        if dead is not None and dead.user_id == user["id"] and seq.isdigit():
+            s, self.ws_resumes = dead, self.ws_resumes + 1
+            s.q, s.resumable = asyncio.Queue(), False
+            s.q.put_nowait({"event": "hello", "data": {"connection_id": cid, "server_version": self.server_version},
+                            "broadcast": {"user_id": user["id"]}})
+            for ev in s.history:
+                if ev["seq"] >= int(seq):
+                    s.q.put_nowait(ev)
+        else:
+            s = _WsSession(user["id"], "conn-%d" % next(self._ws_ids))
+            s.push({"event": "hello", "data": {"connection_id": s.connection_id,
+                                               "server_version": self.server_version},
+                    "broadcast": {"user_id": user["id"]}})
         self.ws_sessions.append(s)
 
         async def writer():
@@ -328,6 +375,8 @@ class FakeMattermost:
                 t.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
             self.ws_sessions.remove(s)
+            if s.resumable:
+                self.ws_dead[s.connection_id] = s
             with contextlib.suppress(Exception):
                 await ws.close()
 
@@ -352,11 +401,22 @@ class _WsSession:
         self.user_id, self.connection_id = user_id, connection_id
         self.q = asyncio.Queue()
         self.seq, self.last = 0, None
+        self.history = []          # every event sent (replayed from sequence_number on resume)
+        self.resumable = False
 
     def push(self, event):
         self.last = {**event, "seq": self.seq}
         self.seq += 1
+        self.history.append(self.last)
         self.q.put_nowait(self.last)
+
+
+def _page(request, items):
+    q = request.query_params
+    if "per_page" not in q:
+        return items
+    page, per_page = int(q.get("page", 0)), int(q["per_page"])
+    return items[page * per_page:(page + 1) * per_page]
 
 
 def _tok(headers):

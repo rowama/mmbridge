@@ -159,6 +159,14 @@ class State:
         with self._tx() as c:
             self._advance(c, channel_id, create_at, post_id)
 
+    def delete_cursor(self, channel_id: str) -> None:
+        with self._tx() as c:
+            c.execute("DELETE FROM cursors WHERE channel_id=?", (channel_id,))
+
+    def cursor_channels(self) -> list[str]:
+        with self._lock:
+            return [r[0] for r in self._conn.execute("SELECT channel_id FROM cursors ORDER BY channel_id")]
+
     # --- meta ------------------------------------------------------------------------------------------------
     def get_meta(self, key: str) -> str | None:
         with self._lock:
@@ -170,18 +178,25 @@ class State:
             c.execute("INSERT INTO meta (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                       (key, value))
 
-    def claim_owner(self, now: int, ttl: int = OWNER_TTL_S) -> bool:
-        """Become (or stay, as heartbeat) the single dispatcher owner; refused while another owner is fresh."""
+    def claim_owner(self, now: int, ttl: int = OWNER_TTL_S, key: str = "dispatcher_owner") -> bool:
+        """Become (or stay, as heartbeat) the single owner of `key` (dispatcher_owner | listener_owner);
+        refused while another owner is fresh."""
         with self._tx() as c:
-            row = c.execute("SELECT value FROM meta WHERE key='dispatcher_owner'").fetchone()
+            row = c.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
             if row:
                 cur = json.loads(row[0])
                 if cur["id"] != self.instance_id and now - cur["ts"] < ttl:
                     return False
-            c.execute("INSERT INTO meta (key, value) VALUES ('dispatcher_owner', ?) "
-                      "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-                      (json.dumps({"id": self.instance_id, "ts": now}),))
+            c.execute("INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                      (key, json.dumps({"id": self.instance_id, "ts": now})))
             return True
+
+    def release_owner(self, key: str = "dispatcher_owner") -> None:
+        """Clean shutdown: drop our lease so a restarted process takes over at once."""
+        with self._tx() as c:
+            row = c.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
+            if row and json.loads(row[0])["id"] == self.instance_id:
+                c.execute("DELETE FROM meta WHERE key=?", (key,))
 
     # --- dispatcher queue ------------------------------------------------------------------------------------
     def claim_due(self, now: int, limit: int = 4) -> list[Wake]:
@@ -258,6 +273,12 @@ class State:
 
     def failed(self) -> list[Wake]:
         return self._select("WHERE status='failed'")
+
+    def failed_count(self, since: int) -> int:
+        """Failed wakes whose last update is at or after `since` (unix s): /health wake_failed_24h."""
+        with self._lock:
+            return self._conn.execute("SELECT COUNT(*) FROM wakes WHERE status='failed' AND updated_at >= ?",
+                                      (since,)).fetchone()[0]
 
     def stats(self) -> dict:
         """Counts per status and post->delivered latency (delivered_at - post_create_at, ms; PR-9)."""

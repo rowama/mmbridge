@@ -1,5 +1,6 @@
 """Listener against the fake Mattermost REST + websocket (served by uvicorn on a free port): users/me,
-Bearer handshake, hello/seq, ping/idle, posted -> filter -> state.db (enqueue_and_advance)."""
+Bearer handshake, hello/seq, ping/idle, posted -> filter -> state.db (enqueue_and_advance).
+connect_once() is one connection; run() is the lb5 reconnect loop (tests/unit/test_reconnect.py)."""
 import asyncio
 import json
 import logging
@@ -53,11 +54,11 @@ async def until(pred, timeout=5.0):
 @pytest.fixture
 async def running(served, tmp_path):
     lis, state = make(served, tmp_path)
-    task = asyncio.create_task(lis.run())
+    task = asyncio.create_task(lis.run())           # reconnect loop (lb5): cancelled, not dropped, to stop
     await until(lambda: lis.status == "ok")
     yield served[0], served[1], lis, state
-    served[0].ws_drop()
-    await asyncio.wait_for(task, 5)
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
 
 
 def test_ws_url():
@@ -133,7 +134,7 @@ async def test_token_absent_from_logs_and_state(served, tmp_path, caplog, ws_lev
     m, w, _ = served
     with caplog.at_level(logging.DEBUG), caplog.at_level(ws_level or logging.INFO, logger="mmbridge.ws"):
         lis, state = make(served, tmp_path)
-        task = asyncio.create_task(lis.run())
+        task = asyncio.create_task(lis.connect_once())
         await until(lambda: lis.status == "ok")
         p = m.add_post(w["chosen"], w["rob"]["id"], "hello")
         await until(lambda: state.wake(p["id"]) is not None)
@@ -175,7 +176,7 @@ async def test_seq_is_tracked_and_gap_logged(running, caplog):
 async def test_pings_keep_a_quiet_connection_alive(served, tmp_path):
     m, w, _ = served
     lis, state = make(served, tmp_path, ping_s=0.05, idle_s=0.3)
-    task = asyncio.create_task(lis.run())
+    task = asyncio.create_task(lis.connect_once())
     await until(lambda: lis.status == "ok")
     await asyncio.sleep(1.0)
     assert not task.done() and m.ws_pings >= 5
@@ -189,7 +190,7 @@ async def test_idle_connection_is_treated_as_dead(served, tmp_path, caplog):
     m.ws_answer_pings = False
     lis, state = make(served, tmp_path, ping_s=0.05, idle_s=0.3)
     with caplog.at_level(logging.INFO, logger="mmbridge"):
-        await asyncio.wait_for(lis.run(), 5)
+        await asyncio.wait_for(lis.connect_once(), 5)
     assert lis.status == "off" and "ws_idle" in caplog.text
 
 
