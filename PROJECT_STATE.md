@@ -3,11 +3,11 @@ id: STATE
 type: project-state
 phase: implement
 status: active
-owner_agent: claude-code
-date: 2026-10-27
+owner_agent: grok-bot
+date: 2026-10-28
 links: []
 triage: large             # unset | small | medium | large
-active_slice: SLICE-20261027-lb4b-drop-allowlist
+active_slice: SLICE-20261027-lb5-wireup-reconnect-acceptance
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
 pending_approvals: []
@@ -31,10 +31,10 @@ implement (increment A Live bots, Large) - PROCESS.md section 3.
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[SLICE-20261027-lb4b-drop-allowlist](thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md) (review: implemented at 14ecd18, Codex review no findings). Previous: lb4 [done](thoughts/shared/slices/2026-10-27-lb4-signed-wake-dispatcher.md)
+[SLICE-20261027-lb5-wireup-reconnect-acceptance](thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md) (in-progress: eng-run implement on Merkle). Previous: lb4b [done](thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md)
 
 ## Next action
-lb4 done (see Approval log; README wake-receiver/tamper demo deferred until set-bot + wake secret exist). Allow-list delta: CP-A amendment + CP-C speclock rows in the Approval log; re-locked specs/DSL applied (new live specs red until lb4b implements). F8 dispositioned (live-only per ADR-0010). lb4b implemented at 14ecd18 (unit 234 passed; lb4b specs 12 passed; review no findings). Next: planner runs eng-verify for lb4b, then requests CP-S (in-process demo); then lb5. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
+lb4b done (CP-S 2026-10-28; live Mattermost->receiver e2e and wake posts deferred until lb5 wires listener/dispatcher into main). lb5 implement running (eng-run, claude-code); then Codex review + planner eng-verify, then CP-S lb5 (live e2e demo). Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
 
 ## Blockers
 - none
@@ -62,6 +62,7 @@ none
 - Cross-model review A (awaiting Codex): [thoughts/shared/verification/2026-10-26-live-bots-arch-review.md](thoughts/shared/verification/2026-10-26-live-bots-arch-review.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0010 (all accepted): [docs/decisions/](docs/decisions/)
+- Verification lb4b (PASS): [thoughts/shared/verification/2026-10-27-lb4b-drop-allowlist.md](thoughts/shared/verification/2026-10-27-lb4b-drop-allowlist.md)
 - Latest handoff: [thoughts/shared/handoffs/2026-10-27_22-25-35_lb4b-implemented-awaiting-verify.md](thoughts/shared/handoffs/2026-10-27_22-25-35_lb4b-implemented-awaiting-verify.md)
 - Review lb4b (addressed, no findings): [thoughts/shared/verification/2026-10-27-slice-20261027-lb4b-drop-allowlist-review.md](thoughts/shared/verification/2026-10-27-slice-20261027-lb4b-drop-allowlist-review.md)
 - Review lb3 (addressed, no findings): [thoughts/shared/verification/2026-10-27-slice-20261027-lb3-listener-filters-review.md](thoughts/shared/verification/2026-10-27-slice-20261027-lb3-listener-filters-review.md)
@@ -80,6 +81,7 @@ none
      Pre-kit decisions: back-fill with Checkpoint "pre-kit" and Decision "approved (back-filled, pre-kit)". .eng/bin/eng-check matches rows to statuses. -->
 | Date | Checkpoint | Artifact | Decision (Rob) |
 |---|---|---|---|
+| 2026-10-28 | CP-S | thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md | approved (verify PASS 14ecd18; demo set-bot + --channels reject; live Mattermost->receiver e2e deferred until listener/dispatcher wired in lb5) |
 | 2026-10-27 | CP-C | thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md | approved speclock sha256:ea6a99cbd5601d05 |
 | 2026-10-27 | CP-A | docs/design/2026-10-26-live-bots.md | approved amendment: drop allow-list sha256:0f250a0276b5 (via Eddie) |
 | 2026-10-27 | CP-S | thoughts/shared/slices/2026-10-27-lb4-signed-wake-dispatcher.md | approved (verify PASS 219a9a1; README wake-receiver/tamper demo deferred - no set-bot/wake secret yet; via Eddie) |

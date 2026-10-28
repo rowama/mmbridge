@@ -1,9 +1,20 @@
+---
+id: VERIF-20261027-lb4b-drop-allowlist
+type: verification
+phase: verify
+status: pass
+owner_agent: grok-bot
+date: 2026-10-27
+links: [thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md, thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md]
+plan: thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md
+git_commit: 14ecd18
+---
 # Verification: SLICE-20261027-lb4b-drop-allowlist
 
 - Date: 2026-10-27
 - Verifier: Grok Bot executor (for Eddie), Merkle WSL
 - Code SHA: 14ecd18 (docs 2d7105d), base cb4e711 (local kit v2.5.9 upgrade, not pushed)
-- Verdict: PASS (pending CP-S)
+- Verdict: PASS (CP-S approved 2026-10-28)
 
 ## Re-run checks
 | Check | Result |

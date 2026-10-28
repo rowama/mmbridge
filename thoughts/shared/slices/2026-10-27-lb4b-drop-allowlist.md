@@ -2,7 +2,7 @@
 id: SLICE-20261027-lb4b-drop-allowlist
 type: slice
 phase: implement
-status: review           # todo | in-progress | blocked | review | done
+status: done             # todo | in-progress | blocked | review | done
 owner_agent: claude-code
 date: 2026-10-27
 links: [thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md, thoughts/shared/plans/2026-10-27-live-bots.md]
@@ -39,6 +39,7 @@ Plan: [delta](../plans/2026-10-27-live-bots-delta-no-allowlist.md) Phase 1. Sequ
 
 ## Progress log
 <!-- date - agent - what changed (file:line) -->
+- 2026-10-28 - grok-bot - CP-S approved by Rob (in-process set-bot + --channels reject demo); live Mattermost->receiver e2e deferred until lb5 wires listener/dispatcher; status -> done
 - 2026-10-27 - claude-code - Re-lock was already applied by the planner (6148856): specs/DSL byte-identical to the drafts; `eng-spec status` = lock approval ok, matches. Red first: 12/12 lb4b specs failed (`LiveDriver.given_channel() got an unexpected keyword argument 'private'`, `given_live_bot() missing 'channels'`).
 - 2026-10-27 - claude-code - Commit 14ecd18. app/live_filter.py `decide(event, bot_user_id)` (O/P always wake, membership is the filter); app/store.py BotConfig/validate/save without channels, legacy key ignored on load; app/admin.py hidden `--channels` -> `invalid_argument: channels no longer used ...` before any Mattermost call, `_username` replaces `_resolve` (no channel lookups), show/set-bot output without channels; app/listener.py:108 no chosen set. Driver: `given_channel(..., private)`, `reply_in_thread`, `assert_woken_once(thread=)` checks `post.root_id`, `assert_not_member` (not a member + no Mattermost writes). Unit tests: filter (any O/P, @channel/@here/@all, thread reply O/P/D, G/own/system drop), store legacy-key + save-without-channels, admin `--channels` refused, listener (other member channel wakes, non-member private channel never reaches). CHANGELOG Unreleased "Changed" entry.
 - 2026-10-27 - claude-code - Verification at 14ecd18: `.venv/bin/pytest tests/unit -q` 234 passed (exit 0); lb4b spec command 12 passed (exit 0); `.venv/bin/pytest tests/acceptance -q` 16 passed / 15 skipped (exit 0); `--channel live` full: 13 passed, 2 failed = the lb5 drop/reconnect specs (`NotImplementedError: drop_connection is built in lb5`), as planned; `eng-spec status` matches the lock. No locked spec, DSL interface or DSL assertion step body edited.
