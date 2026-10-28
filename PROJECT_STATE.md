@@ -34,7 +34,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [SLICE-20261027-lb5-wireup-reconnect-acceptance](thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md) (done; CP-S logged 2026-10-28, verify PASS 8f987e7). Previous: lb4b [done](thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md)
 
 ## Next action
-eng-retro for v0.3.0 (Live bots). Shipped: CP-P approved by Rob 2026-10-28; annotated tag v0.3.0 -> 93b4f7d pushed. Wake rule stays every-post (Rob 2026-10-28: no @mention change). Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer waits on Rob uncommitted OWNER-GUIDE edits; flaky timing-race unit tests (TODOS, implementer follow-up).
+AWAIT ROB on retro proposals: [retro v0.3.0](thoughts/shared/retros/2026-10-28-v0.3.0-live-bots.md) (draft) - 3 process changes + kit lessons K-1..K-4 + L-* confirmations, presented via Eddie. Apply only agreed edits, then set phase discover (or Rob defers all). Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer waits on Rob uncommitted OWNER-GUIDE edits; flaky timing-race unit tests (TODOS P2).
 
 ## Blockers
 - none
@@ -51,6 +51,7 @@ none
 - Conventions: [AGENTS.md](AGENTS.md)
 - Owner guide: [OWNER-GUIDE.md](OWNER-GUIDE.md)
 - Definition of Done: [docs/definition-of-done.md](docs/definition-of-done.md)
+- Retro v0.3.0 (draft, awaiting Rob): [thoughts/shared/retros/2026-10-28-v0.3.0-live-bots.md](thoughts/shared/retros/2026-10-28-v0.3.0-live-bots.md)
 - Process feedback: [thoughts/shared/process-feedback.md](thoughts/shared/process-feedback.md)
 - Design A Live bots (approved; scope REDUCE recorded 2026-10-26): [docs/design/2026-10-26-live-bots.md](docs/design/2026-10-26-live-bots.md)
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
