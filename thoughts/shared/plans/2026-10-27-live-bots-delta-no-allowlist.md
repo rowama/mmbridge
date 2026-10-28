@@ -88,5 +88,5 @@ Codex plan review (8 findings, advisory; `thoughts/shared/verification/2026-10-2
 - F7 lb4b uses explicit node ids + in-process demo; full container suite stays in lb5.
 - F8 ask Rob to confirm live-only acceptance per ADR-0010.
 
-Status 2026-10-27: F1 drafted (above; hash approval pending Rob), F2 done (design Amendments, architecture 'catch-up channel discovery', ADR-0007 Amendment), F3 done (lb4b card; lb5 card + plan refs), F4 done (architecture + lb5 PR-3), F5/F6 in drafts, F7 in lb4b card; F8 open for Rob. Re-review (plan-review-2, supersedes the first): the REQ-A1/examples amendment needs a new CP-A row by Rob (with the CP-C); until then eng-check reports design-changed-after-approval.
+Status 2026-10-27: F1 drafted (above; hash approval pending Rob), F2 done (design Amendments, architecture 'catch-up channel discovery', ADR-0007 Amendment), F3 done (lb4b card; lb5 card + plan refs), F4 done (architecture + lb5 PR-3), F5/F6 in drafts, F7 in lb4b card; F8 accepted-risk (Rob 2026-10-27: live-only per ADR-0010). Re-review (plan-review-2, supersedes the first): the REQ-A1/examples amendment needs a new CP-A row by Rob (with the CP-C); until then eng-check reports design-changed-after-approval.
 

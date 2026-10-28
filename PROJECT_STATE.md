@@ -34,7 +34,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [SLICE-20261027-lb4-signed-wake-dispatcher](thoughts/shared/slices/2026-10-27-lb4-signed-wake-dispatcher.md) (done: verify PASS at 219a9a1; see Approval log). Previous: lb3 [done](thoughts/shared/slices/2026-10-27-lb3-listener-filters.md)
 
 ## Next action
-lb4 done (see Approval log; README wake-receiver/tamper demo deferred until set-bot + wake secret exist). Allow-list delta: CP-A amendment + CP-C speclock rows in the Approval log; re-locked specs/DSL applied (new live specs red until lb4b implements). Open for Rob: F8 (live-only acceptance per ADR-0010). Next: lb4b (thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md) - do not start until the planner says; then lb5. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
+lb4 done (see Approval log; README wake-receiver/tamper demo deferred until set-bot + wake secret exist). Allow-list delta: CP-A amendment + CP-C speclock rows in the Approval log; re-locked specs/DSL applied (new live specs red until lb4b implements). F8 dispositioned (live-only per ADR-0010). Next: lb4b (thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md) - do not start until the planner says; then lb5. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
 
 ## Blockers
 - none
