@@ -10,7 +10,8 @@ triage: large             # unset | small | medium | large
 active_slice: SLICE-20261027-lb5-wireup-reconnect-acceptance
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: []
+pending_approvals:
+  - "CP-A: docs/design/2026-10-28-grok-webhook-multibot.md - approve problem/requirements (1 NEEDS CLARIFICATION: Grok Bot webhook contract)"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -25,7 +26,7 @@ acceptance: executable-specs   # v2.5: tests/acceptance/, see PROCESS.md 13
 > Update it at the end of every session. Keep it under one screen.
 
 ## Current phase
-discover (idle; ready for next increment). v0.3.0 Live bots shipped 2026-10-28 (93b4f7d, tag v0.3.0); retro done and agreed changes applied 2026-10-28 - PROCESS.md section 3.
+discover (increment B: Grok Bot webhook wake + multi-bot; design in-review 2026-10-28). v0.3.0 Live bots shipped 2026-10-28 (93b4f7d, tag v0.3.0).
 
 ## Goal (one sentence)
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
@@ -34,7 +35,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [SLICE-20261027-lb5-wireup-reconnect-acceptance](thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md) (done; CP-S logged 2026-10-28, verify PASS 8f987e7). Previous: lb4b [done](thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md)
 
 ## Next action
-IDLE - ready for the next increment (do not start discover until Rob/Eddie kick it off). Retro v0.3.0 [done, changes applied](thoughts/shared/retros/2026-10-28-v0.3.0-live-bots.md). Next-discover candidate (Rob, P1, needed soon): Grok Bot webhook wake contract (mmbridge -> Grok Bot), not Ulrik temp HMAC receiver (TODOS). Open: live Mattermost-restart resume/catch-up check (TODOS follow-up, deferred); OWNER-GUIDE pointer waits on Rob uncommitted OWNER-GUIDE edits (TODOS P2); flaky timing-race unit tests (TODOS P2). Kit lessons K-1..K-4 go to Yana via Eddie.
+Await Rob CP-A on [design B](docs/design/2026-10-28-grok-webhook-multibot.md) and his answer to its one NEEDS CLARIFICATION (Grok Bot inbound webhook endpoint, auth, body). Then eng-scope-review. Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
 
 ## Blockers
 - none
@@ -48,6 +49,7 @@ none
 
 ## Latest artifacts
 <!-- Relative links only; .eng/bin/eng-check verifies they resolve. -->
+- Design B Grok Bot webhook + multi-bot (in-review, CP-A pending): [docs/design/2026-10-28-grok-webhook-multibot.md](docs/design/2026-10-28-grok-webhook-multibot.md)
 - Conventions: [AGENTS.md](AGENTS.md)
 - Owner guide: [OWNER-GUIDE.md](OWNER-GUIDE.md)
 - Definition of Done: [docs/definition-of-done.md](docs/definition-of-done.md)
