@@ -30,7 +30,7 @@ def create_app(mm_transport=None, limiter: RateLimiter | None = None, live: Live
             finally:
                 await live.stop()
 
-    app = FastAPI(title="mmbridge", version="0.2.0", lifespan=lifespan,
+    app = FastAPI(title="mmbridge", version="0.3.0", lifespan=lifespan,
                   docs_url=None, redoc_url=None, openapi_url=None)
 
     @app.get("/health")

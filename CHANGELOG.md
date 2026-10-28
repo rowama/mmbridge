@@ -2,6 +2,10 @@
 All notable changes to this project. Format: Keep a Changelog style; newest first.
 
 ## [Unreleased]
+
+## [0.3.0] - 2026-10-28
+<!-- id: CHANG-20261028-ship-0.3.0 | owner_agent: grok-bot | date: 2026-10-28 -->
+Live bots (increment A, slices lb1-lb5): with LIVE_BOTS_ENABLED=true the bridge listens to Mattermost as the configured bot and sends one signed wake to its wake URL for every post by someone else in its member channels and DMs, with retries, reconnect and catch-up. Operator CLI `python -m app.admin` manages the encrypted bot store and the wake queue. Known gap: a live Mattermost-restart resume check was deferred (TODOS).
 <!-- id: CHANG-20261028-lb5-wireup-reconnect | owner_agent: unassigned | date: 2026-10-28 -->
 ### Added
 - Live bots go live with LIVE_BOTS_ENABLED=true: the listener and wake dispatcher start with the bridge, /health reports listener (disabled|off|connecting|ok|degraded) and wake_failed_24h, dropped Mattermost connections reconnect and catch up missed posts (all member channels on all teams and DMs, 15 min window) with exactly one wake per post, and store edits (token, wake URL, secret) apply without a redeploy. Catch-up pages by post id (Mattermost ignores paging with `since`), finds DMs for a bot in no team, and a token rotated mid-connect reconnects.
