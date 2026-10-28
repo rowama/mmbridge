@@ -10,8 +10,7 @@ triage: large             # unset | small | medium | large
 active_slice: SLICE-20261027-lb5-wireup-reconnect-acceptance
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals:
-  - "CP-A: docs/design/2026-10-28-grok-webhook-multibot.md - approve problem/requirements (1 NEEDS CLARIFICATION: Grok Bot webhook contract)"
+pending_approvals: []
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -35,7 +34,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [SLICE-20261027-lb5-wireup-reconnect-acceptance](thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md) (done; CP-S logged 2026-10-28, verify PASS 8f987e7). Previous: lb4b [done](thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md)
 
 ## Next action
-Await Rob CP-A on [design B](docs/design/2026-10-28-grok-webhook-multibot.md) and his answer to its one NEEDS CLARIFICATION (Grok Bot inbound webhook endpoint, auth, body). Then eng-scope-review. Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
+eng-scope-review on [design B](docs/design/2026-10-28-grok-webhook-multibot.md) (CP-A approved 2026-10-28). Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
 
 ## Blockers
 - none
@@ -49,7 +48,7 @@ none
 
 ## Latest artifacts
 <!-- Relative links only; .eng/bin/eng-check verifies they resolve. -->
-- Design B Grok Bot webhook + multi-bot (in-review, CP-A pending): [docs/design/2026-10-28-grok-webhook-multibot.md](docs/design/2026-10-28-grok-webhook-multibot.md)
+- Design B Grok Bot webhook + multi-bot (approved CP-A 2026-10-28): [docs/design/2026-10-28-grok-webhook-multibot.md](docs/design/2026-10-28-grok-webhook-multibot.md)
 - Conventions: [AGENTS.md](AGENTS.md)
 - Owner guide: [OWNER-GUIDE.md](OWNER-GUIDE.md)
 - Definition of Done: [docs/definition-of-done.md](docs/definition-of-done.md)
@@ -86,6 +85,7 @@ none
      Pre-kit decisions: back-fill with Checkpoint "pre-kit" and Decision "approved (back-filled, pre-kit)". .eng/bin/eng-check matches rows to statuses. -->
 | Date | Checkpoint | Artifact | Decision (Rob) |
 |---|---|---|---|
+| 2026-10-28 | CP-A | docs/design/2026-10-28-grok-webhook-multibot.md | approved (problem, REQ-B1..B8, acceptance examples; Grok wake contract locked: POST per-routine URL, Bearer key, any JSON body, 200=run started; via Eddie) |
 | 2026-10-28 | retro | thoughts/shared/retros/2026-10-28-v0.3.0-live-bots.md | approved (all proposals: process changes 1-3 applied; kit lessons K-1..K-4 to Yana; via Eddie) |
 | 2026-10-28 | CP-S | thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md | approved (verify PASS 8f987e7; Coolify steps 1-4 and 6 good; step 5 restart Mattermost mid-demo / real-MM resume+catch-up check deferred by Rob; rollback not exercised, LIVE_BOTS_ENABLED left on; via Eddie) |
 | 2026-10-28 | CP-S | thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md | approved (verify PASS 14ecd18; demo set-bot + --channels reject; live Mattermost->receiver e2e deferred until listener/dispatcher wired in lb5) |

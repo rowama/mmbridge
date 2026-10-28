@@ -2,7 +2,7 @@
 id: DESIG-20261028-grok-webhook-multibot
 type: design
 phase: discover
-status: in-review        # input (pre-draft from an earlier phase) | draft | in-review | approved | superseded
+status: approved        # input (pre-draft from an earlier phase) | draft | in-review | approved | superseded
 owner_agent: grok-bot
 date: 2026-10-28
 links: [docs/design/2026-10-26-live-bots.md]
@@ -48,7 +48,7 @@ Slice 1: adapt the existing mmbridge HMAC wake so it is delivered into the Grok 
 - Builds on v0.3.0 Live bots (listener, encrypted token store, state.db wake queue, signed dispatcher; ADR-0006..0010). Single container on Coolify.
 - Order fixed by Rob 2026-10-28: Grok Bot webhook first, then multi-bot, same version, multi-slice (option C).
 - Assumption: the reply path (REQ-B5) can reuse the existing v1 MCP post tools with the bot's own token; architecture confirms.
-- [NEEDS CLARIFICATION: What does the Grok Bot inbound webhook accept for a wake - its endpoint per bot, how it authenticates callers (shared secret / HMAC header / bearer token / signed URL), and the expected body shape? Rob to provide the Grok Bot webhook settings or docs for one bot (e.g. Eddie). This drives REQ-B1/B2.]
+- Grok Bot wake contract (locked at CP-A, Rob 2026-10-28; source: Grok Bot help, Routines - webhook trigger): each bot routine has its own webhook URL; the caller sends HTTP POST to that per-routine URL with header `Authorization: Bearer <routine key>`; the body is any JSON (fields are ours to define - mmbridge sends channel, sender, message text, post id, thread root id when set); HTTP 200 means the routine run started (not that the bot replied). The bearer key is a secret (REQ-B2: never logged). Replay/forgery protection beyond the bearer key is mmbridge-side (architecture decides). Drives REQ-B1/B2.
 
 ## Out of scope
 - Web admin UI; bot-to-bot wakes and loop caps (REQ-A3 bot-to-bot part); channel ignore-list. Auto-accept invites (REQ-A5 suite) stays in TODOS.
@@ -70,4 +70,4 @@ Mode (relative to that baseline): <expand | selective | hold | reduce>
 <to be filled after CP-A>
 
 ## Open questions
-- Q1 (Rob): Grok Bot inbound webhook contract - see NEEDS CLARIFICATION above.
+- Q1 (Rob): Grok Bot inbound webhook contract - resolved 2026-10-28 (see Constraints).
