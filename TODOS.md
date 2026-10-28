@@ -15,7 +15,9 @@
 - **OWNER-GUIDE pointer to README "Live bots (deploy)"** (filed 2026-10-28, from [lb5 verify](thoughts/shared/verification/2026-10-28-lb5-wireup-reconnect-acceptance-verify.md)) - OWNER-GUIDE.md has Rob's uncommitted edits; add the pointer once he commits. **Effort:** S. **Priority:** P2.
 - **Kit: eng-run code-review parser misses codex `[P1]/[P2]` findings** (filed 2026-10-28, from lb5 reviews 2-5) - writes "No findings." while the raw output has findings; read raw output until fixed. **Effort:** S. **Priority:** P1.
 - **Kit: eng-spec trace shows amended approved design as "(not in an approved design)"** (filed 2026-10-28, from lb5 verify) - REQ-A1..A8 are in docs/design/2026-10-26-live-bots.md. **Effort:** S. **Priority:** P3.
+- **Flaky timing-race unit tests** (filed 2026-10-28, from v0.3.0 ship) - some unit tests intermittently fail on timing races; did not block tag v0.3.0. Implementer to make them deterministic. **Effort:** S. **Priority:** P2.
 
 ## Follow-ups
 - [x] P2: Case-insensitive Bearer scheme match in auth.py (F2 accepted-risk 2026-10-26) -> slice d-hardening
 - (2026-10-28, lb5 CP-S) Live check deferred by Rob: restart Mattermost mid-demo on Coolify to confirm real-Mattermost websocket resume (seq on hello) and REST catch-up deliver exactly one wake per missed post; covers the lb5 fake-drift note. Rollback (LIVE_BOTS_ENABLED=false) also not exercised.
+- [x] (2026-10-28) Ship v0.3.0: CP-P approved by Rob; tag v0.3.0 -> 93b4f7d pushed.

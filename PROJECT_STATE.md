@@ -1,7 +1,7 @@
 ---
 id: STATE
 type: project-state
-phase: ship
+phase: reflect
 status: active
 owner_agent: grok-bot
 date: 2026-10-28
@@ -10,8 +10,7 @@ triage: large             # unset | small | medium | large
 active_slice: SLICE-20261027-lb5-wireup-reconnect-acceptance
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals:
-  - "CP-P: CHANGELOG.md - release v0.3.0 at 93b4f7d and tag v0.3.0"
+pending_approvals: []
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -26,7 +25,7 @@ acceptance: executable-specs   # v2.5: tests/acceptance/, see PROCESS.md 13
 > Update it at the end of every session. Keep it under one screen.
 
 ## Current phase
-ship (increment A Live bots, Large; lb1-lb5 done; v0.3.0 CHANGELOG + app version pushed at 93b4f7d; awaiting CP-P and tag) - PROCESS.md section 3.
+reflect (increment A Live bots shipped: v0.3.0 at 93b4f7d, tag v0.3.0 pushed 2026-10-28; CP-P approved by Rob) - PROCESS.md section 3.
 
 ## Goal (one sentence)
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
@@ -35,7 +34,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [SLICE-20261027-lb5-wireup-reconnect-acceptance](thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md) (done; CP-S logged 2026-10-28, verify PASS 8f987e7). Previous: lb4b [done](thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md)
 
 ## Next action
-eng-ship: full suite re-run green at 8af985b (unit 267; acceptance 16/15 skipped; live container 15/16 skipped; eng-spec status clean); CHANGELOG [0.3.0] + app/main.py version 0.3.0 pushed (93b4f7d). Waiting on Rob: CP-P and permission to create/push tag v0.3.0 on 93b4f7d (tags ask). No PR (trunk+tag, L-002); no CI configured. After CP-P: phase reflect, eng-retro. Deferred: live Mattermost-restart resume check (TODOS); OWNER-GUIDE pointer waits for Rob's uncommitted OWNER-GUIDE edits.
+eng-retro for v0.3.0 (Live bots). Shipped: CP-P approved by Rob 2026-10-28; annotated tag v0.3.0 -> 93b4f7d pushed. Wake rule stays every-post (Rob 2026-10-28: no @mention change). Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer waits on Rob uncommitted OWNER-GUIDE edits; flaky timing-race unit tests (TODOS, implementer follow-up).
 
 ## Blockers
 - none
@@ -92,6 +91,7 @@ none
 | 2026-10-27 | CP-S | thoughts/shared/slices/2026-10-27-lb3-listener-filters.md | approved (verify PASS; ws_spike hello+ping reply+posted on Coolify; via Eddie) |
 | 2026-10-27 | CP-S | thoughts/shared/slices/2026-10-27-lb2-state-db-wake-queue.md | approved (verify PASS; empty-DB admin failed/stats deferred; via Eddie) |
 | 2026-10-27 | CP-S | thoughts/shared/slices/2026-10-27-lb1-bot-store-admin-cli.md | approved (verify PASS; live container/Coolify check deferred, not yet redeployed; via Eddie) |
+| 2026-10-28 | CP-P | CHANGELOG.md (v0.3.0, commit 93b4f7d, tag v0.3.0) | approved (release v0.3.0; Rob via Eddie; wake rule stays every-post, no @mention change) |
 | 2026-10-27 | CP-C | thoughts/shared/plans/2026-10-27-live-bots.md | approved speclock sha256:3108f1fe6a93cfae |
 | 2026-10-27 | CP-B | docs/architecture/2026-10-26-live-bots.md | approved (incl. stored-token security review) |
 | 2026-10-27 | CP-B | docs/decisions/0006-encrypted-token-store.md, docs/decisions/0007-mattermost-websocket-listener.md, docs/decisions/0008-signed-wake-webhook.md, docs/decisions/0009-listener-state-persistence.md, docs/decisions/0010-acceptance-tests-live-bots.md | accepted (ADR-0006..0010) |
