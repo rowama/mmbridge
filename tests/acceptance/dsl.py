@@ -144,14 +144,16 @@ class Dsl:
     # --- Live bots (REQ-A1..A8, ADR-0010): listener -> signed wake at a receiver ----------
     # Driven by the "live" channel: real container image + fake Mattermost (REST + websocket)
     # + local wake receiver that captures and HMAC-verifies every wake. Bot set up via admin CLI.
-    def given_live_bot(self, name="eddie", channels=()):
-        """Bot `name` is the registered live bot (via the admin CLI), listening on the chosen
-        channels (names; the bot must be a member). Listener is enabled and connected."""
-        self._d.given_live_bot(name, list(channels))
+    def given_live_bot(self, name="eddie"):
+        """Bot `name` is the registered live bot (via the admin CLI: token, wake URL and secret;
+        no channel list). Listener is enabled and connected; it wakes for DMs and every post in
+        channels the bot is a member of."""
+        self._d.given_live_bot(name)
 
-    def given_member_channel(self, channel="town-square", members=(), team="rmlab"):
-        """A channel exists; listed bots/users are members (no choice made by this)."""
-        self._d.given_channel(team, channel, list(members))
+    def given_member_channel(self, channel="town-square", members=(), team="rmlab", private=False):
+        """A channel exists (public, or private when `private`) on `team`; listed bots/users are
+        members. Membership alone decides which channel posts can wake the bot."""
+        self._d.given_channel(team, channel, list(members), private=private)
 
     def given_wake_target_down(self):
         """The bot's wake receiver fails every request (HTTP 503) from now on."""
@@ -160,6 +162,10 @@ class Dsl:
     def post_in(self, channel="town-square", message="hello", as_user="rob"):
         """A Mattermost user (or bot) posts in a channel; the listener sees it live."""
         self._d.post_in(channel, message, as_user)
+
+    def reply_in_thread(self, channel="town-square", to_message="hello", message="reply", as_user="rob"):
+        """A user replies in the thread started by the earlier post `to_message` in `channel`."""
+        self._d.reply_in_thread(channel, to_message, message, as_user)
 
     def dm(self, bot="eddie", message="ping", as_user="ulrik"):
         """A user sends a direct message to the bot."""
@@ -178,15 +184,20 @@ class Dsl:
         """Someone posts a wake to the receiver without a valid signature."""
         self._last = self._d.send_forged_wake()
 
-    def assert_woken_once(self, bot="eddie", channel="town-square", sender="rob", message=None):
+    def assert_woken_once(self, bot="eddie", channel="town-square", sender="rob", message=None, thread=None):
         """Exactly one correctly signed wake for this post reached the bot's receiver, naming
-        channel, sender, message text and post id (within the 10 s metric)."""
-        self._d.assert_woken_once(bot, channel, sender, message)
+        channel, sender, message text and post id (within the 10 s metric); when `thread` is
+        given, the wake names the post with that text as its thread root (root_id)."""
+        self._d.assert_woken_once(bot, channel, sender, message, thread)
 
     def assert_not_woken(self, bot="eddie", message=None):
         """No wake (for this message, or at all when message is None) reached the receiver
         within the settle time."""
         self._d.assert_not_woken(bot, message)
+
+    def assert_not_member(self, bot="eddie", channel="hr"):
+        """The bot is not a member of `channel`: nothing joined it implicitly (REQ-7)."""
+        self._d.assert_not_member(bot, channel)
 
     def assert_forged_wake_rejected(self):
         """The receiver rejected the unsigned/forged wake (signature check failed)."""

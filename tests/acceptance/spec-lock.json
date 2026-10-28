@@ -11,6 +11,7 @@
     "tests/acceptance/dsl.py::Dsl.assert_forged_wake_rejected": "f2f088fc8aa01f4cb258ce9405bfb9d2f83ced762de9832a0048e84b24490b60",
     "tests/acceptance/dsl.py::Dsl.assert_newest_posts": "6666b52a4a2747209d112a64e8f1231bdf07bcc8c29f0586b1ec0a12d4c480b0",
     "tests/acceptance/dsl.py::Dsl.assert_no_token_anywhere": "afcba7fc05db69d0280bcbf6971e6c61ffbc0cc7968eaf22cdeb1091cf85578d",
+    "tests/acceptance/dsl.py::Dsl.assert_not_member": "4ba02d4d665be2cbbb9a01626496ad42a8d462528d7d47f806cb8d3f662eaad6",
     "tests/acceptance/dsl.py::Dsl.assert_not_woken": "c07d481fcc4ebae10acdd45c44e9d97c6ff5e55d1faa933ba356cfaec64d36ec",
     "tests/acceptance/dsl.py::Dsl.assert_nothing_changed_in_mattermost": "db294487e4b3ba6d9183ec7bd663231c8064108759ae073671c95b2bdb5b87d9",
     "tests/acceptance/dsl.py::Dsl.assert_nothing_posted_or_joined": "bd13c70f5860e1b2d585851e653a3e5654ddd01202aa8a39895430de9aae0181",
@@ -18,7 +19,7 @@
     "tests/acceptance/dsl.py::Dsl.assert_refused": "410fc46765afd389c6045d287fdaf36365d7f3a2235e8d3788a3e26cfc734e97",
     "tests/acceptance/dsl.py::Dsl.assert_single_dm_conversation": "8097e6ea41815b014cdb13d7141d9203b0b80aeac3a1840e12da8152c5f3d033",
     "tests/acceptance/dsl.py::Dsl.assert_wake_retried": "e7d543c67c035eb1393a36d29dfa80181b585596d5cef5fdb34923e8cecf321d",
-    "tests/acceptance/dsl.py::Dsl.assert_woken_once": "fd5eaead28a6f53b1f6829fc3c47522293cfede46686a2e3087c5aff273213da"
+    "tests/acceptance/dsl.py::Dsl.assert_woken_once": "d1d4a73319fc3a84b69b0b0d4c39404dfd63ff161daf14fc015fb8a92de719fb"
   },
   "dsl_interface": {
     "tests/acceptance/dsl.py::Dsl": "f35ca00c9526661260904b895e05f0fcb07b881daeeac11035591379c85d12d3",
@@ -34,6 +35,7 @@
     "tests/acceptance/dsl.py::Dsl.assert_forged_wake_rejected": "7af0dfff700eac31fdb748cf1ebb4338c957fc85e6878a6a0f44bc64cb687cf5",
     "tests/acceptance/dsl.py::Dsl.assert_newest_posts": "e919eca0985c0dba90dba56048472bc1ae32f3ae3c034c710f9d5f4587284b43",
     "tests/acceptance/dsl.py::Dsl.assert_no_token_anywhere": "efeb35d69a1f780f4d49f933ef2d5f6f54e5440b0c76ac4b30606b5a33961976",
+    "tests/acceptance/dsl.py::Dsl.assert_not_member": "1ce09df92914875c8d5186e01f2ebb2ef426acef6dd0df65b4710b4af3a79758",
     "tests/acceptance/dsl.py::Dsl.assert_not_woken": "586b5e3604384c8437079ef50b898c913b4548fdc85909a1345bde988cf78d72",
     "tests/acceptance/dsl.py::Dsl.assert_nothing_changed_in_mattermost": "94e089137167022f2b9b92bf4f93b6e6448159a03a0f3a019f9bddeee662678e",
     "tests/acceptance/dsl.py::Dsl.assert_nothing_posted_or_joined": "b2c33b6ed69b2885606fe1b9fa352204caf92eb0c1c9be894def2f9fe066abd3",
@@ -41,7 +43,7 @@
     "tests/acceptance/dsl.py::Dsl.assert_refused": "d523cb97e44e173222887dd3e55b14658dad7a646984de3e864062babc0535cc",
     "tests/acceptance/dsl.py::Dsl.assert_single_dm_conversation": "ade054b504d6e151b6ad4c9987e851bd6eaaa88bb254b96e0b91618c14ef6880",
     "tests/acceptance/dsl.py::Dsl.assert_wake_retried": "60db6bbfe3d973b3c8341bd987c41088a9d20209bd0852306ab4c17fdca53233",
-    "tests/acceptance/dsl.py::Dsl.assert_woken_once": "9cc05df00afed2940f02b6f7fd6b2c2f48d257c1bfa67a4f2922fd39ed3f3891",
+    "tests/acceptance/dsl.py::Dsl.assert_woken_once": "df32519ff3153e6a207b6a2cc59e4286c03cd44440a75fdb65800468b65bde01",
     "tests/acceptance/dsl.py::Dsl.dm": "f7f0c2165e4d56d683d3f93b9a0e615f6be1343ebf6d2ec344b426ee7157c7a9",
     "tests/acceptance/dsl.py::Dsl.dm_read": "291724f4f21e2654d253bcddc1b8cf29ceffcdc3716b330ca129638265331250",
     "tests/acceptance/dsl.py::Dsl.dm_send": "ead1e15c0b684fbe6a77cfe82001a3922851fd449a4213b8fb5abd80516d3adc",
@@ -50,9 +52,9 @@
     "tests/acceptance/dsl.py::Dsl.given_channel": "f742d4d5f1c97c2ef8c7439ccbc959408e62399648e457761d6723d601e868a3",
     "tests/acceptance/dsl.py::Dsl.given_channel_posts": "c01ad58b6e2e19d9799e5c60208875bb3e7566d6a55b8a44680fa6ac187d5495",
     "tests/acceptance/dsl.py::Dsl.given_dm_post": "9b4b2e9630d20d22b6fe2a23f2e8497cb2138c611c5baea678f7e1e31a5d524c",
-    "tests/acceptance/dsl.py::Dsl.given_live_bot": "5e83caabcb8f3711f5cea5b0804373b9b649985dde147b77389ac427ccca09c0",
+    "tests/acceptance/dsl.py::Dsl.given_live_bot": "ee1b63cee5c9688dee2108b43afb28323d569dc5e1c9b69aedb8dd88d32982d4",
     "tests/acceptance/dsl.py::Dsl.given_mattermost_down": "0c9fe27c7a7bfc1fa86f04ab680f39985f37bc8f5b37a6244b1ee34f5eb62752",
-    "tests/acceptance/dsl.py::Dsl.given_member_channel": "03e28235e4961010709214e65482a73de97b8874cd9e5d33d16d5d7100aeb56a",
+    "tests/acceptance/dsl.py::Dsl.given_member_channel": "b0d0fa0e2b3c621c4bf568b0ce406e4fe446cb6691bb0bba6a2b92fa820a6540",
     "tests/acceptance/dsl.py::Dsl.given_no_channel": "ce858a777b298c640e9dd462d1c88fc8c0977270189dd48b1d0e71ea07fecbe4",
     "tests/acceptance/dsl.py::Dsl.given_no_user": "95b371f2ac7c4ea022c9f248ae22a69f8f2f564c54df8c6f8e55d2f3726d0bf8",
     "tests/acceptance/dsl.py::Dsl.given_user": "e5cfd546c64124e0f39d1a582c2a722e399201732a148a533c8798a0496ac543",
@@ -61,12 +63,13 @@
     "tests/acceptance/dsl.py::Dsl.post": "499d25bfe83717e939a4f38641d1827e736a1562f8aead05f3ccad070feeb795",
     "tests/acceptance/dsl.py::Dsl.post_in": "0bb1f92c50760d4967d85d002edc94c9991ef67e92def0181e93efec39544b83",
     "tests/acceptance/dsl.py::Dsl.read_channel": "ca444e945cf29daee52f04eb849b4e9a0422009eb525525a75ae093be16b76f9",
+    "tests/acceptance/dsl.py::Dsl.reply_in_thread": "8ac93cd5f7c8c6390d3d445aa2749e90904b9e1529d60b61a03904500d87674e",
     "tests/acceptance/dsl.py::Dsl.restore_connection": "4d4caac2c5ea979ff20c0331b56700a6270cdcceb0175e5cb8afd4242479d56d",
     "tests/acceptance/dsl.py::Dsl.send_forged_wake": "8fccb881feca5f863420159b52f23a2ad3a324e9d94b794df32bfeae80501c37"
   },
   "kit_version": "2.5.6",
   "specs": {
-    "tests/acceptance/specs/test_live_bots.py": "c1b316377dd5263ab496b197da35745a00c70ec05a2c69c66c6b2c4fbac58d77",
+    "tests/acceptance/specs/test_live_bots.py": "8cd5b8c5721c24abda0ef3c4e278df1e8e0a0138f1709baadc9c7691871df068",
     "tests/acceptance/specs/test_mmbridge.py": "7b557b29445c2f5774f7f05002d4ecf47864ff2a21b1ef95210bfedcc0eac48e"
   }
 }

@@ -2,7 +2,7 @@
 id: PLAN-20261027-live-bots-delta-no-allowlist
 type: plan
 phase: plan
-status: in-review
+status: approved
 owner_agent: grok-bot
 date: 2026-10-27
 links: [thoughts/shared/plans/2026-10-27-live-bots.md, docs/design/2026-10-26-live-bots.md, docs/architecture/2026-10-26-live-bots.md, tests/acceptance/specs/test_live_bots.py]
