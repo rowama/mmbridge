@@ -1,7 +1,7 @@
 ---
 id: STATE
 type: project-state
-phase: implement
+phase: ship
 status: active
 owner_agent: grok-bot
 date: 2026-10-28
@@ -10,7 +10,8 @@ triage: large             # unset | small | medium | large
 active_slice: SLICE-20261027-lb5-wireup-reconnect-acceptance
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: []
+pending_approvals:
+  - "CP-P: CHANGELOG.md - release v0.3.0 at 93b4f7d and tag v0.3.0"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -25,7 +26,7 @@ acceptance: executable-specs   # v2.5: tests/acceptance/, see PROCESS.md 13
 > Update it at the end of every session. Keep it under one screen.
 
 ## Current phase
-implement (increment A Live bots, Large; all slices lb1-lb5 done, lb5 CP-S logged 2026-10-28; next eng-ship) - PROCESS.md section 3.
+ship (increment A Live bots, Large; lb1-lb5 done; v0.3.0 CHANGELOG + app version pushed at 93b4f7d; awaiting CP-P and tag) - PROCESS.md section 3.
 
 ## Goal (one sentence)
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
@@ -34,7 +35,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [SLICE-20261027-lb5-wireup-reconnect-acceptance](thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md) (done; CP-S logged 2026-10-28, verify PASS 8f987e7). Previous: lb4b [done](thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md)
 
 ## Next action
-lb5 CP-S done 2026-10-28, see Approval log (steps 1-4, 6 good; step 5 Mattermost-restart resume/catch-up check deferred by Rob - see TODOS; rollback not done, LIVE_BOTS_ENABLED left on). Next: eng-ship increment A Live bots (CHANGELOG/VERSION; tag asks Rob). OWNER-GUIDE pointer waits for Rob's uncommitted OWNER-GUIDE edits (TODOS).
+eng-ship: full suite re-run green at 8af985b (unit 267; acceptance 16/15 skipped; live container 15/16 skipped; eng-spec status clean); CHANGELOG [0.3.0] + app/main.py version 0.3.0 pushed (93b4f7d). Waiting on Rob: CP-P and permission to create/push tag v0.3.0 on 93b4f7d (tags ask). No PR (trunk+tag, L-002); no CI configured. After CP-P: phase reflect, eng-retro. Deferred: live Mattermost-restart resume check (TODOS); OWNER-GUIDE pointer waits for Rob's uncommitted OWNER-GUIDE edits.
 
 ## Blockers
 - none
