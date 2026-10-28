@@ -31,3 +31,8 @@ base = "main"            # default --base for code-review <slice-id>
 
 [runners.claude]
 implement_args = ["--permission-mode", "bypassPermissions"]
+
+# codex lives under the nvm bin; it is not on PATH from a non-login shell (exit 127, retro v0.3.0 change 3).
+# Run eng-run from a login shell (bash -lc), or add the nvm bin to PATH for codex, e.g.:
+# [runners.codex]
+# env = { PATH = "/home/<user>/.nvm/versions/node/<ver>/bin:/usr/local/bin:/usr/bin:/bin" }

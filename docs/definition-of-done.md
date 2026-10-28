@@ -4,7 +4,7 @@ type: definition-of-done
 phase: any
 status: active
 owner_agent: Eddie
-date: 2026-10-25
+date: 2026-10-28
 links: []
 ---
 # Definition of Done
@@ -27,3 +27,6 @@ A slice/increment is Done only when every applicable item holds, proven by comma
 <!-- Project-specific additions below -->
 - [ ] `pytest tests` from the repo root runs unit + acceptance with zero silent collection skips (collected count matches).
 - [ ] Time/rate-dependent tests use an injected/frozen clock, never wall clock.
+- [ ] No sleep/timing-based waits on threads or async tasks in tests: use events, injected clocks, or polling with a deadline. For slices with concurrency (threads, async tasks, sockets), the verifier runs the full suite 3 times and all 3 pass. (retro v0.3.0 change 3)
+- [ ] Checkpoint asks (CP-C, CP-S) for any user-visible behaviour change include a one-line `Before -> After` example, and the CP-S demo shows it. (retro v0.3.0 change 1)
+- [ ] Live path (retro v0.3.0 change 2): from the first slice with a live path, the slice keeps a thin live demo runnable at CP-S; earlier CP-S asks list only runnable-now checks.

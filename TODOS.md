@@ -16,6 +16,7 @@
 - **Kit: eng-run code-review parser misses codex `[P1]/[P2]` findings** (filed 2026-10-28, from lb5 reviews 2-5) - writes "No findings." while the raw output has findings; read raw output until fixed. **Effort:** S. **Priority:** P1.
 - **Kit: eng-spec trace shows amended approved design as "(not in an approved design)"** (filed 2026-10-28, from lb5 verify) - REQ-A1..A8 are in docs/design/2026-10-26-live-bots.md. **Effort:** S. **Priority:** P3.
 - **Flaky timing-race unit tests** (filed 2026-10-28, from v0.3.0 ship) - some unit tests intermittently fail on timing races; did not block tag v0.3.0. Implementer to make them deterministic. **Effort:** S. **Priority:** P2.
+- **Grok Bot webhook wake contract (mmbridge -> Grok Bot), not Ulrik temp HMAC receiver** (filed 2026-10-28, Rob via Eddie: needed soon) - define and wire the real wake contract into Grok Bot; candidate for the next increment (discover not started). **Effort:** M. **Priority:** P1.
 
 ## Follow-ups
 - [x] P2: Case-insensitive Bearer scheme match in auth.py (F2 accepted-risk 2026-10-26) -> slice d-hardening

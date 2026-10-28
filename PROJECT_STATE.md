@@ -1,7 +1,7 @@
 ---
 id: STATE
 type: project-state
-phase: reflect
+phase: discover
 status: active
 owner_agent: grok-bot
 date: 2026-10-28
@@ -25,7 +25,7 @@ acceptance: executable-specs   # v2.5: tests/acceptance/, see PROCESS.md 13
 > Update it at the end of every session. Keep it under one screen.
 
 ## Current phase
-reflect (increment A Live bots shipped: v0.3.0 at 93b4f7d, tag v0.3.0 pushed 2026-10-28; see Approval log) - PROCESS.md section 3.
+discover (idle; ready for next increment). v0.3.0 Live bots shipped 2026-10-28 (93b4f7d, tag v0.3.0); retro done and agreed changes applied 2026-10-28 - PROCESS.md section 3.
 
 ## Goal (one sentence)
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
@@ -34,7 +34,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [SLICE-20261027-lb5-wireup-reconnect-acceptance](thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md) (done; CP-S logged 2026-10-28, verify PASS 8f987e7). Previous: lb4b [done](thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md)
 
 ## Next action
-AWAIT ROB on retro proposals: [retro v0.3.0](thoughts/shared/retros/2026-10-28-v0.3.0-live-bots.md) (draft) - 3 process changes + kit lessons K-1..K-4 + L-* confirmations, presented via Eddie. Apply only agreed edits, then set phase discover (or Rob defers all). Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer waits on Rob uncommitted OWNER-GUIDE edits; flaky timing-race unit tests (TODOS P2).
+IDLE - ready for the next increment (do not start discover until Rob/Eddie kick it off). Retro v0.3.0 [done, changes applied](thoughts/shared/retros/2026-10-28-v0.3.0-live-bots.md). Next-discover candidate (Rob, P1, needed soon): Grok Bot webhook wake contract (mmbridge -> Grok Bot), not Ulrik temp HMAC receiver (TODOS). Open: live Mattermost-restart resume/catch-up check (TODOS follow-up, deferred); OWNER-GUIDE pointer waits on Rob uncommitted OWNER-GUIDE edits (TODOS P2); flaky timing-race unit tests (TODOS P2). Kit lessons K-1..K-4 go to Yana via Eddie.
 
 ## Blockers
 - none
@@ -51,7 +51,7 @@ none
 - Conventions: [AGENTS.md](AGENTS.md)
 - Owner guide: [OWNER-GUIDE.md](OWNER-GUIDE.md)
 - Definition of Done: [docs/definition-of-done.md](docs/definition-of-done.md)
-- Retro v0.3.0 (draft, awaiting Rob): [thoughts/shared/retros/2026-10-28-v0.3.0-live-bots.md](thoughts/shared/retros/2026-10-28-v0.3.0-live-bots.md)
+- Retro v0.3.0 (done, changes applied 2026-10-28): [thoughts/shared/retros/2026-10-28-v0.3.0-live-bots.md](thoughts/shared/retros/2026-10-28-v0.3.0-live-bots.md)
 - Process feedback: [thoughts/shared/process-feedback.md](thoughts/shared/process-feedback.md)
 - Design A Live bots (approved; scope REDUCE recorded 2026-10-26): [docs/design/2026-10-26-live-bots.md](docs/design/2026-10-26-live-bots.md)
 - Design (approved; scope hold approved): [docs/design/2026-10-25-mmbridge-mcp.md](docs/design/2026-10-25-mmbridge-mcp.md)
@@ -84,6 +84,7 @@ none
      Pre-kit decisions: back-fill with Checkpoint "pre-kit" and Decision "approved (back-filled, pre-kit)". .eng/bin/eng-check matches rows to statuses. -->
 | Date | Checkpoint | Artifact | Decision (Rob) |
 |---|---|---|---|
+| 2026-10-28 | retro | thoughts/shared/retros/2026-10-28-v0.3.0-live-bots.md | approved (all proposals: process changes 1-3 applied; kit lessons K-1..K-4 to Yana; via Eddie) |
 | 2026-10-28 | CP-S | thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md | approved (verify PASS 8f987e7; Coolify steps 1-4 and 6 good; step 5 restart Mattermost mid-demo / real-MM resume+catch-up check deferred by Rob; rollback not exercised, LIVE_BOTS_ENABLED left on; via Eddie) |
 | 2026-10-28 | CP-S | thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md | approved (verify PASS 14ecd18; demo set-bot + --channels reject; live Mattermost->receiver e2e deferred until listener/dispatcher wired in lb5) |
 | 2026-10-27 | CP-C | thoughts/shared/plans/2026-10-27-live-bots-delta-no-allowlist.md | approved speclock sha256:ea6a99cbd5601d05 |

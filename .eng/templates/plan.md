@@ -26,6 +26,9 @@ plan_review: none        # medium/large: path to the mandatory Codex plan review
 - <explicit out-of-scope item>
 
 ## Implementation Approach
+<!-- Live path (project rule, retro v0.3.0 change 2): name the first slice that unlocks a live end-to-end check. From that slice on, every slice keeps a thin live demo runnable at CP-S (walking skeleton); earlier CP-S asks list only runnable-now checks. -->
+First live slice: <Phase N / slice id, or "none: no live path">
+<!-- Behaviour changes: for each user-visible behaviour change, add a one-line `Before -> After` example here and in the CP-C ask (retro v0.3.0 change 1). -->
 <strategy; program design: key types/signatures, call path, file-tree diff>
 
 ## Phase 1: <vertical slice name — thin, end-to-end, demoable>

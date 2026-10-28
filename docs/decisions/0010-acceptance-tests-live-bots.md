@@ -34,4 +34,4 @@ Specs and the DSL public interface are locked at CP-C. DSL assertion-step change
 - Expected outcome: no shipped REQ-A without a passing spec; live CP-S checks agree with the fake.
 - Check date: after the Live bots v1 ship
 - What would prove it wrong: live behaviour differs from the fake WS in a way specs did not catch, or specs rewritten in most slices.
-- Score: unscored
+- Score: unclear (retro v0.3.0, 2026-10-28): specs pass, but live MM-restart resume unchecked and lb5 reviews found fake drift (team-less D-channel discovery, 9bdff90)

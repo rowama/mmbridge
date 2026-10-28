@@ -27,4 +27,4 @@ Positive: works with any receiver; forgery and replay resistant; idempotency key
 - Expected outcome: a verifying receiver accepts all real wakes and rejects tampered/stale ones in tests; failed wakes are visible to Rob.
 - Check date: after the Live bots v1 ship
 - What would prove it wrong: the actual Grok Bot target cannot receive/verify the webhook at all, forcing a different wake path.
-- Score: unscored
+- Score: right (retro v0.3.0, 2026-10-28): lb4 tamper tests plus lb5 live CP-S steps 1-4, real wakes reached the HMAC receiver

@@ -27,4 +27,4 @@ Positive: no redeploy to change the bot; volume/backups leak only ciphertext. Ne
 - Expected outcome: token never appears in logs, /health, tool output or wake payloads (tested); token rotation via CLI takes effect within 60 s without redeploy.
 - Check date: after the Live bots v1 ship
 - What would prove it wrong: a token string found in any log/output; Rob needs a redeploy to change the bot; key management proves too awkward in Coolify.
-- Score: unscored
+- Score: unclear (retro v0.3.0, 2026-10-28): no-token-in-output covered by tests; 60 s CLI rotation not exercised live, only in tests

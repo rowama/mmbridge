@@ -20,6 +20,8 @@ The values live in `PROJECT_STATE.md` front matter (`implementer`, `planner`, `c
 - **Cross-model review** (Codex) is advisory, never a gate. See `.eng/PROCESS.md` section 10.
 - **Push:** follow `push_permission` (default `ask`: ask the owner before each push).
 - **Owner review notes** (`thoughts/shared/review-notes/`) belong to the owner. Agents never edit them until the owner says they are ready.
+- **Approval asks show behaviour (retro v0.3.0 change 1):** when a slice or delta changes user-visible behaviour (especially reversing an earlier default), the CP-C and CP-S ask includes a one-line `Before -> After` example in Rob's words (e.g. "Before: bot wakes only on @mention. After: bot wakes on every post in channels it is in."), and the CP-S demo shows it.
+- **Planning: early live path (retro v0.3.0 change 2, L-009):** from the first slice that adds a live path, every slice keeps a thin end-to-end live demo runnable at CP-S (walking skeleton). Otherwise the plan names the first slice that unlocks live checks, and earlier CP-S asks list only runnable-now checks.
 
 ## Commands
 - Install:  `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirements-dev.txt`
@@ -45,5 +47,7 @@ The values live in `PROJECT_STATE.md` front matter (`implementer`, `planner`, `c
 - Lint: ruff not in the gate yet (TODO, TODOS P3: needs ruff in requirements-dev + a clean run).
 - Dev venv uses **Python 3.12** to match the Dockerfile: `uv venv -p 3.12` (3.14 install fails).
 - After a redeploy that changes the MCP tool list, restart the Grok Bot MCP servers before manual checks (clients cache tool lists).
+- **Codex runner PATH:** `eng-run code-review`/`plan-review` need the nvm bin on PATH (codex is not found from a non-login shell, exit 127). Run from a login shell (`bash -lc`) or set PATH in `.eng/runners.toml` `[runners.codex] env`.
+- **Concurrency tests:** no sleep/timing-based waits on threads or async tasks; use events, injected clocks, or polling with a deadline. Slices with concurrency run the full suite 3 times at verify (see DoD).
 
 ## Gotchas
