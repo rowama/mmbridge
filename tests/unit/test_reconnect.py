@@ -378,6 +378,43 @@ async def test_second_listener_cannot_take_the_lease(served, tmp_path, caplog):
     await a.stop()
 
 
+def test_backoff_and_restart_delay_never_overflow(tmp_path):
+    from app.live import restart_delay
+    lis = Listener(BotConfig("t" * 26, "https://x.example/h", "s" * 40), State(str(tmp_path / "s.db")),
+                   lambda t: None, rand=lambda: 1.0)
+    assert lis._backoff(5000) == 60
+    assert restart_delay(5000, 1.0, 60.0) == 60.0 and restart_delay(1, 1.0, 60.0) == 1.0
+
+
+class _RotatingClient(Client):
+    """On the first /users/me after `arm`, the token is rotated (store reload mid connect)."""
+    arm, hook = False, None
+
+    async def get(self, path, **params):
+        r = await super().get(path, **params)
+        if path == "/users/me" and _RotatingClient.arm:
+            _RotatingClient.arm = False
+            _RotatingClient.hook()
+        return r
+
+
+async def test_token_rotated_during_connect_reconnects_with_new_token(served, tmp_path):
+    m, w, _ = served
+    r = await Run(served, tmp_path / "state.db", client_cls=_RotatingClient).start()
+    new = "tok-eddie-rotated-" + "y" * 10
+
+    def rotate():
+        old = r.lis.cfg
+        w["bot"]["tokens"] = [new]                 # a second access token; the old one stays valid
+        nc = BotConfig(token=new, wake_url=old.wake_url, wake_secret=old.wake_secret)
+        r.lis._cfg = lambda: nc
+        r.lis.config_changed(old, nc)              # _ws is None here: it cannot close the handshake
+    _RotatingClient.hook, _RotatingClient.arm = rotate, True
+    m.ws_drop()
+    await until(lambda: ("WS", "/api/v4/websocket", new) in m.calls and r.lis.status == "ok")
+    await r.stop()
+
+
 def test_reconnect_backoff_doubles_with_jitter_and_caps(tmp_path):
     lis = Listener(BotConfig("t" * 26, "https://x.example/h", "s" * 40), State(str(tmp_path / "s.db")),
                    lambda t: None, rand=lambda: 1.0)

@@ -122,7 +122,7 @@ class Listener:
             asyncio.ensure_future(self._ws.close())
 
     def _backoff(self, attempt: int) -> float:
-        d = min(self.max_backoff_s, self.backoff_s * 2 ** (max(attempt, 1) - 1))
+        d = min(self.max_backoff_s, self.backoff_s * 2 ** min(max(attempt, 1) - 1, 32))   # no float overflow
         return d * (0.5 + 0.5 * self.rand())
 
     async def _pause(self, seconds: float) -> None:
@@ -200,6 +200,9 @@ class Listener:
                 raise
             self._ws = ws
             try:
+                if self.cfg.token != cfg.token:   # rotated while connecting: config_changed could not close us
+                    _log("token_changed_during_connect")
+                    return True
                 pinger = asyncio.create_task(self._ping(ws))
                 try:
                     reached = await self._read(ws, client)

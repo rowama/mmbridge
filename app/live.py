@@ -81,6 +81,11 @@ class ConfigHolder:
             self.check()
 
 
+def restart_delay(attempt: int, base_s: float, max_s: float) -> float:
+    """base_s * 2^(attempt-1) capped at max_s; the exponent is bounded so endless crashes cannot overflow."""
+    return min(max_s, base_s * 2 ** min(max(attempt, 1) - 1, 32))
+
+
 async def supervise(name: str, factory, crashed: set, base_s: float = RESTART_BASE_S,
                     max_s: float = RESTART_MAX_S) -> None:
     """Run factory() forever: on an exception (or a return) log task_crashed, mark `name` crashed while waiting
@@ -96,7 +101,7 @@ async def supervise(name: str, factory, crashed: set, base_s: float = RESTART_BA
         except Exception as e:                      # type only: messages may carry request details
             err = type(e).__name__
         attempt = 1 if time.monotonic() - started > max_s else attempt + 1
-        delay = min(max_s, base_s * 2 ** (attempt - 1))
+        delay = restart_delay(attempt, base_s, max_s)
         crashed.add(name)
         _log("task_crashed", "error", task=name, error=err, attempt=attempt, restart_in_s=delay)
         try:

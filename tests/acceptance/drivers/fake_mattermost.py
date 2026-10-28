@@ -10,7 +10,7 @@ drop/raw/seq-skip controls). `serve()` runs the app on a free localhost port for
 Live bots lb4: `mm_ids=True` gives channels Mattermost-shaped 26-char ids (the bot store validates them).
 Live bots lb5: `clock` (seconds callable, e.g. time.time) stamps posts with real ms (catch-up windows); channel
 posts: `since` as Mattermost (paging ignored, capped at `since_cap`), else newest-first pages with `before`/`after`
-post-id anchors (fix cycle: catch-up pages by id); GET /users/{id}/channels (all, D included); /users/me/teams and team channels page (`page`/`per_page`) and team channel lists include
+post-id anchors (fix cycle: catch-up pages by id); GET /users/{id}/channels (all, D included); a user's extra `tokens` (several access tokens, as Mattermost allows); /users/me/teams and team channels page (`page`/`per_page`) and team channel lists include
 the user's D/G channels (as Mattermost does); `ws_refuse` (REST 503 + websocket handshake 503, an MM restart);
 resume: a dropped session stays resumable (`ws_drop(resumable=True)`), keeps receiving its events in a dead
 queue, and a reconnect with `?connection_id&sequence_number` gets hello (same id, no seq) + the missed events.
@@ -210,7 +210,7 @@ class FakeMattermost:
             return None, JSONResponse({"message": "unavailable"}, status_code=503)
         if self.fail_status:
             return None, JSONResponse({"message": "forced"}, status_code=self.fail_status)
-        user = next((u for u in self.users.values() if tok and u["token"] == tok), None)
+        user = next((u for u in self.users.values() if tok and (u["token"] == tok or tok in u.get("tokens", ()))), None)
         if not user:
             return None, JSONResponse({"message": "Invalid or expired session"}, status_code=401)
         return user, None
@@ -356,7 +356,7 @@ class FakeMattermost:
     async def _ws(self, ws: WebSocket):
         tok = _tok(ws.headers)
         self.calls.append(("WS", ws.url.path, tok))
-        user = next((u for u in self.users.values() if tok and u["token"] == tok), None)
+        user = next((u for u in self.users.values() if tok and (u["token"] == tok or tok in u.get("tokens", ()))), None)
         if self.ws_refuse:
             await ws.send_denial_response(JSONResponse({"message": "unavailable"}, status_code=503))
             return
