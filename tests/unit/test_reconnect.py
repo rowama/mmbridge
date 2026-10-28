@@ -258,6 +258,23 @@ async def test_dm_created_during_outage_is_discovered_and_caught_up(run):
     assert run.state.wake(p["id"]).payload["channel"]["type"] == "D"
 
 
+async def test_teamless_bot_discovers_dm_created_during_outage(world, tmp_path):
+    """A bot in no team still has D channels: catch-up discovers them via GET /users/{id}/channels."""
+    m, w = world
+    m.channels[w["town"]]["members"].discard(w["bot"]["id"])
+    ann = m.add_user("ann")
+    async with m.serve() as base:
+        r = await Run((m, w, base), tmp_path / "state.db").start()
+
+        def during():
+            c = m.direct_channel(w["bot"]["id"], ann["id"])
+            return r.post(c["id"], "dm to a team-less bot", user="ann")
+        p = await r.outage(during)
+        await until(lambda: r.state.wake(p["id"]))
+        await r.stop()
+    assert r.state.wake(p["id"]).payload["channel"]["type"] == "D"
+
+
 async def test_two_teams_and_channel_joined_during_outage_are_caught_up(served, tmp_path):
     m, w, _ = served
     ops = m.add_channel("lab2", "ops", ["eddie", "rob"])

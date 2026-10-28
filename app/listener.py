@@ -329,6 +329,14 @@ class Listener:
             for c in await self._paged(client, "/users/me/teams/%s/channels" % t["id"]):
                 if c.get("type") in ("O", "P", "D"):
                     found[c["id"]] = c
+        try:                                  # D channels need no team: a team-less bot is found only here
+            for c in await client.get("/users/%s/channels" % self.bot_user_id):
+                if isinstance(c, dict) and c.get("type") == "D":
+                    found.setdefault(c["id"], c)
+        except MMError as e:
+            if e.code != "not_found":
+                raise
+            _log("direct_channels_unavailable", code=e.code)   # older server: team lists still carry D
         for cid in await asyncio.to_thread(self.state.cursor_channels):
             found.setdefault(cid, self.members.get(cid) or {"id": cid})
         for cid, c in self._seen.items():

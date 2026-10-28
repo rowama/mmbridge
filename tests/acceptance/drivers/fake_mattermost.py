@@ -10,7 +10,7 @@ drop/raw/seq-skip controls). `serve()` runs the app on a free localhost port for
 Live bots lb4: `mm_ids=True` gives channels Mattermost-shaped 26-char ids (the bot store validates them).
 Live bots lb5: `clock` (seconds callable, e.g. time.time) stamps posts with real ms (catch-up windows); channel
 posts: `since` as Mattermost (paging ignored, capped at `since_cap`), else newest-first pages with `before`/`after`
-post-id anchors (fix cycle: catch-up pages by id); /users/me/teams and team channels page (`page`/`per_page`) and team channel lists include
+post-id anchors (fix cycle: catch-up pages by id); GET /users/{id}/channels (all, D included); /users/me/teams and team channels page (`page`/`per_page`) and team channel lists include
 the user's D/G channels (as Mattermost does); `ws_refuse` (REST 503 + websocket handshake 503, an MM restart);
 resume: a dropped session stays resumable (`ws_drop(resumable=True)`), keeps receiving its events in a dead
 queue, and a reconnect with `?connection_id&sequence_number` gets hello (same id, no seq) + the missed events.
@@ -66,6 +66,7 @@ class FakeMattermost:
             Route("/api/v4/channels/direct", self._direct, methods=["POST"]),
             Route("/api/v4/channels/{channel_id}", self._channel),
             Route("/api/v4/teams/{team_id}", self._team),
+            Route("/api/v4/users/{user_id}/channels", self._user_channels),
             Route("/api/v4/users/{user_id}", self._user),
             WebSocketRoute("/api/v4/websocket", self._ws),
         ])
@@ -235,6 +236,16 @@ class FakeMattermost:
         return JSONResponse(_page(request, [{k: v for k, v in c.items() if k != "members"}
                                             for c in self.channels.values()
                                             if c["team_id"] in (tid, "") and u["id"] in c["members"]]))
+
+    async def _user_channels(self, request):
+        """GET /users/{id}/channels: every channel of the user across teams, D/G included (no paging)."""
+        u, err = self._auth(request)
+        if err:
+            return err
+        if request.path_params["user_id"] != u["id"]:
+            return JSONResponse({"message": "no permission"}, status_code=403)
+        return JSONResponse([{k: v for k, v in c.items() if k != "members"}
+                             for c in self.channels.values() if u["id"] in c["members"]])
 
     def _member_channel(self, u, cid):
         c = self.channels.get(cid)
