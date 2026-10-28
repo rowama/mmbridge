@@ -4,7 +4,7 @@ All notable changes to this project. Format: Keep a Changelog style; newest firs
 ## [Unreleased]
 <!-- id: CHANG-20261028-lb5-wireup-reconnect | owner_agent: unassigned | date: 2026-10-28 -->
 ### Added
-- Live bots go live with LIVE_BOTS_ENABLED=true: the listener and wake dispatcher start with the bridge, /health reports listener (disabled|off|connecting|ok|degraded) and wake_failed_24h, dropped Mattermost connections reconnect and catch up missed posts (all member channels on all teams and DMs, 15 min window) with exactly one wake per post, and store edits (token, wake URL, secret) apply without a redeploy.
+- Live bots go live with LIVE_BOTS_ENABLED=true: the listener and wake dispatcher start with the bridge, /health reports listener (disabled|off|connecting|ok|degraded) and wake_failed_24h, dropped Mattermost connections reconnect and catch up missed posts (all member channels on all teams and DMs, 15 min window) with exactly one wake per post, and store edits (token, wake URL, secret) apply without a redeploy. Catch-up pages by post id (Mattermost ignores paging with `since`), finds DMs for a bot in no team, and a token rotated mid-connect reconnects.
 
 <!-- id: CHANG-20261027-lb4b-drop-allowlist | owner_agent: unassigned | date: 2026-10-27 -->
 ### Changed

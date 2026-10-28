@@ -12,5 +12,9 @@
 - **Plan for mcp 2.x (FastMCP→MCPServer)** (filed 2026-10-26, from [s1 verify](thoughts/shared/verification/2026-10-26-s1-verify.md)) — pinned 1.30.0. **Effort:** S. **Priority:** P3.
 - [closed] **Requirements don't install on Python 3.14** (filed 2026-10-26, from [s2 slice](thoughts/shared/slices/2026-10-25-s2-post-read-channel.md)) — fastapi 0.115.6 needs starlette<0.42, mcp 1.30.0 needs starlette>=0.48 on 3.14; the AGENTS.md install command fails with the box's python3 (3.14). Dev venv built with 3.12 via uv to match the Dockerfile. Pin the venv Python in AGENTS.md or bump fastapi. **Effort:** S. **Priority:** P2. — **DONE (residual: fastapi bump deferred): AGENTS.md pins `uv venv -p 3.12`**
 
+- **OWNER-GUIDE pointer to README "Live bots (deploy)"** (filed 2026-10-28, from [lb5 verify](thoughts/shared/verification/2026-10-28-lb5-wireup-reconnect-acceptance-verify.md)) - OWNER-GUIDE.md has Rob's uncommitted edits; add the pointer once he commits. **Effort:** S. **Priority:** P2.
+- **Kit: eng-run code-review parser misses codex `[P1]/[P2]` findings** (filed 2026-10-28, from lb5 reviews 2-5) - writes "No findings." while the raw output has findings; read raw output until fixed. **Effort:** S. **Priority:** P1.
+- **Kit: eng-spec trace shows amended approved design as "(not in an approved design)"** (filed 2026-10-28, from lb5 verify) - REQ-A1..A8 are in docs/design/2026-10-26-live-bots.md. **Effort:** S. **Priority:** P3.
+
 ## Follow-ups
 - [x] P2: Case-insensitive Bearer scheme match in auth.py (F2 accepted-risk 2026-10-26) -> slice d-hardening
