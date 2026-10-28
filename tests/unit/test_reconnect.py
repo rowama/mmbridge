@@ -197,10 +197,11 @@ async def test_failed_enqueue_does_not_advance_seq(run, monkeypatch):
             raise RuntimeError("disk hiccup")
         return real(*args)
     monkeypatch.setattr(run.state, "enqueue_and_advance", flaky)
-    before = run.lis.last_seq
+    before, alive = run.lis.last_seq, run.lis._alive_at
     run.post(w["town"], "fails once")
-    await until(lambda: seen)
+    await until(lambda: seen and run.task.done())
     assert seen == [before] and run.lis.last_seq == before
+    assert run.lis._alive_at == alive                 # nor the in-memory catch-up start (review-3)
 
 
 async def test_alive_not_persisted_until_catchup_completes(served, tmp_path, monkeypatch):

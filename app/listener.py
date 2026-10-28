@@ -225,9 +225,13 @@ class Listener:
                 _log("ws_closed", connection_id=self.connection_id)
                 return reached
             prev_alive = self._alive_at
-            self._alive_at = int(self.clock() * 1000)   # in memory now; persisted only once the frame is handled
-            if await self._frame(raw, client, prev_alive):
-                reached = True
+            self._alive_at = int(self.clock() * 1000)   # persisted only once the frame is handled
+            try:
+                if await self._frame(raw, client, prev_alive):
+                    reached = True
+            except BaseException:
+                self._alive_at = prev_alive   # not handled: a later catch-up must still start before this frame
+                raise
             await self._mark_alive()
 
     async def _frame(self, raw, client, prev_alive: int | None) -> bool:
