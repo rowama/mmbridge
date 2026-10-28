@@ -9,7 +9,8 @@ hello{connection_id}, per-connection seq, `posted` broadcast to channel members,
 drop/raw/seq-skip controls). `serve()` runs the app on a free localhost port for real HTTP/WS clients.
 Live bots lb4: `mm_ids=True` gives channels Mattermost-shaped 26-char ids (the bot store validates them).
 Live bots lb5: `clock` (seconds callable, e.g. time.time) stamps posts with real ms (catch-up windows); channel
-posts honour `since`; /users/me/teams and team channels page (`page`/`per_page`) and team channel lists include
+posts: `since` as Mattermost (paging ignored, capped at `since_cap`), else newest-first pages with `before`/`after`
+post-id anchors (fix cycle: catch-up pages by id); /users/me/teams and team channels page (`page`/`per_page`) and team channel lists include
 the user's D/G channels (as Mattermost does); `ws_refuse` (REST 503 + websocket handshake 503, an MM restart);
 resume: a dropped session stays resumable (`ws_drop(resumable=True)`), keeps receiving its events in a dead
 queue, and a reconnect with `?connection_id&sequence_number` gets hello (same id, no seq) + the missed events.
@@ -49,6 +50,8 @@ class FakeMattermost:
         self.ws_refuse = False    # Mattermost unreachable: REST 503, websocket handshake 503
         self.ws_dead = {}         # connection_id -> resumable dropped _WsSession (dead queue)
         self.ws_resumes = 0
+        self.since_cap = 1000     # Mattermost caps `GET /channels/{id}/posts?since=` (and ignores paging there)
+        self.posts_queries = []   # (channel_id, query dict) of every channel posts call
         self._ws_ids = itertools.count(1)
         self.app = Starlette(routes=[
             Route("/api/v4/users/me", self._me),
@@ -179,8 +182,9 @@ class FakeMattermost:
             await task
 
     def channel_posts(self, channel_id):
-        """Posts of a channel, oldest first."""
-        return sorted((p for p in self.posts.values() if p["channel_id"] == channel_id), key=lambda p: p["create_at"])
+        """Posts of a channel, oldest first (create_at, then creation order)."""
+        return sorted((p for p in self.posts.values() if p["channel_id"] == channel_id),
+                      key=lambda p: (p["create_at"], int(p["id"][2:])))
 
     def transport(self):
         fake = self
@@ -267,10 +271,22 @@ class FakeMattermost:
         c, err = self._member_channel(u, request.path_params["channel_id"])
         if err:
             return err
-        page, per_page = int(request.query_params.get("page", 0)), int(request.query_params.get("per_page", 60))
-        since = int(request.query_params.get("since", 0))
-        newest = [p for p in reversed(self.channel_posts(c["id"])) if p["create_at"] > since]
-        newest = newest[page * per_page:(page + 1) * per_page]
+        q = request.query_params
+        self.posts_queries.append((c["id"], dict(q)))
+        page, per_page = int(q.get("page", 0)), int(q.get("per_page", 60))
+        newest = list(reversed(self.channel_posts(c["id"])))
+        if "since" in q:                      # as Mattermost: page/per_page ignored, result capped
+            since = int(q["since"])
+            newest = [p for p in newest if p["create_at"] > since][:self.since_cap]
+        else:
+            ids = [p["id"] for p in newest]
+            if q.get("before"):
+                newest = newest[ids.index(q["before"]) + 1:] if q["before"] in ids else []
+            elif q.get("after"):          # the per_page posts right after the anchor, still newest first
+                later = list(reversed(newest[:ids.index(q["after"])])) if q["after"] in ids else []
+                newest = list(reversed(later[page * per_page:(page + 1) * per_page]))
+            if not q.get("after"):
+                newest = newest[page * per_page:(page + 1) * per_page]
         return JSONResponse({"order": [p["id"] for p in newest], "posts": {p["id"]: p for p in newest}})
 
     async def _create_post(self, request):

@@ -162,6 +162,73 @@ async def test_catchup_paginates_450_posts_each_enqueued_once(run):
     assert ids(run.state) == [p["id"] for p in posts]               # ascending (create_at, post_id)
 
 
+async def test_catchup_pages_by_post_id_past_the_since_cap(run):
+    """Mattermost ignores page/per_page with `since` and caps it (fake: since_cap): catch-up must page by id."""
+    w = run.w
+    run.m.since_cap = 300
+    posts = await run.outage(lambda: [run.post(w["town"], "bulk %d" % i) for i in range(700)])
+    await until(lambda: len(run.state.wakes()) == 700)
+    assert ids(run.state) == [p["id"] for p in posts]
+    assert run.state.get_cursor(w["town"]) == (posts[-1]["create_at"], posts[-1]["id"])
+    assert not any("since" in q for _, q in run.m.posts_queries)
+
+
+async def test_catchup_with_old_cursor_fetches_only_back_to_it(run):
+    w = run.w
+    a = run.post(w["town"], "live one")
+    await until(lambda: run.state.wake(a["id"]))
+    n0 = len(run.posts_calls(w["town"]))
+    posts = await run.outage(lambda: [run.post(w["town"], "bulk %d" % i) for i in range(30)])
+    await until(lambda: len(run.state.wakes()) == 31)
+    assert len(run.posts_calls(w["town"])) - n0 == 1                 # 30 newer posts: one page reaches the cursor
+    assert ids(run.state) == [a["id"]] + [p["id"] for p in posts]
+
+
+async def test_failed_enqueue_does_not_advance_seq(run, monkeypatch):
+    """last_seq moves only after enqueue_and_advance commits: a reconnect then asks to replay the event."""
+    w = run.w
+    a = run.post(w["town"], "live one")
+    await until(lambda: run.state.wake(a["id"]))
+    real, seen = run.state.enqueue_and_advance, []
+
+    def flaky(*args):
+        if not seen:
+            seen.append(run.lis.last_seq)
+            raise RuntimeError("disk hiccup")
+        return real(*args)
+    monkeypatch.setattr(run.state, "enqueue_and_advance", flaky)
+    before = run.lis.last_seq
+    run.post(w["town"], "fails once")
+    await until(lambda: seen)
+    assert seen == [before] and run.lis.last_seq == before
+
+
+async def test_alive_not_persisted_until_catchup_completes(served, tmp_path, monkeypatch):
+    """A restart mid catch-up must still start cursor-less channels at the catch-up's own start."""
+    import app.listener as listener_mod
+    monkeypatch.setattr(listener_mod, "ALIVE_EVERY_S", 0)
+    r = await Run(served, tmp_path / "state.db").start()
+    w = r.w
+    a = r.post(w["town"], "live one")
+    await until(lambda: r.state.wake(a["id"]))
+    await asyncio.sleep(0.05)
+    alive0 = r.state.get_meta("last_event_at")
+    assert alive0 and r.state.get_cursor(w["dm"]) is None
+    real, at_fail = r.lis._since, []
+
+    async def flaky(client, cid, since_ms):
+        if cid == w["dm"] and not at_fail:
+            at_fail.append(r.state.get_meta("last_event_at"))
+            raise MMError("mattermost_unavailable", 503)
+        return await real(client, cid, since_ms)
+    monkeypatch.setattr(r.lis, "_since", flaky)
+    p = await r.outage(lambda: r.post(w["dm"], "dm while down"))
+    await until(lambda: r.state.wake(p["id"]))
+    await r.stop()
+    assert at_fail == [alive0]                                      # hello did not overwrite it mid catch-up
+    assert int(r.state.get_meta("last_event_at")) > int(alive0)     # written once catch-up completed
+
+
 async def test_equal_create_at_straddling_a_page_boundary_both_enqueued_once(served, tmp_path):
     r = await Run(served, tmp_path / "state.db", per_page=2).start()
     w = r.w
@@ -218,11 +285,11 @@ async def test_membership_events_refresh_and_user_removed_drops_cursor(run):
 
 
 class _FlakyClient(Client):
-    """Fails the first catch-up GET of page 1 (crash between pages)."""
+    """Fails the first catch-up GET of the second page (`before=`; crash between pages)."""
     failed = False
 
     async def get(self, path, **params):
-        if path.endswith("/posts") and params.get("page") == 1 and not _FlakyClient.failed:
+        if path.endswith("/posts") and params.get("before") and not _FlakyClient.failed:
             _FlakyClient.failed = True
             raise MMError("mattermost_unavailable", 503)
         return await super().get(path, **params)

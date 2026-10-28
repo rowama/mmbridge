@@ -8,7 +8,8 @@ Mattermost `ping` action every PING_S and treats IDLE_S without any frame as dea
 lb5: run() reconnects forever (backoff 1->60 s with jitter) and asks to resume with
 `?connection_id&sequence_number`. Same connection_id in hello = resumed (missed events are replayed). A new id,
 or a seq gap, runs REST catch-up: membership across all teams (+ D channels, channels with a cursor, channels
-seen on the socket), then per channel `GET /channels/{id}/posts?since=` paged, ascending (create_at, post_id),
+seen on the socket), then per channel `GET /channels/{id}/posts` paged back by post id (`before=`; never
+`since`, which Mattermost does not page), ascending (create_at, post_id),
 each post through decide() and enqueue_and_advance (the ledger dedupes). Channels without a cursor start at meta
 `last_event_at` (last alive); posts older than LIVE_CATCHUP_MINUTES are skipped (`catchup_skipped`). 401 ->
 `degraded`, retry every 5 min or on a config change. One listener per state.db (meta lease `listener_owner`).
@@ -224,38 +225,49 @@ class Listener:
                 _log("ws_closed", connection_id=self.connection_id)
                 return reached
             prev_alive = self._alive_at
+            self._alive_at = int(self.clock() * 1000)   # in memory now; persisted only once the frame is handled
+            if await self._frame(raw, client, prev_alive):
+                reached = True
             await self._mark_alive()
-            try:
-                ev = json.loads(raw)
-            except ValueError:
-                mlog.log.warning(json.dumps({"event": "event_invalid", "reason": "json"}))
-                continue
-            if not isinstance(ev, dict) or "event" not in ev:
-                continue                      # ping replies ({"status","seq_reply"}) and other non-events
-            if ev["event"] == "hello":
-                cid = (ev.get("data") or {}).get("connection_id")
-                resumed = bool(cid) and cid == self._resume_id
-                self.connection_id = cid
-                await asyncio.to_thread(self.state.set_meta, "ws_connection_id", cid or "")
-                if not resumed:
-                    self.last_seq = ev.get("seq") if isinstance(ev.get("seq"), int) else 0
-                _log("ws_connected", connection_id=cid, resumed=resumed,
-                     server_version=(ev.get("data") or {}).get("server_version"))
-                if not resumed or self._catchup_pending:
-                    await self._catch_up(client, "new_connection" if not resumed else "pending", prev_alive)
-                elif time.monotonic() - self._refreshed_at >= self.refresh_s:
-                    await self._refresh_soft(client)
-                self.status, reached = "ok", True
-                continue
-            if self._track_seq(ev):
-                await self._catch_up(client, "seq_gap", prev_alive)
-            if time.monotonic() - self._refreshed_at >= self.refresh_s:
+
+    async def _frame(self, raw, client, prev_alive: int | None) -> bool:
+        """Handle one frame; True when it was a hello (connection established). Raises leave last_seq and
+        meta last_event_at untouched, so a reconnect resumes/catches up from before this frame."""
+        try:
+            ev = json.loads(raw)
+        except ValueError:
+            mlog.log.warning(json.dumps({"event": "event_invalid", "reason": "json"}))
+            return False
+        if not isinstance(ev, dict) or "event" not in ev:
+            return False                      # ping replies ({"status","seq_reply"}) and other non-events
+        if ev["event"] == "hello":
+            cid = (ev.get("data") or {}).get("connection_id")
+            resumed = bool(cid) and cid == self._resume_id
+            self.connection_id = cid
+            await asyncio.to_thread(self.state.set_meta, "ws_connection_id", cid or "")
+            if not resumed:
+                self.last_seq = ev.get("seq") if isinstance(ev.get("seq"), int) else 0
+            _log("ws_connected", connection_id=cid, resumed=resumed,
+                 server_version=(ev.get("data") or {}).get("server_version"))
+            if not resumed or self._catchup_pending:
+                await self._catch_up(client, "new_connection" if not resumed else "pending", prev_alive)
+            elif time.monotonic() - self._refreshed_at >= self.refresh_s:
                 await self._refresh_soft(client)
-            await self._membership_event(ev, client)
-            intent = decide(ev, self.bot_user_id)
-            if intent:
-                self._seen.setdefault(intent.channel_id, {"id": intent.channel_id, "type": intent.channel_type})
-                await self._enqueue(intent, client)
+            self.status = "ok"
+            return True
+        seq = ev.get("seq")
+        if self._seq_gap(ev):
+            await self._catch_up(client, "seq_gap", prev_alive)
+        if time.monotonic() - self._refreshed_at >= self.refresh_s:
+            await self._refresh_soft(client)
+        await self._membership_event(ev, client)
+        intent = decide(ev, self.bot_user_id)
+        if intent:
+            self._seen.setdefault(intent.channel_id, {"id": intent.channel_id, "type": intent.channel_type})
+            await self._enqueue(intent, client)
+        if isinstance(seq, int):
+            self.last_seq = seq           # only after the event is committed (a raise above replays it)
+        return False
 
     async def _enqueue(self, intent: WakeIntent, client) -> bool:
         payload = await self._payload(intent, client)
@@ -264,20 +276,22 @@ class Listener:
         _log("wake_queued", post_id=intent.post_id, channel_id=intent.channel_id, new=new)
         return new
 
-    def _track_seq(self, ev: dict) -> bool:
-        """True on a seq gap (missed events)."""
+    def _seq_gap(self, ev: dict) -> bool:
+        """True on a seq gap (missed events). Does not advance last_seq (_frame does, after the commit)."""
         seq = ev.get("seq")
         if not isinstance(seq, int):
             return False
         gap = self.last_seq is not None and seq != self.last_seq + 1
         if gap:
             _log("ws_seq_gap", expected=self.last_seq + 1, got=seq)
-        self.last_seq = seq
         return gap
 
     async def _mark_alive(self) -> None:
-        self._alive_at = int(self.clock() * 1000)
-        if not self._catchup_pending and time.monotonic() - self._alive_written >= ALIVE_EVERY_S:
+        """Persist the last-alive time of a fully handled frame (never mid catch-up: a restart then still
+        starts cursor-less channels at the catch-up's own start)."""
+        if self._alive_at is None or self._catchup_pending:
+            return
+        if time.monotonic() - self._alive_written >= ALIVE_EVERY_S:
             self._alive_written = time.monotonic()
             await asyncio.to_thread(self.state.set_meta, "last_event_at", str(self._alive_at))
 
@@ -382,14 +396,27 @@ class Listener:
             _log("catchup_skipped", n=n_skipped, window_minutes=self.window_ms // 60_000)
 
     async def _since(self, client, cid: str, since_ms: int) -> list:
+        """Every post with create_at >= since_ms. Mattermost ignores page/per_page when `since` is given (and caps
+        the result), so this pages by post id instead: the newest page, then `before=<oldest id seen>` until a
+        page reaches back past since_ms or runs out. MAX_PAGES (x per_page posts in one channel inside the
+        catch-up window) is the only bound; reaching it is logged (`catchup_truncated`)."""
         posts: dict = {}
-        for page in range(MAX_PAGES):
-            r = await client.get("/channels/%s/posts" % cid, since=since_ms - 1, page=page, per_page=self.per_page)
+        before = ""
+        for _ in range(MAX_PAGES):
+            q = {"page": 0, "per_page": self.per_page}
+            if before:
+                q["before"] = before
+            r = await client.get("/channels/%s/posts" % cid, **q)
             batch = [r["posts"][i] for i in r.get("order", []) if i in r.get("posts", {})]
             new = [p for p in batch if p["id"] not in posts]
             posts.update((p["id"], p) for p in new)
             if len(batch) < self.per_page or not new:
-                break
+                return list(posts.values())
+            oldest = batch[-1]                # Mattermost order is newest first
+            if oldest.get("create_at", 0) < since_ms:
+                return list(posts.values())
+            before = oldest["id"]
+        _log("catchup_truncated", channel_id=cid, pages=MAX_PAGES)
         return list(posts.values())
 
     async def _get(self, client, cache: dict, key: str, path: str) -> dict | None:
