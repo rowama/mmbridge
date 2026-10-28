@@ -7,7 +7,7 @@ owner_agent: claude-code
 date: 2026-10-27
 links: []
 triage: large             # unset | small | medium | large
-active_slice: SLICE-20261027-lb4-signed-wake-dispatcher
+active_slice: SLICE-20261027-lb4b-drop-allowlist
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
 pending_approvals: []
@@ -31,10 +31,10 @@ implement (increment A Live bots, Large) - PROCESS.md section 3.
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[SLICE-20261027-lb4-signed-wake-dispatcher](thoughts/shared/slices/2026-10-27-lb4-signed-wake-dispatcher.md) (done: verify PASS at 219a9a1; see Approval log). Previous: lb3 [done](thoughts/shared/slices/2026-10-27-lb3-listener-filters.md)
+[SLICE-20261027-lb4b-drop-allowlist](thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md) (review: implemented at 14ecd18, Codex review no findings). Previous: lb4 [done](thoughts/shared/slices/2026-10-27-lb4-signed-wake-dispatcher.md)
 
 ## Next action
-lb4 done (see Approval log; README wake-receiver/tamper demo deferred until set-bot + wake secret exist). Allow-list delta: CP-A amendment + CP-C speclock rows in the Approval log; re-locked specs/DSL applied (new live specs red until lb4b implements). F8 dispositioned (live-only per ADR-0010). Next: lb4b (thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md) - do not start until the planner says; then lb5. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
+lb4 done (see Approval log; README wake-receiver/tamper demo deferred until set-bot + wake secret exist). Allow-list delta: CP-A amendment + CP-C speclock rows in the Approval log; re-locked specs/DSL applied (new live specs red until lb4b implements). F8 dispositioned (live-only per ADR-0010). lb4b implemented at 14ecd18 (unit 234 passed; lb4b specs 12 passed; review no findings). Next: planner runs eng-verify for lb4b, then requests CP-S (in-process demo); then lb5. Deploy prerequisites before enabling: Coolify volume /data (uid 10001), env MMB_STORE_KEY, replicas 1.
 
 ## Blockers
 - none
@@ -62,7 +62,8 @@ none
 - Cross-model review A (awaiting Codex): [thoughts/shared/verification/2026-10-26-live-bots-arch-review.md](thoughts/shared/verification/2026-10-26-live-bots-arch-review.md)
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0010 (all accepted): [docs/decisions/](docs/decisions/)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-27_12-53-47_lb4-blocked-dm-only-bot.md](thoughts/shared/handoffs/2026-10-27_12-53-47_lb4-blocked-dm-only-bot.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-27_22-25-35_lb4b-implemented-awaiting-verify.md](thoughts/shared/handoffs/2026-10-27_22-25-35_lb4b-implemented-awaiting-verify.md)
+- Review lb4b (addressed, no findings): [thoughts/shared/verification/2026-10-27-slice-20261027-lb4b-drop-allowlist-review.md](thoughts/shared/verification/2026-10-27-slice-20261027-lb4b-drop-allowlist-review.md)
 - Review lb3 (addressed, no findings): [thoughts/shared/verification/2026-10-27-slice-20261027-lb3-listener-filters-review.md](thoughts/shared/verification/2026-10-27-slice-20261027-lb3-listener-filters-review.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - Plan (approved): [thoughts/shared/plans/2026-10-25-mmbridge-mcp.md](thoughts/shared/plans/2026-10-25-mmbridge-mcp.md)

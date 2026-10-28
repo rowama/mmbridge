@@ -72,8 +72,8 @@ Done (lb4 verify PASS at 219a9a1). Sequence decided: allow-list removal is its o
 Changes per the touch-point table above.
 ### Success Criteria
 #### Automated Verification
-- [ ] `.venv/bin/pytest tests/unit -q` exit 0 incl. member-channel/@channel/thread-reply filter cases and legacy-`channels`-key load test
-- [ ] `.venv/bin/pytest -q --channel live <the 10 node ids listed in the lb4b card Tasks; 12 passed>` (in-process; drop/reconnect + token specs stay in lb5) exit 0; `python3 .eng/bin/eng-spec status .` matches the new lock; `python3 .eng/bin/eng-check .` exit 0
+- [x] `.venv/bin/pytest tests/unit -q` exit 0 incl. member-channel/@channel/thread-reply filter cases and legacy-`channels`-key load test
+- [x] `.venv/bin/pytest -q --channel live <the 10 node ids listed in the lb4b card Tasks; 12 passed>` (in-process; drop/reconnect + token specs stay in lb5) exit 0; `python3 .eng/bin/eng-spec status .` matches the new lock; `python3 .eng/bin/eng-check .` exit 0
 #### Manual Verification
 - [ ] Rob (in-process demo at lb4b CP-S; deployed demo in lb5): `set-bot` without `--channels`; a plain post and an `@channel` post in a member channel each wake once; a thread reply wakes with root_id; a DM wakes.
 
