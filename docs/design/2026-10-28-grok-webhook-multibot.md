@@ -68,7 +68,7 @@ Rationale: the baseline is already the narrowest set that meets both metrics (on
 - **Out (also recorded in TODOS.md):** web admin UI; bot-to-bot wakes and loop caps (REQ-A3 bot-to-bot part); channel ignore-list. Auto-accept invites (REQ-A5 suite) stays in TODOS.
 
 ## Architecture (filled by eng-architecture-review)
-<to be filled after CP-A>
+See [architecture B](../architecture/2026-10-28-grok-webhook-multibot.md) (in-review, CP-B pending) and ADR-0011..0016. Summary: per-bot wake kind `grok` (Bearer routine key) beside `signed`; `claim_wake` MCP tool for forgery/replay defence; `root_id` on reply tools; store v2 named bots; one listener per bot, shared dispatcher, state.db keyed by (bot, post_id).
 
 ## Open questions
 - Q1 (Rob): Grok Bot inbound webhook contract - resolved 2026-10-28 (see Constraints).

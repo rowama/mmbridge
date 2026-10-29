@@ -10,7 +10,8 @@ triage: large             # unset | small | medium | large
 active_slice: SLICE-20261027-lb5-wireup-reconnect-acceptance
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: []
+pending_approvals:
+  - "CP-B: docs/architecture/2026-10-28-grok-webhook-multibot.md + docs/decisions/0011-grok-routine-wake-target.md, docs/decisions/0012-claim-wake-authenticity.md, docs/decisions/0013-multi-bot-store-v2.md, docs/decisions/0014-multi-bot-runtime-state-v2.md, docs/decisions/0015-thread-replies-root-id.md, docs/decisions/0016-acceptance-tests-increment-b.md - approve architecture"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -25,7 +26,7 @@ acceptance: executable-specs   # v2.5: tests/acceptance/, see PROCESS.md 13
 > Update it at the end of every session. Keep it under one screen.
 
 ## Current phase
-architecture (increment B; research accepted 2026-10-28;: Grok Bot webhook wake + multi-bot; design approved, scope HOLD approved 2026-10-28). v0.3.0 Live bots shipped 2026-10-28 (93b4f7d, tag v0.3.0).
+architecture (increment B; architecture drafted, CP-B pending;: Grok Bot webhook wake + multi-bot; design approved, scope HOLD approved 2026-10-28). v0.3.0 Live bots shipped 2026-10-28 (93b4f7d, tag v0.3.0).
 
 ## Goal (one sentence)
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
@@ -34,7 +35,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [SLICE-20261027-lb5-wireup-reconnect-acceptance](thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md) (done; CP-S logged 2026-10-28, verify PASS 8f987e7). Previous: lb4b [done](thoughts/shared/slices/2026-10-27-lb4b-drop-allowlist.md)
 
 ## Next action
-CP-R accepted 2026-10-28. Run eng-architecture-review for increment B. Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
+CP-B pending (Rob): review [architecture B](docs/architecture/2026-10-28-grok-webhook-multibot.md) and ADR-0011..0016; optional Codex review. Then eng-plan. Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
 
 ## Blockers
 - none
@@ -48,6 +49,8 @@ none
 
 ## Latest artifacts
 <!-- Relative links only; .eng/bin/eng-check verifies they resolve. -->
+- Architecture B (in-review, CP-B pending): [docs/architecture/2026-10-28-grok-webhook-multibot.md](docs/architecture/2026-10-28-grok-webhook-multibot.md); ADR-0011..0016 (proposed) in [docs/decisions/](docs/decisions/)
+- Cross-model review B (awaiting Codex): [thoughts/shared/verification/2026-10-28-grok-webhook-multibot-arch-review.md](thoughts/shared/verification/2026-10-28-grok-webhook-multibot-arch-review.md)
 - Research B (accepted): [thoughts/shared/research/2026-10-28-grok-webhook-multibot-current-code.md](thoughts/shared/research/2026-10-28-grok-webhook-multibot-current-code.md)
 - Design B Grok Bot webhook + multi-bot (approved; scope HOLD approved 2026-10-28): [docs/design/2026-10-28-grok-webhook-multibot.md](docs/design/2026-10-28-grok-webhook-multibot.md)
 - Conventions: [AGENTS.md](AGENTS.md)
@@ -68,7 +71,7 @@ none
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0010 (all accepted): [docs/decisions/](docs/decisions/)
 - Verification lb4b (PASS): [thoughts/shared/verification/2026-10-27-lb4b-drop-allowlist.md](thoughts/shared/verification/2026-10-27-lb4b-drop-allowlist.md)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-28_13-30-00_lb5-verified-awaiting-cp-s.md](thoughts/shared/handoffs/2026-10-28_13-30-00_lb5-verified-awaiting-cp-s.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-28_19-30-00_arch-b-awaiting-cp-b.md](thoughts/shared/handoffs/2026-10-28_19-30-00_arch-b-awaiting-cp-b.md)
 - Review lb4b (addressed, no findings): [thoughts/shared/verification/2026-10-27-slice-20261027-lb4b-drop-allowlist-review.md](thoughts/shared/verification/2026-10-27-slice-20261027-lb4b-drop-allowlist-review.md)
 - Review lb3 (addressed, no findings): [thoughts/shared/verification/2026-10-27-slice-20261027-lb3-listener-filters-review.md](thoughts/shared/verification/2026-10-27-slice-20261027-lb3-listener-filters-review.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
