@@ -18,12 +18,12 @@ proposed
 REQ-B4/B6. Store holds one bot (app/store.py:88-106, :150-159); CLI has no name and replaces the bot (app/admin.py:73-79). ADR-0006 encryption stays.
 
 ## Decision
-Store document version 2: `bots` map keyed by operator-chosen name; each bot has `token`, cached `user_id`, `wake` {kind, url, key|secret}. v1 loads as one bot named after its MM username and is rewritten as v2 on first save, keeping `bots.enc.v1.bak`. Tokens unique across bots. CLI: `set-bot --name` (create/replace one), `list`, `show NAME`, `remove-bot`, `status`, `--wake-kind`, `--wake-key-stdin`. Reload every 30 s, no redeploy.
+Store document version 2: `bots` map keyed by operator-chosen name; each bot has `token`, cached `user_id`, `wake` {url, secret} (always HMAC-signed per ADR-0008; Grok routines are reached through the relay, ADR-0011, so no Bearer routine key is stored in mmbridge). v1 loads as one bot named after its MM username and is rewritten as v2 on first save, keeping `bots.enc.v1.bak`. Tokens unique across bots. CLI: `set-bot --name` (create/replace one), `list`, `show NAME`, `remove-bot`, `status`, `--wake-secret-stdin`. Reload every 30 s, no redeploy.
 
 ## Consequences
 Positive: one file, one key, same rotation; backward compatible. Negative: whole-file rewrite on every change (fine at <10 bots). Neutral: still no web admin (out of scope).
 
 ## Prediction (scored in a later eng-retro)
-- Expected outcome: Rob registers 2+ bots and switches a wake kind with no redeploy; v0.3.0 store migrates untouched.
+- Expected outcome: Rob registers 2+ bots and repoints a bot's wake URL with no redeploy; v0.3.0 store migrates untouched.
 - Check date: after the increment B ship
 - What would prove it wrong: migration loses or corrupts the v1 bot, or concurrent CLI writes clobber each other.

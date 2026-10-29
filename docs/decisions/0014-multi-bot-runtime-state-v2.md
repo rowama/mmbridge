@@ -18,7 +18,7 @@ proposed
 REQ-B6/B7/B8. Runtime builds one Listener/Dispatcher (app/live.py:146-157); wakes keyed by post_id only (app/state.py:25-39); filter knows one bot id (app/live_filter.py:70); health has one status word.
 
 ## Decision
-One Listener task per bot (own websocket on its token, own membership, own catch-up), each under `supervise`, started/stopped by a BotSupervisor on store reload. One shared Dispatcher with per-bot in-flight cap 2. state.db schema v2: wakes and cursors keyed by (bot, ...), per-bot meta keys, `claimed_at`; migrated in one transaction with backup. Filter drops posts authored by any registered bot user id. Per-bot status map exposed via `admin status`; /health shows only counts.
+One Listener task per bot (own websocket on its token, own membership, own catch-up), each under `supervise`, started/stopped by a BotSupervisor on store reload. One shared Dispatcher with per-bot in-flight cap 2. state.db schema v2: wakes and cursors keyed by (bot, ...), per-bot meta keys (no `claimed_at`: ADR-0012 rejected); migrated in one transaction with backup. Filter drops posts authored by any registered bot user id. Per-bot status map exposed via `admin status`; /health shows only counts.
 
 ## Consequences
 Positive: failure isolation per bot (B8), exact once-per-bot dedupe, simple reuse of the proven Listener. Negative: N websockets (fine for a handful of bots); migration risk. Neutral: a non-registered integration bot can still wake bots (same as today).

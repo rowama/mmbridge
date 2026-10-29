@@ -11,7 +11,7 @@ active_slice: SLICE-20261027-lb5-wireup-reconnect-acceptance
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
 pending_approvals:
-  - "CP-B: docs/architecture/2026-10-28-grok-webhook-multibot.md + docs/decisions/0011-grok-routine-wake-target.md, docs/decisions/0012-claim-wake-authenticity.md, docs/decisions/0013-multi-bot-store-v2.md, docs/decisions/0014-multi-bot-runtime-state-v2.md, docs/decisions/0015-thread-replies-root-id.md, docs/decisions/0016-acceptance-tests-increment-b.md - approve architecture"
+  - "CP-B: docs/architecture/2026-10-28-grok-webhook-multibot.md + docs/decisions/0011-hmac-to-bearer-wake-relay.md, docs/decisions/0012-claim-wake-authenticity.md, docs/decisions/0013-multi-bot-store-v2.md, docs/decisions/0014-multi-bot-runtime-state-v2.md, docs/decisions/0015-thread-replies-root-id.md, docs/decisions/0016-acceptance-tests-increment-b.md - approve architecture (revised 2026-10-28: HMAC->Bearer relay, claim_wake rejected)"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
