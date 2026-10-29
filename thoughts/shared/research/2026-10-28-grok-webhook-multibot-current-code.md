@@ -2,7 +2,7 @@
 id: RESEA-20261028-grok-webhook-multibot-current-code
 type: research
 phase: research
-status: in-review
+status: accepted
 owner_agent: grok-bot
 date: 2026-10-28
 links: [docs/design/2026-10-28-grok-webhook-multibot.md]
