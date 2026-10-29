@@ -61,10 +61,11 @@ Slice 1: adapt the existing mmbridge HMAC wake so it is delivered into the Grok 
 | Grok Bot routine polls dm_read/read_channel | no webhook contract needed | latency minutes, cost, misses round-trip metric; the reason Live bots was built |
 
 ## Scope decision (filled by eng-scope-review)
-Baseline: the Requirements list above as approved at CP-A (REQ ids).
-Mode (relative to that baseline): <expand | selective | hold | reduce>
-- In:
-- Out (also recorded in TODOS.md):
+**Baseline (approved at CP-A 2026-10-28):** REQ-B1, B2, B3, B4, B5, B6, B7, B8.
+**Mode: HOLD - approved by Rob 2026-10-28 (via Eddie).**
+Rationale: the baseline is already the narrowest set that meets both metrics (one-bot round-trip: B1-B5; 2+ bots: B6-B8); B7 is the safety rail that makes multi-bot shippable without loop caps. Nothing added, nothing cut.
+- **In:** REQ-B1, REQ-B2, REQ-B3, REQ-B4, REQ-B5, REQ-B6, REQ-B7, REQ-B8 (one version, multi-slice; order Grok Bot webhook first, then reply, then multi-bot).
+- **Out (also recorded in TODOS.md):** web admin UI; bot-to-bot wakes and loop caps (REQ-A3 bot-to-bot part); channel ignore-list. Auto-accept invites (REQ-A5 suite) stays in TODOS.
 
 ## Architecture (filled by eng-architecture-review)
 <to be filled after CP-A>
