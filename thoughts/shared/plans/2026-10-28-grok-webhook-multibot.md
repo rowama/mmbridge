@@ -6,7 +6,7 @@ status: draft            # input (pre-draft from an earlier phase) | draft | in-
 owner_agent: grok-bot
 date: 2026-10-28
 links: [docs/design/2026-10-28-grok-webhook-multibot.md, docs/architecture/2026-10-28-grok-webhook-multibot.md, thoughts/shared/research/2026-10-28-grok-webhook-multibot-current-code.md]
-plan_review:
+plan_review: thoughts/shared/verification/2026-10-28-grok-webhook-multibot-plan-review.md
 ---
 # Plan: Grok Bot webhook wake, round-trip reply and multi-bot (increment B)
 
