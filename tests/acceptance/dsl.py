@@ -280,16 +280,16 @@ class Dsl:
         None) within the settle time."""
         self._d.assert_routine_not_started(bot, message)
 
-    def assert_relay_rejected(self, reason="bad_sig"):
-        """The relay refused the last wake for `reason` (bad_sig | stale | duplicate) and did not forward
-        it to any routine."""
-        self._d.assert_relay_rejected(self._last, reason)
-
     def assert_replied(self, bot="eddie", where="town-square", text="all green", thread=None):
         """A post with `text` authored by the bot itself is visible in `where` (a channel name, or
         "dm:<username>" for the DM with that user); when `thread` is given it is a reply in the thread
         whose root has that text, otherwise it is top-level."""
         self._d.assert_replied(bot, where, text, thread)
+
+    def assert_failed_wake_visible_for_bot(self, bot="grok", message=None):
+        """After that bot's retries are exhausted the operator sees one failed wake for this post,
+        attributed to that bot (admin CLI `failed --bot <bot>`), and no other bot has a failed wake for it."""
+        self._d.assert_failed_wake_visible_for_bot(bot, message)
 
     def assert_bot_failing(self, bot="grok"):
         """The operator sees this bot marked failing (admin status degraded with its reason; /health

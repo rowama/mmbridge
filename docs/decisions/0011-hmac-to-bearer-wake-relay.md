@@ -38,3 +38,6 @@ Positive: mmbridge wire format and ADR-0008 unchanged (one format to test); auth
 - Expected outcome: a real Grok routine starts on every qualifying post via the relay in B-s1 CP-S; forged/replayed wakes are rejected at the relay; tripwire never fires in normal use.
 - Check date: after the increment B ship
 - What would prove it wrong: the routine rejects or mangles relayed POSTs, the relay becomes a reliability bottleneck, or a key leak is observed.
+
+## Note 2026-10-28: delivery guarantee (accepted risk, Rob 2026-10-28)
+Relay dedupe records a delivery id only after the upstream routine returns 2xx (option A). A lost upstream response or a relay crash after upstream 2xx can cause a rare double wake; accepted because marking before forwarding (option B, rejected) can lose posts. Routine-side idempotency on `X-MMB-Delivery` (option C) is deferred; revisit if the relay's count-drift tripwire (`double_forward`) fires often (>= 3 in 24 h). Plan: thoughts/shared/plans/2026-10-28-grok-webhook-multibot.md "Delivery guarantee".

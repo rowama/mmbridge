@@ -9,6 +9,7 @@
     "tests/acceptance/dsl.py::Dsl.assert_dm_visible": "ca4b943cc7b3c348a27a5b9ef81d537c426b7f29d821d3071794e040488c534c",
     "tests/acceptance/dsl.py::Dsl.assert_error": "8326af90221dcaf8b7f021771265c9c85c0b47e3f53a315abf5923e049576254",
     "tests/acceptance/dsl.py::Dsl.assert_failed_wake_visible": "d223bca6b7bdff0ae2728738b204e8194fcc093febf3c6c13c694fec4e57bb83",
+    "tests/acceptance/dsl.py::Dsl.assert_failed_wake_visible_for_bot": "cb8af4bd833bcbb2069a66b2290cc33f1899e966db44c7e7193de44eb83e2f21",
     "tests/acceptance/dsl.py::Dsl.assert_forged_wake_rejected": "f2f088fc8aa01f4cb258ce9405bfb9d2f83ced762de9832a0048e84b24490b60",
     "tests/acceptance/dsl.py::Dsl.assert_newest_posts": "6666b52a4a2747209d112a64e8f1231bdf07bcc8c29f0586b1ec0a12d4c480b0",
     "tests/acceptance/dsl.py::Dsl.assert_no_secret_anywhere": "4cafcd50a507be737376221c9146c4fffb237d0a7e848836826f2b72b747c47d",
@@ -19,7 +20,6 @@
     "tests/acceptance/dsl.py::Dsl.assert_nothing_posted_or_joined": "bd13c70f5860e1b2d585851e653a3e5654ddd01202aa8a39895430de9aae0181",
     "tests/acceptance/dsl.py::Dsl.assert_post_visible": "cad6d793e375d15c3b90ba0082df2ca781bd46a6174dfd2065a2e1d26a8bbaad",
     "tests/acceptance/dsl.py::Dsl.assert_refused": "410fc46765afd389c6045d287fdaf36365d7f3a2235e8d3788a3e26cfc734e97",
-    "tests/acceptance/dsl.py::Dsl.assert_relay_rejected": "632b61a463eb0b9a7c039f96d9d73e77bc9c7c8a12a7409b09829ab02f22a705",
     "tests/acceptance/dsl.py::Dsl.assert_replied": "37943003a2c4fc43f82bdf4821546d0b9fbc3c74ba6d306ea93d735f3ffb1d8d",
     "tests/acceptance/dsl.py::Dsl.assert_routine_not_started": "86c0b7fe1eebc9e3d7d26a5fc4e07aa657b7f6e34fc5666d8a13d20467dc0cb9",
     "tests/acceptance/dsl.py::Dsl.assert_routine_started_once": "85ba373f69df82582b895278fe28fcc3923d925bd8740abe260a112c5e63e6f7",
@@ -39,6 +39,7 @@
     "tests/acceptance/dsl.py::Dsl.assert_dm_visible": "1738e1782b4288ef2733ae2ecac50eaa3b6b5416283322e63e1d71c1bf58d2e9",
     "tests/acceptance/dsl.py::Dsl.assert_error": "4c664da7512ce528b1e5da534fc8376a727d3b07d5ca42cc749b0eaeaffc9365",
     "tests/acceptance/dsl.py::Dsl.assert_failed_wake_visible": "242acad368d850418055cf3431aec444a960d7471615412d0dfe5065b029b59d",
+    "tests/acceptance/dsl.py::Dsl.assert_failed_wake_visible_for_bot": "6912099fad987aeea5e9fbed01a3fd0289a2527affbd5d9a3e649bb9061c675e",
     "tests/acceptance/dsl.py::Dsl.assert_forged_wake_rejected": "7af0dfff700eac31fdb748cf1ebb4338c957fc85e6878a6a0f44bc64cb687cf5",
     "tests/acceptance/dsl.py::Dsl.assert_newest_posts": "e919eca0985c0dba90dba56048472bc1ae32f3ae3c034c710f9d5f4587284b43",
     "tests/acceptance/dsl.py::Dsl.assert_no_secret_anywhere": "7b312331af04a4d33976115eba3312becde029c19ed64ea2a968133150e138f2",
@@ -49,7 +50,6 @@
     "tests/acceptance/dsl.py::Dsl.assert_nothing_posted_or_joined": "b2c33b6ed69b2885606fe1b9fa352204caf92eb0c1c9be894def2f9fe066abd3",
     "tests/acceptance/dsl.py::Dsl.assert_post_visible": "c278aea5ac5bf2e0dcc4c841bdf3670469616a0a78d49939c6547451dde5e9da",
     "tests/acceptance/dsl.py::Dsl.assert_refused": "d523cb97e44e173222887dd3e55b14658dad7a646984de3e864062babc0535cc",
-    "tests/acceptance/dsl.py::Dsl.assert_relay_rejected": "0913ab216135bf61299201a118592d3b98d059beed94d5be15ed67a57878a38f",
     "tests/acceptance/dsl.py::Dsl.assert_replied": "ed8c315304428a63415bf546554926774cfd1cad131acc7d8027c4509f70d63f",
     "tests/acceptance/dsl.py::Dsl.assert_routine_not_started": "7ca6d8043c308051e3c987dd3f8780308a1dd633bbb0bb79c3243e7a9bd2fd5e",
     "tests/acceptance/dsl.py::Dsl.assert_routine_started_once": "854c4b0e5c6f1c1ed8c54cd9f786620e1847e7bc9e369a11157c1cc1cc1dfae7",
@@ -92,7 +92,7 @@
   },
   "kit_version": "2.5.9",
   "specs": {
-    "tests/acceptance/specs/test_grok_multibot.py": "7e65c9971589bd3b034f06b34f085f75ada0d784ce1d964a6e3e20905ffe126a",
+    "tests/acceptance/specs/test_grok_multibot.py": "90c3db4c5fc1baa06e41eb99df53121db003b5986498e176a0118ca12cc5aae3",
     "tests/acceptance/specs/test_live_bots.py": "8cd5b8c5721c24abda0ef3c4e278df1e8e0a0138f1709baadc9c7691871df068",
     "tests/acceptance/specs/test_mmbridge.py": "7b557b29445c2f5774f7f05002d4ecf47864ff2a21b1ef95210bfedcc0eac48e"
   }

@@ -27,3 +27,6 @@ Positive: round-trip exercised end to end without a real Grok. Negative: two ima
 - Expected outcome: no shipped REQ-B without a passing spec; CP-S live run agrees with fakes.
 - Check date: after the increment B ship
 - What would prove it wrong: live Grok behaviour differs from the fake routine in a way specs missed.
+
+## Note 2026-10-28 (plan review dispositions)
+DSL `assert_relay_rejected(reason)` removed from the behavioural layer: B2 specs assert no additional routine run; relay reason codes are covered by tests/unit/test_relay.py. Added `assert_failed_wake_visible_for_bot(bot, message)` and a REQ-B8 two-bot outage spec. Live-only channel reaffirmed (plan review #4 rejected).

@@ -25,11 +25,12 @@ def test_dm_to_bot_starts_grok_routine_once(app):
 
 
 # --- REQ-B2: forged, tampered, replayed wakes never start the routine; no secrets leak ------
+# Behaviour only: no additional routine run. Relay reason codes (bad_sig/stale/duplicate) are
+# asserted in tests/unit/test_relay.py, not here (plan review #6).
 @pytest.mark.req("REQ-B2")
 def test_wake_not_produced_by_mmbridge_does_not_start_routine(app):
     app.register_bot("eddie", wake="grok")
     app.forge_wake("eddie")
-    app.assert_relay_rejected("bad_sig")
     app.assert_routine_not_started("eddie")
 
 
@@ -40,7 +41,6 @@ def test_altered_wake_does_not_start_routine(app):
     app.post_in("town-square", "deploy at 5", as_user="rob")
     app.assert_routine_started_once("eddie", channel="town-square", sender="rob", message="deploy at 5")
     app.tamper_wake("eddie", message="deploy now")
-    app.assert_relay_rejected("bad_sig")
     app.assert_routine_not_started("eddie", message="deploy now")
 
 
@@ -51,7 +51,6 @@ def test_wake_replayed_ten_minutes_later_does_not_start_routine_again(app):
     app.post_in("town-square", "status?", as_user="rob")
     app.assert_routine_started_once("eddie", channel="town-square", sender="rob", message="status?")
     app.replay_last_wake("eddie", after_seconds=600)
-    app.assert_relay_rejected("stale")
     app.assert_routine_started_once("eddie", channel="town-square", sender="rob", message="status?")
 
 
@@ -62,7 +61,6 @@ def test_wake_replayed_within_window_does_not_start_routine_again(app):
     app.post_in("town-square", "status?", as_user="rob")
     app.assert_routine_started_once("eddie", channel="town-square", sender="rob", message="status?")
     app.replay_last_wake("eddie", after_seconds=5)
-    app.assert_relay_rejected("duplicate")
     app.assert_routine_started_once("eddie", channel="town-square", sender="rob", message="status?")
 
 
@@ -216,3 +214,15 @@ def test_revoked_token_of_one_bot_leaves_other_bots_working_and_marks_it_failing
     app.post_in("town-square", "who is alive?", as_user="rob")
     app.assert_routine_started_once("eddie", channel="town-square", sender="rob", message="who is alive?")
     app.assert_bot_failing("grok")
+
+
+@pytest.mark.req("REQ-B8")
+def test_one_bot_routine_down_leaves_other_bot_waking_and_shows_its_failed_wake(app):
+    app.given_member_channel("town-square", members=["eddie", "grok", "rob"])
+    app.register_bot("eddie", wake="grok")
+    app.register_bot("grok", wake="grok")
+    app.grok_routine_down("grok")
+    app.post_in("town-square", "who is up?", as_user="rob")
+    app.assert_routine_started_once("eddie", channel="town-square", sender="rob", message="who is up?")
+    app.assert_failed_wake_visible_for_bot("grok", message="who is up?")
+    app.assert_routine_not_started("grok", message="who is up?")

@@ -10,7 +10,7 @@ plan: thoughts/shared/plans/2026-10-28-grok-webhook-multibot.md
 plan_phase: 3
 review: required (security: encrypted store v2 migration, per-bot isolation, token uniqueness) - thoughts/shared/verification/2026-10-28-slice-20261028-b-s3-multi-bot-registry-routing-review.md
 reqs: [REQ-B4, REQ-B6, REQ-B7, REQ-B8]
-specs: [tests/acceptance/specs/test_grok_multibot.py::test_bot_on_generic_signed_webhook_keeps_receiving_signed_wakes, tests/acceptance/specs/test_grok_multibot.py::test_post_in_channel_only_one_bot_is_in_wakes_only_that_bot, tests/acceptance/specs/test_grok_multibot.py::test_post_in_shared_channel_wakes_each_bot_once, tests/acceptance/specs/test_grok_multibot.py::test_dm_to_one_bot_wakes_only_that_bot, tests/acceptance/specs/test_grok_multibot.py::test_post_by_a_registered_bot_wakes_no_bot, tests/acceptance/specs/test_grok_multibot.py::test_revoked_token_of_one_bot_leaves_other_bots_working_and_marks_it_failing]
+specs: [tests/acceptance/specs/test_grok_multibot.py::test_bot_on_generic_signed_webhook_keeps_receiving_signed_wakes, tests/acceptance/specs/test_grok_multibot.py::test_post_in_channel_only_one_bot_is_in_wakes_only_that_bot, tests/acceptance/specs/test_grok_multibot.py::test_post_in_shared_channel_wakes_each_bot_once, tests/acceptance/specs/test_grok_multibot.py::test_dm_to_one_bot_wakes_only_that_bot, tests/acceptance/specs/test_grok_multibot.py::test_post_by_a_registered_bot_wakes_no_bot, tests/acceptance/specs/test_grok_multibot.py::test_revoked_token_of_one_bot_leaves_other_bots_working_and_marks_it_failing, tests/acceptance/specs/test_grok_multibot.py::test_one_bot_routine_down_leaves_other_bot_waking_and_shows_its_failed_wake]
 ---
 # Slice B-s3: multi-bot registry and routing
 
@@ -26,17 +26,17 @@ Two or more bots (e.g. eddie, grok, test) registered on one mmbridge, each with 
 - [ ] `app/live_filter.py` decide(event, bot_user_id, registered_ids) drops any registered bot author (B7)
 - [ ] `app/live.py` BotSupervisor: listener per bot, reconcile on reload (add/remove/rotate, no redeploy), per-bot status; one bot 401 never affects others (B8)
 - [ ] `app/wake.py` per-row config, delivery_id `<bot>:<post_id>`, per-bot in-flight cap 2; `app/main.py` /health bots_total, bots_failing
-- [ ] fake MM multiple bot users + revoke; DSL register_bot for several bots, assert_bot_failing
+- [ ] fake MM multiple bot users + revoke; DSL register_bot for several bots, assert_bot_failing, assert_failed_wake_visible_for_bot (two-bot outage spec: grok routine down, eddie still woken once, grok's failed wake visible via `failed --bot grok`)
 - [ ] Unit tests per plan Phase 3 (migrations incl. crash mid-migration, admin, filter table, supervisor, dispatcher fairness, health)
 - [ ] README/OWNER-GUIDE multi-bot setup + rollback; CHANGELOG
-- [ ] Full suite: all A + B live specs (container), MCP specs; `eng-spec trace .` maps REQ-B1..B8
+- [ ] Full suite: all A + B live specs (in-process and container, 3x), MCP specs; `eng-spec trace .` maps REQ-B1..B8
 
 ## Tasks
 - [ ] eng-resume; read plan Phase 3 (Changes Required is the detailed checklist), architecture contracts, ADRs above
-- [ ] Run this slice's executable specs (specs:) and confirm they fail for the right reason (red): `.venv/bin/pytest -q --channel live <node ids from specs:>`
+- [ ] Run this slice's executable specs and confirm they fail for the right reason (red): `LIVE_MODE=inprocess .venv/bin/pytest -q --channel live $B3` (`B3` = this card's `specs:` list, defined in plan Phase 3 Automated Verification). Specs of later slices are NOT selected and stay red.
 - [ ] Write failing unit tests (tests/unit/) for the behaviours above
 - [ ] Implement (drivers/DSL bodies may change; spec files and DSL public interface are locked - do not edit them, raise a back-up instead)
-- [ ] Run plan Phase 3 Automated Verification; all exit 0; in-process AND `LIVE_MODE=container`
+- [ ] Run plan Phase 3 Automated Verification block verbatim (explicit `LIVE_IMAGE`/`RELAY_IMAGE` = `:bs3`, in-process AND container, full selection 3x per DoD concurrency rule); all exit 0; paste outputs in the handoff
 - [ ] Do not stage Rob's uncommitted AGENTS.md, OWNER-GUIDE.md, receiver.py or untracked thoughts/shared files
 - [ ] Commit; eng-handoff ("implemented, awaiting review/verify")
 
