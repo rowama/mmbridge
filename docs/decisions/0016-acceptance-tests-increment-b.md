@@ -2,7 +2,7 @@
 id: ADR-0016
 type: adr
 phase: architecture
-status: proposed         # proposed | accepted | partially-accepted | deferred | rejected | deprecated | superseded
+status: accepted         # proposed | accepted | partially-accepted | deferred | rejected | deprecated | superseded
 owner_agent: grok-bot
 date: 2026-10-28
 links: [docs/design/2026-10-28-grok-webhook-multibot.md, docs/architecture/2026-10-28-grok-webhook-multibot.md]

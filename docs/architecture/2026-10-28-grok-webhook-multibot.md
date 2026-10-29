@@ -2,7 +2,7 @@
 id: ARCH-20261028-grok-webhook-multibot
 type: architecture
 phase: architecture
-status: in-review
+status: approved
 owner_agent: grok-bot
 date: 2026-10-28
 revised: 2026-10-28 (Rob authenticity decision: HMAC on mmbridge + thin HMAC->Bearer relay; claim_wake dropped)
