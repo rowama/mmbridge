@@ -215,3 +215,88 @@ class Dsl:
     def assert_failed_wake_visible(self, message=None):
         """After retries are exhausted the operator sees the failed wake (admin CLI `failed`)."""
         self._d.assert_failed_wake_visible(message)
+
+    # --- Increment B: Grok Bot routine via the wake relay, replies, several bots (ADR-0016) ----
+    def register_bot(self, name="eddie", wake="grok"):
+        """Register bot `name` on mmbridge through the real admin CLI with its own Mattermost token and
+        wake secret, and start the live runtime. wake="grok": wake URL is the relay's /wake/<name>, and
+        the relay is configured (same name, same wake secret) to forward to that bot's Grok routine with
+        its routine key. wake="signed": wake URL is a generic signed receiver, as in increment A."""
+        self._d.register_bot(name, wake)
+
+    def switch_wake_target(self, bot="eddie", wake="grok"):
+        """The operator changes the bot's wake target with the admin CLI; no redeploy or restart."""
+        self._d.switch_wake_target(bot, wake)
+
+    def given_routine_answers(self, bot="eddie", text="all green"):
+        """When the bot's Grok routine is started, the bot answers `text` through the real MCP bridge
+        with its own Mattermost token, using the reply target the wake told it about."""
+        self._d.given_routine_answers(bot, text)
+
+    def grok_routine_down(self, bot="eddie"):
+        """The bot's Grok routine webhook is unreachable (fails with a server error)."""
+        self._d.grok_routine_down(bot)
+
+    def grok_routine_up(self, bot="eddie"):
+        """The bot's Grok routine webhook accepts calls again."""
+        self._d.grok_routine_up(bot)
+
+    def relay_down(self):
+        """The wake relay is unreachable from mmbridge."""
+        self._d.relay_down()
+
+    def relay_up(self):
+        """The wake relay is reachable again."""
+        self._d.relay_up()
+
+    def forge_wake(self, bot="eddie"):
+        """Someone posts a wake for `bot` to the relay that mmbridge did not produce (no valid signature)."""
+        self._last = self._d.forge_wake(bot)
+
+    def tamper_wake(self, bot="eddie", message="deploy now"):
+        """Someone captures the last genuine wake for `bot`, changes its message text to `message`, keeps
+        the original signature headers, and sends it to the relay."""
+        self._last = self._d.tamper_wake(bot, message)
+
+    def replay_last_wake(self, bot="eddie", after_seconds=600):
+        """Someone captures the last genuine signed wake for `bot` and re-sends it unchanged to the relay
+        `after_seconds` later (simulated clock)."""
+        self._last = self._d.replay_last_wake(bot, after_seconds)
+
+    def revoke_token(self, bot="grok"):
+        """The bot's Mattermost token is revoked in Mattermost (REST 401, websocket refused)."""
+        self._d.revoke_token(bot)
+
+    def assert_routine_started_once(self, bot="eddie", channel="town-square", sender="rob", message=None,
+                                    thread=None):
+        """Exactly one run of the bot's Grok routine was started for this post (within the 10 s metric),
+        called with the bot's routine key, and its wake names the channel (None = DM), the sender, the
+        message text and the post id; when `thread` is given, the wake names the post with that text as
+        its thread root."""
+        self._d.assert_routine_started_once(bot, channel, sender, message, thread)
+
+    def assert_routine_not_started(self, bot="eddie", message=None):
+        """No run of the bot's Grok routine was started (for this message, or at all when message is
+        None) within the settle time."""
+        self._d.assert_routine_not_started(bot, message)
+
+    def assert_relay_rejected(self, reason="bad_sig"):
+        """The relay refused the last wake for `reason` (bad_sig | stale | duplicate) and did not forward
+        it to any routine."""
+        self._d.assert_relay_rejected(self._last, reason)
+
+    def assert_replied(self, bot="eddie", where="town-square", text="all green", thread=None):
+        """A post with `text` authored by the bot itself is visible in `where` (a channel name, or
+        "dm:<username>" for the DM with that user); when `thread` is given it is a reply in the thread
+        whose root has that text, otherwise it is top-level."""
+        self._d.assert_replied(bot, where, text, thread)
+
+    def assert_bot_failing(self, bot="grok"):
+        """The operator sees this bot marked failing (admin status degraded with its reason; /health
+        counts it in bots_failing) while the others stay ok."""
+        self._d.assert_bot_failing(bot)
+
+    def assert_no_secret_anywhere(self, bot="eddie"):
+        """No Mattermost token, wake secret or Grok routine key of the bot appears in mmbridge or relay
+        logs, CLI output, tool results, or any wake body sent to a routine or receiver."""
+        self._d.assert_no_secret_anywhere(bot)
