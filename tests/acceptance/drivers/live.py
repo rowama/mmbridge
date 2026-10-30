@@ -7,13 +7,19 @@ Backoff is scaled by WAKE_BACKOFF_SCALE so retry specs run in seconds; LIVE_ALLO
 URL be the plain-HTTP local receiver (tests only).
 
 SUT mode (env LIVE_MODE):
-- `container` (default, lb5, ADR-0010 layer 4): the real image (env LIVE_IMAGE, default mmbridge:lb5; build it
-  first with `docker build -t mmbridge:lb5 .`) on `--network host` with a fresh named volume at /data, a fresh
+- `container` (default, lb5, ADR-0010 layer 4): the real image (env LIVE_IMAGE, default mmbridge:bs1; build it
+  first with `docker build -t mmbridge:bs1 .`) on `--network host` with a fresh named volume at /data, a fresh
   MMB_STORE_KEY and LIVE_BOTS_ENABLED=true. `python -m app.admin set-bot` runs in a one-off container on the same
   volume before the server starts (as an operator would before enabling the flag); `admin failed` runs through
   `docker exec`; `/health` tells when the listener is connected; `docker logs` is the log capture for the token
   scan.
 - `inprocess` (lb4): app.admin.main and app.live.LiveRuntime in this process; logs captured from the loggers.
+Increment B (B-s1, ADR-0016): `register_bot(name, "grok")` points the bot's wake URL at the real wake relay
+(drivers/relay.py: in-process or image RELAY_IMAGE, behind a recording tap) configured with the same name and wake
+secret, which forwards to a fake Grok routine (drivers/fake_routine.py, checks the Bearer routine key).
+`register_bot(name, "signed")` uses the HMAC receiver as in increment A. Wake secrets are passed to the CLI on
+stdin (`--wake-secret-stdin`, as an operator copying one secret to the relay), so the CLI never prints them.
+Wake retries: WAKE_BACKOFF_SCALE 0.25 gives ~7 s before a wake fails, enough to restart the relay container.
 drop_connection: the fake closes the websocket (no resume: a new connection id) and refuses REST + websocket
 until restore_connection, so posts made meanwhile are reachable only by the listener's REST catch-up.
 """
@@ -40,6 +46,8 @@ from app import admin
 from app import logging as mlog
 from app.live import LiveRuntime
 from drivers.fake_mattermost import FakeMattermost
+from drivers.fake_routine import FakeRoutine
+from drivers.relay import RelayHarness
 from drivers.wake_receiver import WakeReceiver
 
 TEAM = "rmlab"
@@ -83,7 +91,8 @@ class _InProcess:
         return rc, out.getvalue()
 
     def start(self):
-        self.runtime = LiveRuntime(env=dict(os.environ), base_url=self.drv.base, poll_s=0.05)
+        # reload_s: the container keeps the production 30 s store reload; in-process reloads fast.
+        self.runtime = LiveRuntime(env=dict(os.environ), base_url=self.drv.base, poll_s=0.05, reload_s=0.1)
         self.drv._run(self.runtime.start())
 
     def listener(self):
@@ -108,7 +117,7 @@ class _Container:
 
     def __init__(self, drv, env):
         self.drv, self.env = drv, env
-        self.image = os.environ.get("LIVE_IMAGE", "mmbridge:lb5")
+        self.image = os.environ.get("LIVE_IMAGE", "mmbridge:bs1")
         self.name = "mmb-live-" + secrets.token_hex(4)
         self.volume = self.name + "-data"
         self.port = _free_port()
@@ -166,6 +175,10 @@ class LiveDriver:
     def __init__(self):
         self.mm = FakeMattermost(mm_ids=True, clock=time.time)
         self.rx = WakeReceiver()
+        self.routine = FakeRoutine()
+        self.bots = {}                 # name -> {"secret", "key", "kind"} (increment B)
+        self.relay = None              # RelayHarness, started by the first grok bot
+        self.started = False
         self.outputs = []              # admin CLI stdout
         self.posts = {}                # message -> post id (latest)
         self.teams = {}                # channel name -> team (given_channel)
@@ -173,11 +186,11 @@ class LiveDriver:
         self._loop = asyncio.new_event_loop()
         self._thread = threading.Thread(target=self._loop.run_forever, daemon=True)
         self._thread.start()
-        self._serving = [self.mm.serve(), self.rx.serve()]
-        self.base, self.wake_url = (self._run(cm.__aenter__()) for cm in self._serving)
+        self._serving = [self.mm.serve(), self.rx.serve(), self.routine.serve()]
+        self.base, self.wake_url, self.routine_base = (self._run(cm.__aenter__()) for cm in self._serving)
         env = {"MMB_STORE_KEY": Fernet.generate_key().decode(), "MATTERMOST_URL": self.base,
-               "WAKE_BACKOFF_SCALE": "0.05", "WAKE_MAX_ATTEMPTS": "5", "LIVE_ALLOW_HTTP_WAKE": "true"}
-        mode = os.environ.get("LIVE_MODE", "container")
+               "WAKE_BACKOFF_SCALE": "0.25", "WAKE_MAX_ATTEMPTS": "5", "LIVE_ALLOW_HTTP_WAKE": "true"}
+        mode = self.mode = os.environ.get("LIVE_MODE", "container")
         assert mode in ("container", "inprocess"), "LIVE_MODE must be container or inprocess"
         self._tmp = None
         if mode == "inprocess":
@@ -221,8 +234,13 @@ class LiveDriver:
         rc, out = self._admin("set-bot", "--token-stdin", "--wake-url", self.wake_url, stdin=u["token"] + "\n")
         assert rc == 0, "admin set-bot failed: %s" % out.strip()
         self.rx.secret = re.search(r"wake secret \(shown once[^)]*\): (\S+)", out).group(1)
-        self.sut.start()
-        self._wait(lambda: self.sut.listener() == "ok", START_S, "listener ok in /health")
+        self._start()
+
+    def _start(self):
+        if not self.started:
+            self.sut.start()
+            self.started = True
+            self._wait(lambda: self.sut.listener() == "ok", START_S, "listener ok in /health")
 
     def given_wake_target_down(self):
         self.rx.down = True
@@ -290,14 +308,22 @@ class LiveDriver:
         if thread is not None:
             assert w["post"]["root_id"] == self.posts[thread], "wake does not name the thread %r" % thread
 
-    def assert_not_woken(self, bot, message):
-        # Barrier: a DM posted after the scenario is woken; anything before it has been processed by then.
+    def _barrier(self, bot):
+        """A DM posted after the scenario reaches the bot's current wake target (receiver, or routine via the
+        relay, any status); anything before it has been processed by then. Returns the marker post id."""
         self._user(MARKER_USER)
         marker = "marker %s" % secrets.token_hex(4)
         self.dm(bot, marker, MARKER_USER)
         mid = self.posts[marker]
-        self._wait(lambda: self._delivered(mid), WAKE_WITHIN_S, "marker wake")
+        if self.bots.get(bot, {}).get("kind") == "grok":
+            self._wait(lambda: self.routine.reached(bot, mid), WAKE_WITHIN_S, "marker wake at the routine")
+        else:
+            self._wait(lambda: self._delivered(mid), WAKE_WITHIN_S, "marker wake")
         time.sleep(SETTLE_S)
+        return mid
+
+    def assert_not_woken(self, bot, message):
+        mid = self._barrier(bot)
         others = [r for r in self.rx.requests if r["headers"].get("x-mmb-delivery") != mid]
         if message is not None:
             others = [r for r in others if json.loads(r["body"]).get("post", {}).get("message") == message]
@@ -313,8 +339,31 @@ class LiveDriver:
         assert last["status"] == 401, "receiver accepted a forged wake (HTTP %s)" % last["status"]
         assert last["delivery"] not in self.rx.accepted
 
+    def _mmb_attempts(self, pid):
+        """Attempt numbers of failed deliveries mmbridge logged for this post (wake_retry / wake_failed)."""
+        got = set()
+        for line in self.sut.logs().splitlines():
+            if pid in line and ("wake_retry" in line or "wake_failed" in line) and "{" in line:
+                try:
+                    ev = json.loads(line[line.index("{"):])
+                except ValueError:
+                    continue
+                if ev.get("post_id") == pid and ev.get("event") in ("wake_retry", "wake_failed"):
+                    got.add(ev["attempt"])
+        return got
+
+    def _grok_attempts(self, pid):
+        """Attempt numbers seen at any routine (relay forwarded it) or logged by mmbridge (relay unreachable)."""
+        seen = {json.loads(r["body"])["attempt"] for r in self.routine.requests if self.routine.post_id(r) == pid}
+        return seen | self._mmb_attempts(pid)
+
     def assert_wake_retried(self, minimum):
         pid = self._last_post
+        want = set(range(1, minimum + 1))
+        self._wait(lambda: self.rx.attempts(pid) or want <= self._grok_attempts(pid), WAKE_WITHIN_S,
+                   "%d attempts" % minimum)
+        if not self.rx.attempts(pid):          # grok bot: attempts via relay -> routine, or refused at the relay
+            return
         self._wait(lambda: len(self.rx.attempts(pid)) >= minimum, WAKE_WITHIN_S, "%d attempts" % minimum)
         attempts = self.rx.attempts(pid)
         assert all(self._valid(r) for r in attempts)
@@ -338,6 +387,137 @@ class LiveDriver:
         for r in self.rx.requests:
             assert tok not in r["body"].decode() and tok not in json.dumps(r["headers"]), "token in a wake"
 
+    # --- increment B: Grok routine via the wake relay (B-s1) ---------------------------------------------------
+    def _relay(self):
+        if self.relay is None:
+            self.relay = RelayHarness(self, self.mode, self.routine_base)
+        return self.relay
+
+    def _configure_relay(self):
+        grok = {n: b for n, b in self.bots.items() if b["kind"] == "grok"}
+        if grok:
+            self._relay().configure(grok)
+
+    def _target(self, name, kind):
+        return "%s/wake/%s" % (self._relay().url, name) if kind == "grok" else self.wake_url
+
+    def _set_bot(self, name):
+        b, u = self.bots[name], self._user(name)
+        rc, out = self._admin("set-bot", "--token-stdin", "--wake-secret-stdin", "--wake-url",
+                              self._target(name, b["kind"]), stdin="%s\n%s\n" % (u["token"], b["secret"]))
+        assert rc == 0, "admin set-bot failed: %s" % out.strip()
+
+    def register_bot(self, name, wake):
+        assert wake in ("grok", "signed"), wake
+        u = self._user(name)
+        u["is_bot"], u["token"] = True, "tok-%s-%s" % (name, secrets.token_hex(12))
+        self.bots[name] = {"secret": secrets.token_urlsafe(32), "key": "rk-%s-%s" % (name, secrets.token_hex(16)),
+                           "kind": wake}
+        self.routine.keys[name] = self.bots[name]["key"]
+        if wake == "signed":
+            self.rx.secret = self.bots[name]["secret"]
+        self._configure_relay()                 # relay ready (same name + secret) before mmbridge points at it
+        self._set_bot(name)
+        self._start()
+
+    def _reloads(self):
+        return sum(1 for line in self.sut.logs().splitlines() if "store_updated" in line and '"generation"' in line)
+
+    def switch_wake_target(self, bot, wake):
+        before = self._reloads()
+        self.bots[bot]["kind"] = wake
+        if wake == "signed":
+            self.rx.secret = self.bots[bot]["secret"]
+        self._configure_relay()
+        self._set_bot(bot)                      # same secret (copied to the relay), new wake URL
+        # No redeploy/restart: the running bridge picks the change up on its own store reload (30 s in the image).
+        self._wait(lambda: self._reloads() > before, 45, "the running bridge to reload the store")
+
+    def grok_routine_down(self, bot):
+        self.routine.down.add(bot)
+
+    def grok_routine_up(self, bot):
+        self.routine.down.discard(bot)
+
+    def relay_down(self):
+        self._relay().down()
+
+    def relay_up(self):
+        self._relay().up()
+
+    def forge_wake(self, bot):
+        d = "forged-" + secrets.token_hex(4)
+        body = json.dumps({"version": 1, "kind": "post", "delivery_id": d, "attempt": 1,
+                           "post": {"id": d, "message": "do something bad"}}, separators=(",", ":")).encode()
+        ts = int(time.time())
+        sig = "v1=" + hmac.new(b"not-the-secret", b"%d." % ts + body, hashlib.sha256).hexdigest()
+        return self._relay().send(bot, body, {"Content-Type": "application/json", "X-MMB-Delivery": d,
+                                              "X-MMB-Timestamp": str(ts), "X-MMB-Signature": sig})
+
+    def _captured_headers(self, rec):
+        return {k: v for k, v in rec["headers"].items() if k.startswith("x-mmb-") or k == "content-type"}
+
+    def tamper_wake(self, bot, message):
+        rec = self._relay().last(bot)
+        w = json.loads(rec["body"])
+        w["post"]["message"] = message
+        body = json.dumps(w, separators=(",", ":")).encode()
+        return self._relay().send(bot, body, self._captured_headers(rec))
+
+    def replay_last_wake(self, bot, after_seconds):
+        rec = self._relay().last(bot)
+        return self._relay().send(bot, rec["body"], self._captured_headers(rec), after_seconds=after_seconds)
+
+    def _runs(self, bot, post_id):
+        return [r for r in self.routine.runs(bot) if self.routine.post_id(r) == post_id]
+
+    def assert_routine_started_once(self, bot, channel, sender, message, thread=None):
+        pid = self.posts[message]
+        self._wait(lambda: self._runs(bot, pid), WAKE_WITHIN_S, "routine run for %r" % message)
+        time.sleep(SETTLE_S)
+        got = self._runs(bot, pid)
+        assert len(got) == 1, "expected one routine run for %r, got %d" % (message, len(got))
+        r = got[0]
+        assert r["headers"].get("authorization") == "Bearer " + self.bots[bot]["key"], "routine key not used"
+        w = json.loads(r["body"])
+        assert r["headers"].get("x-mmb-delivery") == w["delivery_id"]
+        assert w["post"]["id"] == pid and w["post"]["message"] == message
+        assert w["bot"]["username"] == bot and w["sender"]["username"] == sender
+        if channel is None:
+            assert w["channel"]["type"] == "D"
+        else:
+            assert w["channel"]["name"] == channel and w["channel"]["type"] == self._channel(channel)["type"]
+            assert w["channel"]["type"] in ("O", "P")
+        if thread is not None:
+            assert w["post"]["root_id"] == self.posts[thread], "wake does not name the thread %r" % thread
+
+    def assert_routine_not_started(self, bot, message):
+        mid = self._barrier(bot)
+        runs = [r for r in self.routine.runs(bot) if self.routine.post_id(r) != mid]
+        if message is not None:
+            runs = [r for r in runs if json.loads(r["body"]).get("post", {}).get("message") == message]
+        assert not runs, "unexpected routine run(s): %s" % [self.routine.post_id(r) for r in runs]
+
+    def assert_no_secret_anywhere(self, bot):
+        tok, b = self._user(bot)["token"], self.bots[bot]
+        secrets_ = {"token": tok, "wake secret": b["secret"], "routine key": b["key"]}
+        logs, relay_logs = self.sut.logs(), self.relay.logs() if self.relay else ""
+        assert '"event": "wake_queued"' in logs, "log capture is empty or not the bridge's logs"
+        if b["kind"] == "grok":
+            assert "relay_forwarded" in relay_logs, "relay log capture is empty or not the relay's logs"
+        places = {"mmbridge logs": logs, "relay logs": relay_logs, "admin output": "\n".join(self.outputs)}
+        for r in self.routine.requests:         # the Bearer key is legitimately in the routine's Authorization
+            h = {k: v for k, v in r["headers"].items() if k != "authorization"}
+            places["routine wake"] = places.get("routine wake", "") + r["body"].decode() + json.dumps(h)
+        for r in self.rx.requests:
+            places["receiver wake"] = places.get("receiver wake", "") + r["body"].decode() + json.dumps(r["headers"])
+        if self.relay:
+            places["relay wake"] = "".join(r["body"].decode() + json.dumps(r["headers"]) for r in self.relay.captured)
+            places["relay responses"] = "".join(r["text"] + json.dumps(r["headers"]) for r in self.relay.responses)
+        for what, value in secrets_.items():
+            for where, text in places.items():
+                assert value not in text, "%s in %s" % (what, where)
+
     def drop_connection(self, seconds):
         # `seconds` is simulated: reconnects stay refused until restore_connection (no real wait).
         def drop():
@@ -351,7 +531,11 @@ class LiveDriver:
 
     def close(self):
         try:
-            self.sut.close()
+            try:
+                self.sut.close()
+            finally:
+                if self.relay:
+                    self.relay.close()
         finally:
             try:
                 for cm in reversed(self._serving):

@@ -74,6 +74,12 @@ still wake exactly once. Edits made with `admin set-bot` while running are picke
 reconnects); a store that no longer decrypts keeps the previous config and logs `store_reload_failed`.
 `python -m app.admin failed` lists wakes the receiver never accepted; `--retry <post_id>` sends one again.
 
+## Grok Bot routines (wake relay)
+Grok Bot routines take a Bearer key, not a signed wake, so a small relay sits beside mmbridge: it checks each
+signed wake (signature, 5-minute window, no repeats, per-bot rate limit) and starts the bot's routine with its key.
+Point the bot at it with `python -m app.admin set-bot --token-stdin --wake-secret-stdin --wake-url
+https://<relay>/wake/<bot>` (no redeploy). Setup, env and key rotation: [relay/README.md](relay/README.md).
+
 ## Wake receiver (live bots)
 
 With live bots on, mmbridge POSTs each wake to the bot's `wake_url` with headers `X-MMB-Delivery`, `X-MMB-Timestamp` and `X-MMB-Signature: v1=<hex HMAC-SHA256(secret, ts + "." + body)>`. A receiver must check the signature before acting:

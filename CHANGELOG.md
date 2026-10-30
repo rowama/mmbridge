@@ -2,6 +2,10 @@
 All notable changes to this project. Format: Keep a Changelog style; newest first.
 
 ## [Unreleased]
+<!-- id: CHANG-20261029-b-s1-wake-relay | owner_agent: claude-code | date: 2026-10-29 -->
+### Added
+- Wake relay (relay/, own image and Coolify app): verifies mmbridge's signed wakes (signature, 5-minute window, per-bot secret) and starts each bot's Grok Bot routine with its Bearer routine key; forged, altered, stale and repeated wakes never start a routine, each bot is rate-limited (30/min, burst 10), and a routine or relay outage is retried by mmbridge then shown as one failed wake. Point a bot at it with `set-bot --wake-url https://<relay>/wake/<name>`; no mmbridge redeploy.
+
 
 ## [0.3.0] - 2026-10-28
 <!-- id: CHANG-20261028-ship-0.3.0 | owner_agent: grok-bot | date: 2026-10-28 -->

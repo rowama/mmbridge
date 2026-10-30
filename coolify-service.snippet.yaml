@@ -23,3 +23,29 @@ services:
       retries: 3
     # Same compose stack => same default network as `mattermost`, so
     # http://mattermost:8065 resolves without exposing Mattermost publicly.
+
+  # Wake relay (ADR-0011, relay/README.md): own app, own domain, holds the Grok routine keys.
+  # Can also be a separate Coolify application built from relay/Dockerfile.
+  relay:
+    build:
+      context: https://github.com/rowama/mmbridge.git#main:relay
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - SERVICE_FQDN_RELAY_8080=https://relay.rmlab.cloud      # TODO: real relay domain from Rob
+      # Per bot, as Coolify secrets (never commit values): <NAME> = bot name upper-case, '-' -> '_'
+      # - RELAY_BOT_EDDIE_HMAC_SECRET=<eddie's mmbridge wake secret>
+      # - RELAY_BOT_EDDIE_ROUTINE_URL=<Grok Bot routine webhook URL>
+      # - RELAY_BOT_EDDIE_ROUTINE_KEY=<routine Bearer key>
+    volumes:
+      - relay-data:/data
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  relay-data:
