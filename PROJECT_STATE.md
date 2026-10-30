@@ -3,14 +3,15 @@ id: STATE
 type: project-state
 phase: implement
 status: active
-owner_agent: claude-code
+owner_agent: grok-bot
 date: 2026-10-29
 links: []
 triage: large             # unset | small | medium | large
 active_slice: SLICE-20261028-b-s1-relay-grok-wake-one-bot
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: []
+pending_approvals:
+  - "CP-S: thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md - manual verification (spike + Coolify relay deploy)"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -31,10 +32,10 @@ implement (increment B: Grok Bot webhook wake + multi-bot; architecture B done, 
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[SLICE-20261028-b-s1-relay-grok-wake-one-bot](thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md) (review: implemented cd07811, awaiting Codex review + eng-verify). Previous: lb5 [done](thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md)
+[SLICE-20261028-b-s1-relay-grok-wake-one-bot](thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md) (verified PASS 2026-10-29, [report](thoughts/shared/verification/2026-10-29-b-s1-relay-grok-wake-one-bot-verify.md); awaiting CP-S). Previous: lb5 [done](thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md)
 
 ## Next action
-B-s1: Codex slice review (codex not available on the implementer shell) -> eng-verify -> Rob runs relay/spike_routine.py (OQ-B1/B2) -> CP-S. Then B-s2, B-s3. Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
+B-s1: Codex review clean, eng-verify PASS, pushed. Next: Rob runs relay/spike_routine.py (OQ-B1/B2) -> CP-S. Then B-s2, B-s3. Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
 
 ## Blockers
 - none
@@ -47,6 +48,7 @@ See `pending_approvals` in the front matter (the only copy; `.eng/bin/eng-status
 none
 
 ## Latest artifacts
+- B-s1 verify: [thoughts/shared/verification/2026-10-29-b-s1-relay-grok-wake-one-bot-verify.md](thoughts/shared/verification/2026-10-29-b-s1-relay-grok-wake-one-bot-verify.md); review: [thoughts/shared/verification/2026-10-29-slice-20261028-b-s1-relay-grok-wake-one-bot-review-2.md](thoughts/shared/verification/2026-10-29-slice-20261028-b-s1-relay-grok-wake-one-bot-review-2.md); handoff: [thoughts/shared/handoffs/2026-10-29_23-45-00_b-s1-verified-awaiting-cp-s.md](thoughts/shared/handoffs/2026-10-29_23-45-00_b-s1-verified-awaiting-cp-s.md)
 <!-- Relative links only; .eng/bin/eng-check verifies they resolve. -->
 - Plan B (see Approval log): [thoughts/shared/plans/2026-10-28-grok-webhook-multibot.md](thoughts/shared/plans/2026-10-28-grok-webhook-multibot.md); slices B-s1..B-s3 in thoughts/shared/slices/; specs [tests/acceptance/specs/test_grok_multibot.py](tests/acceptance/specs/test_grok_multibot.py)
 - Architecture B (approved): [docs/architecture/2026-10-28-grok-webhook-multibot.md](docs/architecture/2026-10-28-grok-webhook-multibot.md); ADR-0011, 0013..0016 (accepted), ADR-0012 (rejected) in [docs/decisions/](docs/decisions/)
