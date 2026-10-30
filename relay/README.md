@@ -1,7 +1,7 @@
 # Wake relay (Grok Bot routines)
 
 Thin HMAC -> Bearer relay (ADR-0011). mmbridge keeps sending only signed wakes; the relay checks each one and
-starts that bot's Grok Bot routine with the routine's Bearer key. Routine keys live only here (Coolify secrets),
+starts that bot's Grok Bot routine with the routine's Bearer key. Routine keys live only here (Coolify secrets on the `relay` compose service),
 never in mmbridge.
 
 ```
@@ -40,18 +40,29 @@ everywhere: Mattermost bot, mmbridge wake URL `/wake/<name>`, relay env, Grok ro
 The relay refuses to start if a bot is missing a field, its secret is shorter than 32 characters, or its routine
 URL is not https (`RELAY_ALLOW_HTTP_UPSTREAM=true` is for tests only). Replicas: 1.
 
-## Setup on Coolify (one bot, e.g. eddie)
-1. New application from this repo: build context `relay`, Dockerfile `relay/Dockerfile`, port 8080, a persistent
-   volume at `/data`, its own domain (e.g. `https://relay.rmlab.cloud`). See `coolify-service.snippet.yaml`.
-2. Secrets: `RELAY_BOT_EDDIE_HMAC_SECRET`, `RELAY_BOT_EDDIE_ROUTINE_URL`, `RELAY_BOT_EDDIE_ROUTINE_KEY`.
-   The HMAC secret is eddie's existing mmbridge wake secret. If you don't have it any more, make a new one and
-   give it to both sides (step 4 prints nothing then; paste it there too).
-3. Deploy; `curl https://relay.rmlab.cloud/health` -> `"ok": true, "bots": 1`.
+## Setup: service in the Mattermost compose stack (one bot, e.g. eddie)
+The relay is **not** a separate Coolify application (Rob 2026-10-30). It is one more service, `relay`, in the same
+Coolify Docker Compose as Mattermost, mmbridge and Postgres (Coolify service `pbrl8nkssi6dnanfxofnftkc`), on the
+same private network, so mmbridge reaches it at `http://relay:8080` (plain HTTP is fine on the private Docker
+network; no public domain needed). See the `relay:` block in `coolify-service.snippet.yaml`.
+
+1. Rob, in the Coolify UI (Mattermost service -> Docker Compose): add the `relay:` service and the `relay-data`
+   volume from `coolify-service.snippet.yaml` (build `https://github.com/rowama/mmbridge.git#main:relay`,
+   Dockerfile, `expose: 8080`, no published port, volume `relay-data:/data`, separate from mmbridge's), and add
+   `LIVE_ALLOW_HTTP_WAKE=true` to the `mmbridge` service env (lets mmbridge accept the private `http://` wake URL).
+2. Rob, same screen, environment/secrets: `RELAY_BOT_EDDIE_HMAC_SECRET`, `RELAY_BOT_EDDIE_ROUTINE_URL`,
+   `RELAY_BOT_EDDIE_ROUTINE_KEY`. The HMAC secret is eddie's existing mmbridge wake secret (if lost, make a new one
+   and use it in step 4 too). Redeploy: the whole stack restarts (short Mattermost blip).
+3. Check from the mmbridge container terminal:
+   `python -c "import urllib.request;print(urllib.request.urlopen('http://relay:8080/health').read())"` ->
+   `"ok": true, "bots": 1`.
 4. mmbridge container terminal (no redeploy; picked up within 30 s):
-   `python -m app.admin set-bot --token-stdin --wake-secret-stdin --wake-url https://relay.rmlab.cloud/wake/eddie`
-   and paste two lines at the prompt: eddie's Mattermost token, then the same wake secret as in step 2, then Ctrl-D.
+   `python -m app.admin set-bot --token-stdin --wake-secret-stdin --wake-url http://relay:8080/wake/eddie`
+   and paste two lines: eddie's Mattermost token, then the same wake secret as in step 2, then Ctrl-D.
 5. Check: post in Town Square and DM eddie -> the Eddie routine starts each time (Grok Bot routine history).
-   `curl -X POST https://relay.rmlab.cloud/wake/eddie -d '{}'` -> 401 and no run.
+   From inside the stack, a POST to `http://relay:8080/wake/eddie` with body `{}` -> 401 and no run.
+
+Optional: a public Traefik domain (e.g. `relay.rmlab.cloud`) for ops only; mmbridge never needs it.
 
 ## Grok routine setup
 The routine receives the wake JSON as its input: `bot`, `channel` (`name`, `type`: O/P channel, D = DM),
@@ -63,8 +74,8 @@ gets this text once Rob's pending OWNER-GUIDE edits are committed.)
 Do this when the key may have leaked, a person with access leaves, or the relay logs `relay_upstream` with code
 401/403 (key revoked or rotated on the Grok side).
 1. In Grok Bot, create the new key for the routine (or rotate it).
-2. Coolify relay app: set `RELAY_BOT_<NAME>_ROUTINE_KEY` to the new key; redeploy the relay (seconds; wakes in
-   between get 503 and mmbridge retries them).
+2. Coolify, Mattermost compose stack, `relay` service: set `RELAY_BOT_<NAME>_ROUTINE_KEY` to the new key; redeploy
+   (restarts the stack; wakes in between get 503 and mmbridge retries them).
 3. In Grok Bot, revoke the old key.
 4. Post a test message; the routine starts; relay log shows `relay_forwarded` for it.
 
@@ -72,7 +83,7 @@ Rotating a wake secret: generate one (`python -c "import secrets;print(secrets.t
 relay env and redeploy the relay, then run step 4 of Setup with the new secret. Wakes signed with the old secret in
 between get 401 at the relay and show as failed in mmbridge (`python -m app.admin failed --retry <post_id>`).
 
-## Spike (OQ-B1/B2, once, before CP-S)
+## Spike (OQ-B1/B2, optional; done 2026-10-30: 200/401/401, marker intact)
 `python3 relay/spike_routine.py https://<routine-url>` (paste the key at the prompt, or env `SPIKE_ROUTINE_KEY`).
 It posts one marker body as valid key / wrong key / bad URL and prints only the status codes. Write down the
 three codes and whether the bot saw the JSON body verbatim (the marker).

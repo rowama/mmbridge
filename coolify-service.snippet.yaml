@@ -13,6 +13,7 @@ services:
       # - FORWARDED_ALLOW_IPS=<traefik-ip-or-cidr>
       - SERVICE_FQDN_MMBRIDGE_8080=https://chats.rmlab.cloud   # Coolify domain -> container port 8080
       - MATTERMOST_URL=http://mattermost:8065                  # private network, used later
+      - LIVE_ALLOW_HTTP_WAKE=true                              # wake URL http://relay:8080/wake/<bot> (private net)
       # Per-bot Mattermost tokens: add later as Coolify secrets, never commit them.
     expose:
       - "8080"
@@ -24,15 +25,16 @@ services:
     # Same compose stack => same default network as `mattermost`, so
     # http://mattermost:8065 resolves without exposing Mattermost publicly.
 
-  # Wake relay (ADR-0011, relay/README.md): own app, own domain, holds the Grok routine keys.
-  # Can also be a separate Coolify application built from relay/Dockerfile.
+  # Wake relay (ADR-0011, relay/README.md): service in THIS compose stack (Rob 2026-10-30), not a separate
+  # Coolify app. Holds the Grok routine keys. mmbridge wakes it at http://relay:8080/wake/<bot> (private net).
   relay:
     build:
       context: https://github.com/rowama/mmbridge.git#main:relay
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      - SERVICE_FQDN_RELAY_8080=https://relay.rmlab.cloud      # TODO: real relay domain from Rob
+      # Optional public domain for ops only (mmbridge does not need it):
+      # - SERVICE_FQDN_RELAY_8080=https://relay.rmlab.cloud
       # Per bot, as Coolify secrets (never commit values): <NAME> = bot name upper-case, '-' -> '_'
       # - RELAY_BOT_EDDIE_HMAC_SECRET=<eddie's mmbridge wake secret>
       # - RELAY_BOT_EDDIE_ROUTINE_URL=<Grok Bot routine webhook URL>

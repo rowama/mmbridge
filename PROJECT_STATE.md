@@ -11,7 +11,7 @@ active_slice: SLICE-20261028-b-s1-relay-grok-wake-one-bot
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
 pending_approvals:
-  - "CP-S: thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md - manual verification (spike + Coolify relay deploy)"
+  - "CP-S: thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md - manual verification (real Mattermost post wakes Eddie routine via relay service in the Mattermost compose stack; not yet requested)"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -35,7 +35,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [SLICE-20261028-b-s1-relay-grok-wake-one-bot](thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md) (verified PASS 2026-10-29, [report](thoughts/shared/verification/2026-10-29-b-s1-relay-grok-wake-one-bot-verify.md); awaiting CP-S). Previous: lb5 [done](thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md)
 
 ## Next action
-B-s1: Codex review clean, eng-verify PASS, pushed. Next: Rob runs relay/spike_routine.py (OQ-B1/B2) -> CP-S. Then B-s2, B-s3. Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
+B-s1: Codex review clean, eng-verify PASS, pushed. Spike done 2026-10-30 (200/401/401, marker intact; ADR-0011 Observed). Rob decision 2026-10-30: relay = service in the same Docker Compose as Mattermost/mmbridge/Postgres (not a Coolify app); docs rewritten. Next: Ulrik/Eddie hand Rob the compose snippet; Rob updates compose + pastes 3 secrets; Ulrik runs set-bot; real post wakes Eddie -> CP-S. Then B-s2, B-s3. Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
 
 ## Blockers
 - none

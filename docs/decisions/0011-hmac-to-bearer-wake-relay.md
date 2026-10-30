@@ -20,7 +20,7 @@ REQ-B1/B2/B4. The Grok Bot routine wake contract (locked at CP-A): POST to a per
 
 ## Decision
 - mmbridge keeps sending only ADR-0008 signed wakes (no wake `kind`, no Bearer key in the store). Payload gains v2 fields (bot, reply hints) inside the signed body.
-- New small service, the **wake relay**, deployed as its own container on Coolify on the same VPS: `POST /wake/<bot>` verifies HMAC (per-bot secret, constant time), timestamp window 300 s, and delivery-id dedupe (24 h); then forwards the verified body unchanged to that bot's Grok routine URL with `Authorization: Bearer <routine key>`.
+- New small service, the **wake relay**, deployed as its own container on the same VPS (since 2026-10-30: service `relay` in the Mattermost Docker Compose stack, see note): `POST /wake/<bot>` verifies HMAC (per-bot secret, constant time), timestamp window 300 s, and delivery-id dedupe (24 h); then forwards the verified body unchanged to that bot's Grok routine URL with `Authorization: Bearer <routine key>`.
 - Status mapping back to mmbridge: upstream 2xx -> 200; 408/429/5xx/timeout -> 503 (mmbridge retries); other upstream 4xx -> 424 (permanent); bad sig/stale -> 401; duplicate -> 200 without forwarding.
 - Routine URL/key and HMAC secrets live only in relay Coolify secrets; redacted in logs.
 - Per-bot rate limit (default 30/min, burst 10) and a tripwire alert (HMAC failure bursts, rate-limit hits, upstream 401/403, forwarded vs mmbridge delivered count drift).
@@ -41,3 +41,9 @@ Positive: mmbridge wire format and ADR-0008 unchanged (one format to test); auth
 
 ## Note 2026-10-28: delivery guarantee (accepted risk, Rob 2026-10-28)
 Relay dedupe records a delivery id only after the upstream routine returns 2xx (option A). A lost upstream response or a relay crash after upstream 2xx can cause a rare double wake; accepted because marking before forwarding (option B, rejected) can lose posts. Routine-side idempotency on `X-MMB-Delivery` (option C) is deferred; revisit if the relay's count-drift tripwire (`double_forward`) fires often (>= 3 in 24 h). Plan: thoughts/shared/plans/2026-10-28-grok-webhook-multibot.md "Delivery guarantee".
+
+## Note 2026-10-30: deploy in the compose stack (Rob 2026-10-30)
+Relay runs as service `relay` in the same Coolify Docker Compose as Mattermost + mmbridge + Postgres (Coolify service pbrl8nkssi6dnanfxofnftkc), not a separate Coolify app. mmbridge wake URL `http://relay:8080/wake/<bot>` on the private network (mmbridge `LIVE_ALLOW_HTTP_WAKE=true`); no public relay domain required. Rob installs/updates the compose; Ulrik does VPS wiring. Relay code unchanged.
+
+## Observed 2026-10-30: B-s1 spike (OQ-B1/B2)
+`relay/spike_routine.py` against Rob's real Eddie routine: valid key -> 200, wrong key -> 401, bad URL -> 401. Marker `mmb-spike-262ca3a7` reached the bot intact (body passthrough verbatim). Matches the assumed mapping (401 -> relay 424, tripwire); no OQ-B1/B2 fallback needed. Note: a bad routine URL answers 401 (not 404), so 424 `{"upstream":401}` can mean wrong key or wrong URL.
