@@ -3,8 +3,8 @@ id: STATE
 type: project-state
 phase: implement
 status: active
-owner_agent: grok-bot
-date: 2026-10-28
+owner_agent: claude-code
+date: 2026-10-29
 links: []
 triage: large             # unset | small | medium | large
 active_slice: SLICE-20261028-b-s1-relay-grok-wake-one-bot
@@ -31,10 +31,10 @@ implement (increment B: Grok Bot webhook wake + multi-bot; architecture B done, 
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[SLICE-20261028-b-s1-relay-grok-wake-one-bot](thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md) (implementing; Claude Code via eng-run). Previous: lb5 [done](thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md)
+[SLICE-20261028-b-s1-relay-grok-wake-one-bot](thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md) (review: implemented cd07811, awaiting Codex review + eng-verify). Previous: lb5 [done](thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md)
 
 ## Next action
-Implement B-s1 (eng-run implement) -> review -> eng-verify -> CP-S. Then B-s2, B-s3. Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
+B-s1: Codex slice review (codex not available on the implementer shell) -> eng-verify -> Rob runs relay/spike_routine.py (OQ-B1/B2) -> CP-S. Then B-s2, B-s3. Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
 
 ## Blockers
 - none
@@ -71,7 +71,7 @@ none
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0010 (all accepted): [docs/decisions/](docs/decisions/)
 - Verification lb4b (PASS): [thoughts/shared/verification/2026-10-27-lb4b-drop-allowlist.md](thoughts/shared/verification/2026-10-27-lb4b-drop-allowlist.md)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-28_19-30-00_arch-b-awaiting-cp-b.md](thoughts/shared/handoffs/2026-10-28_19-30-00_arch-b-awaiting-cp-b.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-29_23-08-07_b-s1-implemented-awaiting-review.md](thoughts/shared/handoffs/2026-10-29_23-08-07_b-s1-implemented-awaiting-review.md)
 - Review lb4b (addressed, no findings): [thoughts/shared/verification/2026-10-27-slice-20261027-lb4b-drop-allowlist-review.md](thoughts/shared/verification/2026-10-27-slice-20261027-lb4b-drop-allowlist-review.md)
 - Review lb3 (addressed, no findings): [thoughts/shared/verification/2026-10-27-slice-20261027-lb3-listener-filters-review.md](thoughts/shared/verification/2026-10-27-slice-20261027-lb3-listener-filters-review.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)

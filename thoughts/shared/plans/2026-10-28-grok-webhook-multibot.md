@@ -138,7 +138,7 @@ run_all() {
 for i in 1 2 3; do run_all || { echo RUN $i FAILED; break; }; done   # DoD: concurrency slice -> full suite 3x, all pass
 python3 .eng/bin/eng-check . && python3 .eng/bin/eng-spec status .
 ```
-- [ ] block above exit 0 (all 3 runs); outputs pasted into the slice handoff
+- [x] block above exit 0 (all 3 runs); outputs pasted into the slice handoff
 #### Manual Verification
 - [ ] Rob: spike run against his real Eddie routine; observed codes for valid / wrong key / bad URL and whether the body is visible verbatim to the bot are written down (OQ-B1/B2 closed or fallback chosen).
 - [ ] Rob on Coolify: relay app deployed with eddie env; `set-bot --wake-url https://<relay>/wake/eddie` (existing secret copied into `RELAY_BOT_EDDIE_HMAC_SECRET`); post in Town Square and DM eddie -> Eddie routine run starts each time (seen in Grok Bot routine history), no receiver log needed; `curl -X POST https://<relay>/wake/eddie -d '{}'` -> 401, no run.
