@@ -41,7 +41,7 @@ A Mattermost post in a member channel or a DM to eddie starts the Eddie Grok rou
 - [x] Commit; eng-handoff ("implemented, awaiting review/verify")
 
 ## Manual verification (Rob, at CP-S)
-See plan Phase 1 Manual Verification. Deploy target changed 2026-10-30 (Rob): relay is a service in the Mattermost compose stack (Coolify service pbrl8nkssi6dnanfxofnftkc), wake URL `http://relay:8080/wake/eddie`; mmbridge needs `LIVE_ALLOW_HTTP_WAKE=true`. Done bar = real Mattermost post wakes the Eddie routine. Relay code unchanged.
+See plan Phase 1 Manual Verification. Deploy target changed 2026-10-30 (Rob): relay is a service in the Mattermost compose stack (Coolify service pbrl8nkssi6dnanfxofnftkc), wake URL `http://relay:8080/wake/eddie`; mmbridge accepts it with no flag (http only to host `relay`, SLICE-20261030-http-wake-internal-hosts; do not set `LIVE_ALLOW_HTTP_WAKE`). Done bar = real Mattermost post wakes the Eddie routine. Relay code unchanged.
 
 ## Progress log
 <!-- date - agent - what changed (file:line) -->

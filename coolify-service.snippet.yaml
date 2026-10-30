@@ -13,7 +13,8 @@ services:
       # - FORWARDED_ALLOW_IPS=<traefik-ip-or-cidr>
       - SERVICE_FQDN_MMBRIDGE_8080=https://chats.rmlab.cloud   # Coolify domain -> container port 8080
       - MATTERMOST_URL=http://mattermost:8065                  # private network, used later
-      - LIVE_ALLOW_HTTP_WAKE=true                              # wake URL http://relay:8080/wake/<bot> (private net)
+      # Wake URL http://relay:8080/wake/<bot> is accepted without any flag (http allowed only to host 'relay').
+      # Never set LIVE_ALLOW_HTTP_WAKE here: it is tests-only.
       # Per-bot Mattermost tokens: add later as Coolify secrets, never commit them.
     expose:
       - "8080"

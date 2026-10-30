@@ -63,6 +63,9 @@ def validate(cfg: BotConfig) -> None:
         raise ValueError("wake_secret: must be at least %d characters" % MIN_SECRET)
 
 
+INTERNAL_HTTP_WAKE_HOSTS = frozenset({"relay"})   # compose service name of the wake relay
+
+
 def https_ok(url: str) -> bool:
     try:                                   # must also parse as the dispatcher will send it (review 4 P2)
         u = httpx.URL(url)
@@ -72,7 +75,14 @@ def https_ok(url: str) -> bool:
         return False
     if url.startswith("https://") and len(url) > 8:
         return True
-    return os.getenv("LIVE_ALLOW_HTTP_WAKE", "").lower() == "true" and url.startswith("http://") and len(url) > 7
+    if not (url.startswith("http://") and len(url) > 7):
+        return False
+    # Plain http only to in-stack Docker Compose services on the private network (Rob 2026-10-30
+    # "Tighten now"): exact host match, never public hosts. LIVE_ALLOW_HTTP_WAKE=true stays a
+    # tests-only escape hatch (acceptance driver's 127.0.0.1 receiver); never set it in production.
+    if u.host.lower() in INTERNAL_HTTP_WAKE_HOSTS and not u.userinfo:
+        return True
+    return os.getenv("LIVE_ALLOW_HTTP_WAKE", "").lower() == "true"
 
 
 def _keys(key: str | None) -> list[Fernet]:

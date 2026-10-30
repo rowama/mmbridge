@@ -4,7 +4,7 @@ type: project-state
 phase: implement
 status: active
 owner_agent: grok-bot
-date: 2026-10-29
+date: 2026-10-30
 links: []
 triage: large             # unset | small | medium | large
 active_slice: SLICE-20261028-b-s1-relay-grok-wake-one-bot
@@ -35,6 +35,8 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 [SLICE-20261028-b-s1-relay-grok-wake-one-bot](thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md) (verified PASS 2026-10-29, [report](thoughts/shared/verification/2026-10-29-b-s1-relay-grok-wake-one-bot-verify.md); awaiting CP-S). Previous: lb5 [done](thoughts/shared/slices/2026-10-27-lb5-wireup-reconnect-acceptance.md)
 
 ## Next action
+http-wake-internal-hosts (small, security; Rob 2026-10-30 'Tighten now'): mmbridge accepts plain http wake URLs only for host `relay`; snippet no longer sets LIVE_ALLOW_HTTP_WAKE (tests-only). [slice](thoughts/shared/slices/2026-10-30-http-wake-internal-hosts.md). Then continue B-s1 below.
+
 B-s1: Codex review clean, eng-verify PASS, pushed. Spike done 2026-10-30 (200/401/401, marker intact; ADR-0011 Observed). Rob decision 2026-10-30: relay = service in the same Docker Compose as Mattermost/mmbridge/Postgres (not a Coolify app); docs rewritten. Next: Ulrik/Eddie hand Rob the compose snippet; Rob updates compose + pastes 3 secrets; Ulrik runs set-bot; real post wakes Eddie -> CP-S. Then B-s2, B-s3. Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
 
 ## Blockers
@@ -91,6 +93,7 @@ none
      Pre-kit decisions: back-fill with Checkpoint "pre-kit" and Decision "approved (back-filled, pre-kit)". .eng/bin/eng-check matches rows to statuses. -->
 | Date | Checkpoint | Artifact | Decision (Rob) |
 |---|---|---|---|
+| 2026-10-30 | triage (size) | thoughts/shared/slices/2026-10-30-http-wake-internal-hosts.md | approved (small, security; Rob 'Tighten now': no global LIVE_ALLOW_HTTP_WAKE in prod, http only to in-stack relay; via Eddie) |
 | 2026-10-29 | CP-C | thoughts/shared/plans/2026-10-28-grok-webhook-multibot.md | approved speclock sha256:ee97d6ceffddcb0b (slices B-s1 -> B-s2 -> B-s3; via Eddie) |
 | 2026-10-28 | CP-B | docs/architecture/2026-10-28-grok-webhook-multibot.md, docs/decisions/0011-hmac-to-bearer-wake-relay.md, docs/decisions/0013-multi-bot-store-v2.md, docs/decisions/0014-multi-bot-runtime-state-v2.md, docs/decisions/0015-thread-replies-root-id.md, docs/decisions/0016-acceptance-tests-increment-b.md | approved (architecture B + ADR-0011, 0013..0016 accepted; ADR-0012 claim_wake stays rejected; ops accepted for now: relay Bearer key + routine URL in Coolify env on relay, not mmbridge admin; same bot name ties Mattermost bot, relay and Grok routine; RELAY_BOT_<name>_HMAC_SECRET = copy of the bot wake secret; via Eddie) |
 | 2026-10-28 | CP-R | thoughts/shared/research/2026-10-28-grok-webhook-multibot-current-code.md | accepted (via Eddie) |

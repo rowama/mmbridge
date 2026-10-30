@@ -176,3 +176,43 @@ def test_https_ok_rejects_unparseable_urls():
     assert https_ok("https://example.org/wake") and https_ok("https://example.org:8443/wake")
     for bad in ("https://example.org:bad/wake", "https://", "https://:443/x", "https://example.org:99999/x"):
         assert not https_ok(bad), bad
+
+
+# --- http wake only for in-stack internal hosts (Rob 2026-10-30 "Tighten now") -------------------
+import pytest as _pt
+
+
+@_pt.mark.parametrize("url", ["https://w.example/h", "https://relay:8443/x"])
+def test_https_wake_always_ok(url, monkeypatch):
+    monkeypatch.delenv("LIVE_ALLOW_HTTP_WAKE", raising=False)
+    assert store.https_ok(url)
+
+
+@_pt.mark.parametrize("flag", [None, "false"])
+@_pt.mark.parametrize("url", ["http://relay:8080/wake/eddie", "http://RELAY:8080/wake/eddie", "http://relay/wake/x"])
+def test_http_wake_internal_relay_ok_without_flag(url, flag, monkeypatch):
+    if flag is None:
+        monkeypatch.delenv("LIVE_ALLOW_HTTP_WAKE", raising=False)
+    else:
+        monkeypatch.setenv("LIVE_ALLOW_HTTP_WAKE", flag)
+    assert store.https_ok(url)
+
+
+@_pt.mark.parametrize("url", ["http://evil.example/h", "http://relay.evil.example/h", "http://relayx:8080/h",
+                              "http://127.0.0.1:9000/h", "http://localhost/h", "http://8.8.8.8/h",
+                              "http://evil.example/relay:8080", "http://relay@evil.example/h"])
+def test_http_wake_public_or_other_host_rejected_without_flag(url, monkeypatch):
+    monkeypatch.delenv("LIVE_ALLOW_HTTP_WAKE", raising=False)
+    assert not store.https_ok(url)
+
+
+def test_set_bot_validation_accepts_relay_rejects_public_http(monkeypatch):
+    monkeypatch.delenv("LIVE_ALLOW_HTTP_WAKE", raising=False)
+    store.validate(cfg(wake_url="http://relay:8080/wake/eddie"))
+    with _pt.raises(ValueError):
+        store.validate(cfg(wake_url="http://evil.example/wake"))
+
+
+def test_test_flag_still_allows_local_receiver(monkeypatch):
+    monkeypatch.setenv("LIVE_ALLOW_HTTP_WAKE", "true")      # acceptance driver's 127.0.0.1 receiver
+    assert store.https_ok("http://127.0.0.1:9000/h")
