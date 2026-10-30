@@ -2,7 +2,7 @@
 id: PLAN-20261028-grok-webhook-multibot
 type: plan
 phase: plan
-status: draft            # input (pre-draft from an earlier phase) | draft | in-review | approved | in-progress | done | superseded
+status: approved            # input (pre-draft from an earlier phase) | draft | in-review | approved | in-progress | done | superseded
 owner_agent: grok-bot
 date: 2026-10-28
 links: [docs/design/2026-10-28-grok-webhook-multibot.md, docs/architecture/2026-10-28-grok-webhook-multibot.md, thoughts/shared/research/2026-10-28-grok-webhook-multibot-current-code.md]
