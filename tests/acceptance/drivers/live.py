@@ -7,8 +7,8 @@ Backoff is scaled by WAKE_BACKOFF_SCALE so retry specs run in seconds; LIVE_ALLO
 URL be the plain-HTTP local receiver (tests only).
 
 SUT mode (env LIVE_MODE):
-- `container` (default, lb5, ADR-0010 layer 4): the real image (env LIVE_IMAGE, default mmbridge:bs1; build it
-  first with `docker build -t mmbridge:bs1 .`) on `--network host` with a fresh named volume at /data, a fresh
+- `container` (default, lb5, ADR-0010 layer 4): the real image (env LIVE_IMAGE, default mmbridge:bs2; build it
+  first with `docker build -t mmbridge:bs2 .`) on `--network host` with a fresh named volume at /data, a fresh
   MMB_STORE_KEY and LIVE_BOTS_ENABLED=true. `python -m app.admin set-bot` runs in a one-off container on the same
   volume before the server starts (as an operator would before enabling the flag); `admin failed` runs through
   `docker exec`; `/health` tells when the listener is connected; `docker logs` is the log capture for the token
@@ -20,6 +20,9 @@ secret, which forwards to a fake Grok routine (drivers/fake_routine.py, checks t
 `register_bot(name, "signed")` uses the HMAC receiver as in increment A. Wake secrets are passed to the CLI on
 stdin (`--wake-secret-stdin`, as an operator copying one secret to the relay), so the CLI never prints them.
 Wake retries: WAKE_BACKOFF_SCALE 0.25 gives ~7 s before a wake fails, enough to restart the relay container.
+B-s2 (ADR-0015): `given_routine_answers` makes the fake routine act as the bot on every started run: it follows
+the wake's `reply` hints and calls post_channel / dm_send on the real MCP bridge (/mcp of the container; in-process
+an app.main app with the fake Mattermost transport and no live runtime of its own) with the bot's own token.
 drop_connection: the fake closes the websocket (no resume: a new connection id) and refuses REST + websocket
 until restore_connection, so posts made meanwhile are reachable only by the listener's REST catch-up.
 """
@@ -45,6 +48,7 @@ from cryptography.fernet import Fernet
 from app import admin
 from app import logging as mlog
 from app.live import LiveRuntime
+from drivers import _serve
 from drivers.fake_mattermost import FakeMattermost
 from drivers.fake_routine import FakeRoutine
 from drivers.relay import RelayHarness
@@ -52,6 +56,7 @@ from drivers.wake_receiver import WakeReceiver
 
 TEAM = "rmlab"
 WAKE_WITHIN_S = 10.0       # design metric: wake within 10 s
+REPLY_WITHIN_S = 15.0      # wake + the routine's MCP call
 SETTLE_S = 0.3
 START_S = 30.0             # container start + listener connect
 MARKER_USER = "zz-marker"
@@ -74,11 +79,25 @@ def _free_port() -> int:
         return s.getsockname()[1]
 
 
+class _NoLive:
+    """The in-process MCP app's live runtime slot: the driver runs LiveRuntime itself (_InProcess.start)."""
+
+    async def start(self):
+        pass
+
+    async def stop(self):
+        pass
+
+    async def health(self):
+        return {}
+
+
 class _InProcess:
     """app.admin.main + app.live.LiveRuntime on the driver's event loop."""
 
     def __init__(self, drv, env):
         self.drv, self.env, self.runtime = drv, env, None
+        self._mcp = None
         self._saved = {k: os.environ.get(k) for k in env}
         os.environ.update(env)
         self._log = _Capture()
@@ -98,11 +117,25 @@ class _InProcess:
     def listener(self):
         return self.runtime.listener_status() if self.runtime else "off"
 
+    def mcp_url(self):
+        """The real MCP bridge (app.main) over HTTP, Mattermost = the fake (started on first use)."""
+        if self._mcp is None:
+            from app.main import create_app
+
+            async def go():
+                return await _serve.start(create_app(mm_transport=self.drv.mm.transport(), live=_NoLive()),
+                                          lifespan="on")
+            server, task, port = self.drv._run(go())
+            self._mcp = (server, task, port)
+        return "http://127.0.0.1:%d/mcp" % self._mcp[2]
+
     def logs(self):
         return "\n".join(self._log.lines)
 
     def close(self):
         try:
+            if self._mcp:
+                self.drv._run(_serve.stop(*self._mcp[:2]))
             if self.runtime:
                 self.drv._run(self.runtime.stop())
         finally:
@@ -117,7 +150,7 @@ class _Container:
 
     def __init__(self, drv, env):
         self.drv, self.env = drv, env
-        self.image = os.environ.get("LIVE_IMAGE", "mmbridge:bs1")
+        self.image = os.environ.get("LIVE_IMAGE", "mmbridge:bs2")
         self.name = "mmb-live-" + secrets.token_hex(4)
         self.volume = self.name + "-data"
         self.port = _free_port()
@@ -150,6 +183,9 @@ class _Container:
                      "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(self.port), "--proxy-headers",
                      check=True)
         self.started = True
+
+    def mcp_url(self):
+        return "http://127.0.0.1:%d/mcp" % self.port
 
     def listener(self):
         try:
@@ -490,6 +526,31 @@ class LiveDriver:
             assert w["channel"]["type"] in ("O", "P")
         if thread is not None:
             assert w["post"]["root_id"] == self.posts[thread], "wake does not name the thread %r" % thread
+
+    def given_routine_answers(self, bot, text):
+        self.routine.answer(bot, text, self._user(bot)["token"], self.sut.mcp_url())
+
+    def _conversation(self, bot, where):
+        if where.startswith("dm:"):
+            got = self.mm.direct_channels(self._user(bot)["id"], self._user(where[3:])["id"])
+            return got[0]["id"] if got else None
+        return self._channel(where)["id"]
+
+    def _bot_posts(self, bot, where, text):
+        cid, uid = self._conversation(bot, where), self._user(bot)["id"]
+        return [p for p in self.mm.channel_posts(cid) if p["user_id"] == uid and p["message"] == text] if cid else []
+
+    def assert_replied(self, bot, where, text, thread=None):
+        try:
+            self._wait(lambda: self._call(self._bot_posts, bot, where, text), REPLY_WITHIN_S,
+                       "%s's reply %r in %s" % (bot, text, where))
+        except AssertionError as e:
+            raise AssertionError("%s; routine replies: %s" % (e, self.routine.replies)) from None
+        got = self._call(self._bot_posts, bot, where, text)
+        assert len(got) == 1, "expected one reply %r from %s in %s, got %d" % (text, bot, where, len(got))
+        want_root = self.posts[thread] if thread is not None else ""
+        assert got[0]["root_id"] == want_root, \
+            "reply root_id %r, expected %r (%s)" % (got[0]["root_id"], want_root, thread or "top level")
 
     def assert_routine_not_started(self, bot, message):
         mid = self._barrier(bot)

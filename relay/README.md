@@ -20,9 +20,33 @@ mmbridge --signed wake--> POST /wake/<bot> --verify, dedupe, rate limit--> POST 
 - Known, accepted (Rob 2026-10-28): if the routine started but its answer was lost (timeout), or the relay died
   right after the routine said 200, mmbridge retries and the routine can start twice for one post (log
   `relay_delivery_ambiguous`). It never silently drops a post.
-- `GET /health`: `{"ok": true, "bots": n, "forwarded_24h": n, "rejected_24h": n}` (counts only).
+- `GET /health`: `{"ok": true, "bots": n, "forwarded_24h": n, "rejected_24h": n, "double_forward_24h": n}`
+  (counts only).
 - Logs: one JSON line per event on stdout (`relay_forwarded`, `relay_rejected{reason}`, `relay_upstream{code}`,
-  `relay_delivery_ambiguous`); secrets and keys are redacted, message text is never logged.
+  `relay_delivery_ambiguous`, `relay_tripwire{reason}`, `relay_alert_failed`); secrets and keys are redacted,
+  message text is never logged.
+
+## Tripwire (B-s2)
+The relay logs `relay_tripwire` with a `reason` when something looks wrong, and (optional) posts an alert to a
+Mattermost channel, at most one per reason per 10 minutes:
+
+| reason | when | what to do |
+|---|---|---|
+| `bad_sig` | more than 5 wakes with a bad signature or stale timestamp in 10 min | someone is probing the relay, or a bot's `HMAC_SECRET` differs from its mmbridge wake secret: compare them |
+| `rate_limited` | a bot hit its rate limit (30/min, burst 10) | a runaway conversation or a flood; check that channel |
+| `upstream_http_401` / `upstream_http_403` | the Grok routine refused the key | the key was rotated or revoked: see "Rotating a routine key" |
+| `double_forward` | a post was forwarded again after an earlier forward may already have started the routine (lost answer, or relay crash right after the routine said 200) | the accepted-risk double wake (Rob 2026-10-28). One now and then is expected. **3 or more in 24 h** (`/health` `double_forward_24h`, and only then the alert) means it is time to revisit option C (routine-side idempotency, TODOS) |
+
+Alert (optional, all three or none; the relay refuses to start with only some set):
+
+| Variable | Value |
+|---|---|
+| `RELAY_ALERT_URL` | Mattermost base URL, in the stack `http://mattermost:8065` |
+| `RELAY_ALERT_TOKEN` | token of a dedicated alert bot (not a Grok bot's token), member of the alert channel |
+| `RELAY_ALERT_CHANNEL` | the alert channel's id (26 characters) |
+
+The alert says only the reason, the bot name and counts; never a key, secret or message text. If the post fails the
+relay logs `relay_alert_failed` and carries on (wakes are never held up by alerts).
 
 ## Configuration (env only)
 Per bot, `<NAME>` = bot name upper-cased with `-` -> `_` (bot `eddie` -> `RELAY_BOT_EDDIE_*`). Use the same name
@@ -65,10 +89,24 @@ network; no public domain needed). See the `relay:` block in `coolify-service.sn
 Optional: a public Traefik domain (e.g. `relay.rmlab.cloud`) for ops only; mmbridge never needs it.
 
 ## Grok routine setup
-The routine receives the wake JSON as its input: `bot`, `channel` (`name`, `type`: O/P channel, D = DM),
-`sender.username`, `post` (`id`, `message`, `root_id`). Until B-s2 adds reply hints, the routine instruction
-should say: "You were woken by a Mattermost post. Read `post.message` from `sender.username` in `channel`." (OWNER-GUIDE
-gets this text once Rob's pending OWNER-GUIDE edits are committed.)
+The routine receives the wake JSON verbatim as its input (B-s1 spike): `version` 2, `bot`, `channel` (`name`,
+`type`: O/P channel, D = DM), `sender.username`, `post` (`id`, `message`, `root_id`) and `reply`, which says how to
+answer:
+
+- channel post: `{"tool": "post_channel", "team": "<team>", "channel": "<channel>", "root_id": null}`
+- reply in a thread: the same, with `root_id` = the thread's root post id (answer in that thread)
+- DM: `{"tool": "dm_send", "username": "<sender>", "root_id": null}`
+
+The routine's bot uses the mmbridge MCP server with **its own** Mattermost bot token (the same bot as the wake URL
+name). Its own answer never wakes it again. Routine instruction text (paste into the Grok Bot routine):
+
+> You were woken by a Mattermost post. The input is JSON. Read `post.message` from `sender.username`. Answer it
+> with the mmbridge tool named in `reply.tool`, passing exactly the fields of `reply`: for `post_channel` use
+> `team` and `channel`, for `dm_send` use `username`; if `reply.root_id` is not null pass it as `root_id` so the
+> answer lands in that thread. Do not post anywhere else. If the tool returns `invalid_root`, answer once without
+> `root_id`.
+
+(OWNER-GUIDE gets this text once Rob's pending OWNER-GUIDE edits are committed.)
 
 ## Rotating a routine key (runbook)
 Do this when the key may have leaked, a person with access leaves, or the relay logs `relay_upstream` with code

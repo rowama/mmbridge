@@ -1,8 +1,8 @@
 """Wake relay under test (ADR-0011/0016). Drivers are not locked; edit freely.
 
 The real relay (relay/relay.py) runs in-process (uvicorn in the driver's loop, `LIVE_MODE=inprocess`) or as the
-real image (`LIVE_MODE=container`, env RELAY_IMAGE, default mmbridge-relay:bs1; build it first with
-`docker build -t mmbridge-relay:bs1 relay`) on --network host with a fresh /data volume. Relay config is env only,
+real image (`LIVE_MODE=container`, env RELAY_IMAGE, default mmbridge-relay:bs2; build it first with
+`docker build -t mmbridge-relay:bs2 relay`) on --network host with a fresh /data volume. Relay config is env only,
 so `configure(bots)` (re)starts it with RELAY_BOT_<NAME>_* (container: via a 0600 --env-file, not argv).
 
 mmbridge reaches the relay through a recording tap (`url`): it records each signed wake exactly as sent
@@ -99,7 +99,7 @@ class _InProcessRelay:
 class _ContainerRelay:
     def __init__(self, drv):
         self.drv = drv
-        self.image = os.environ.get("RELAY_IMAGE", "mmbridge-relay:bs1")
+        self.image = os.environ.get("RELAY_IMAGE", "mmbridge-relay:bs2")
         self.name = "mmb-relay-" + secrets.token_hex(4)
         self.volume = self.name + "-data"
         self.port = _free_port()

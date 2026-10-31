@@ -14,6 +14,9 @@ post-id anchors (fix cycle: catch-up pages by id); GET /users/{id}/channels (all
 the user's D/G channels (as Mattermost does); `ws_refuse` (REST 503 + websocket handshake 503, an MM restart);
 resume: a dropped session stays resumable (`ws_drop(resumable=True)`), keeps receiving its events in a dead
 queue, and a reconnect with `?connection_id&sequence_number` gets hello (same id, no seq) + the missed events.
+B-s2 (ADR-0015): GET /posts/{id} (403 unless the caller is in the post's channel, 404 unknown); POST /posts takes
+`root_id` (400 unless the root is a root post in the same channel, as Mattermost); `mm_ids=True` also gives posts
+Mattermost-shaped 26-char ids ("p" + 25 digits; root_id is validated as a Mattermost id).
 """
 import asyncio
 import contextlib
@@ -61,6 +64,7 @@ class FakeMattermost:
             Route("/api/v4/channels/{channel_id}/members/me", self._member_me),
             Route("/api/v4/channels/{channel_id}/posts", self._channel_posts),
             Route("/api/v4/posts", self._create_post, methods=["POST"]),
+            Route("/api/v4/posts/{post_id}", self._get_post),
             Route("/api/v4/users/ids", self._users_by_ids, methods=["POST"]),
             Route("/api/v4/users/username/{username}", self._user_by_username),
             Route("/api/v4/channels/direct", self._direct, methods=["POST"]),
@@ -119,7 +123,8 @@ class FakeMattermost:
     def add_post(self, channel_id, user_id, message, type="", root_id="", create_at=None):
         """Create a post and broadcast `posted` to the channel members' websocket sessions (as Mattermost does,
         including the author's own sessions; dead resumable sessions queue it)."""
-        pid = "p-%d" % next(self._ids)
+        n = next(self._ids)
+        pid = ("p%025d" if self.mm_ids else "p-%d") % n
         self.posts[pid] = p = {"id": pid, "channel_id": channel_id, "user_id": user_id, "message": message,
                                "create_at": self._now_ms() if create_at is None else create_at, "type": type,
                                "root_id": root_id}
@@ -308,9 +313,24 @@ class FakeMattermost:
         c, err = self._member_channel(u, body.get("channel_id"))
         if err:
             return err
-        p = self.add_post(c["id"], u["id"], body["message"])
+        root_id = body.get("root_id") or ""
+        if root_id:
+            r = self.posts.get(root_id)
+            if not r or r["channel_id"] != c["id"] or r.get("root_id"):
+                return JSONResponse({"message": "Invalid RootId parameter."}, status_code=400)
+        p = self.add_post(c["id"], u["id"], body["message"], root_id=root_id)
         self.changes.append(("post", c["id"], p["id"]))
         return JSONResponse(p, status_code=201)
+
+    async def _get_post(self, request):
+        u, err = self._auth(request)
+        if err:
+            return err
+        p = self.posts.get(request.path_params["post_id"])
+        if not p:
+            return JSONResponse({"message": "not found"}, status_code=404)
+        _, err = self._member_channel(u, p["channel_id"])
+        return err or JSONResponse(p)
 
     async def _users_by_ids(self, request):
         u, err = self._auth(request)

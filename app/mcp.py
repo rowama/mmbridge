@@ -35,8 +35,15 @@ Username = _arg({"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"}, "M
 Team = _arg({"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"}, "Team name (URL name, e.g. rmlab).")
 Channel = _arg({"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"}, "Channel name (URL name, e.g. town-square).")
 Message = _arg({"type": "string", "minLength": 1, "maxLength": validate.MAX_MESSAGE}, "Message text (Markdown).")
+RootId = _arg({"type": ["string", "null"], "pattern": "^[a-z0-9]{26}$"},
+              "Optional thread root post id: reply in that thread (a wake's reply.root_id). The root must be a post "
+              "in the same channel or DM, else invalid_root and nothing is posted. Omit to post at top level.")
 Limit = _arg({"type": "integer", "minimum": 1, "maximum": validate.MAX_LIMIT},
              "How many of the newest posts to return.")
+
+
+async def _dm_send(c: Client, username: str, message: str, root_id: str | None, *, me: dict) -> dict:
+    return await service.dm_send(c, username, message, me=me, root_id=root_id)
 
 
 def build(limiter, mm_transport=None, base_url: str = MATTERMOST_URL) -> FastMCP:
@@ -87,20 +94,23 @@ def build(limiter, mm_transport=None, base_url: str = MATTERMOST_URL) -> FastMCP
     async def list_channels() -> CallToolResult:
         return await run("list_channels", service.list_channels)
 
-    @server.tool(description="Post a message to a Mattermost channel this bot is a member of. Never joins channels.")
-    async def post_channel(team: Team, channel: Channel, message: Message) -> CallToolResult:
+    @server.tool(description="Post a message to a Mattermost channel this bot is a member of (optionally as a "
+                             "reply in a thread via root_id). Never joins channels.")
+    async def post_channel(team: Team, channel: Channel, message: Message, root_id: RootId = None) -> CallToolResult:
         return await run("post_channel", service.post_channel, write=True, check=lambda: (
-            validate.identifier("team", team), validate.identifier("channel", channel), validate.message(message)))
+            validate.identifier("team", team), validate.identifier("channel", channel), validate.message(message),
+            validate.post_id(root_id)))
 
     @server.tool(description="Read the newest posts (newest first) of a Mattermost channel this bot is a member of.")
     async def read_channel(team: Team, channel: Channel, limit: Limit = validate.DEFAULT_LIMIT) -> CallToolResult:
         return await run("read_channel", service.read_channel, check=lambda: (
             validate.identifier("team", team), validate.identifier("channel", channel), validate.limit(limit)))
 
-    @server.tool(description="Send a direct message to a Mattermost user by username (opens or reuses the DM).")
-    async def dm_send(username: Username, message: Message) -> CallToolResult:
-        return await run("dm_send", service.dm_send, write=True, with_me=True, check=lambda: (
-            validate.identifier("username", username), validate.message(message)))
+    @server.tool(description="Send a direct message to a Mattermost user by username (opens or reuses the DM; "
+                             "optionally as a reply in a DM thread via root_id).")
+    async def dm_send(username: Username, message: Message, root_id: RootId = None) -> CallToolResult:
+        return await run("dm_send", _dm_send, write=True, with_me=True, check=lambda: (
+            validate.identifier("username", username), validate.message(message), validate.post_id(root_id)))
 
     @server.tool(description="Read the newest posts (newest first) of this bot's DM with a Mattermost user.")
     async def dm_read(username: Username, limit: Limit = validate.DEFAULT_LIMIT) -> CallToolResult:

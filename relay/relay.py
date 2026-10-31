@@ -17,6 +17,15 @@ Delivery guarantee (accepted risk A, Rob 2026-10-28): a delivery id is recorded 
 2xx, so a lost upstream response (logged relay_delivery_ambiguous) or a crash before Seen.add can start the
 routine twice; never zero times. Concurrent identical deliveries forward once (per-delivery lock + in_flight row).
 GET /health: counts only. Logs: JSON lines on logger "relay", every secret and key redacted.
+
+Tripwire (B-s2): logs relay_tripwire{reason} on HMAC failures (bad signature or stale timestamp) > 5 in 10 min
+(`bad_sig`), a rate-limit hit (`rate_limited`), upstream 401/403 (`upstream_http_<code>`: key rotated/revoked) and
+count drift (`double_forward`: a delivery forwarded again although an earlier forward may have started the routine,
+accepted risk A). Every forward is recorded before it is sent and dropped again once the routine definitely did not
+start, so a crash between upstream 2xx and Seen.add is still counted after restart. /health shows
+double_forward_24h; >= 3 in 24 h is the signal to revisit option C (Rob 2026-10-28). Optional Mattermost alert
+post (RELAY_ALERT_URL, RELAY_ALERT_TOKEN, RELAY_ALERT_CHANNEL = channel id; all three or none): one per reason per
+10 min, for double_forward only from 3 in 24 h.
 """
 import asyncio
 import hashlib
@@ -42,6 +51,10 @@ MIN_SECRET = 32
 SEEN_TTL_S = 24 * 3600
 IN_FLIGHT_STALE_S = 60
 PRUNE_EVERY_S = 3600
+TRIP_WINDOW_S = 600
+BAD_SIG_MAX = 5
+DRIFT_ALERT = 3
+ALERT_ENV = ("RELAY_ALERT_URL", "RELAY_ALERT_TOKEN", "RELAY_ALERT_CHANNEL")
 FIELDS = ("HMAC_SECRET", "ROUTINE_URL", "ROUTINE_KEY")
 _ENV_RE = re.compile(r"^RELAY_BOT_([A-Z0-9_]+)_(%s)$" % "|".join(FIELDS))
 
@@ -189,6 +202,8 @@ class Seen:
         self._db.execute("CREATE TABLE IF NOT EXISTS seen (delivery_id TEXT PRIMARY KEY, seen_at INTEGER NOT NULL)")
         self._db.execute("CREATE TABLE IF NOT EXISTS in_flight (delivery_id TEXT PRIMARY KEY, "
                          "started_at INTEGER NOT NULL)")
+        self._db.execute("CREATE TABLE IF NOT EXISTS forwards (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                         "delivery_id TEXT NOT NULL, at INTEGER NOT NULL)")
         self._db.execute("DELETE FROM in_flight")
 
     def _q(self, sql: str, args=()):
@@ -202,7 +217,26 @@ class Seen:
         self._q("INSERT OR IGNORE INTO seen (delivery_id, seen_at) VALUES (?, ?)", (d, int(now)))
 
     def prune(self, now: int) -> int:
+        self._q("DELETE FROM forwards WHERE at < ?", (int(now) - SEEN_TTL_S,))
         return self._q("DELETE FROM seen WHERE seen_at < ?", (int(now) - SEEN_TTL_S,)).rowcount
+
+    # Forward rows (count drift): one per forward that may have started the routine.
+    def forward_begin(self, d: str, now: int) -> int:
+        """Recorded before the upstream call, so it survives a crash after the routine started."""
+        return self._q("INSERT INTO forwards (delivery_id, at) VALUES (?, ?)", (d, int(now))).lastrowid
+
+    def forward_not_started(self, row: int) -> None:
+        """The routine definitely did not start (a non-2xx answer, or never reached): not a forward."""
+        self._q("DELETE FROM forwards WHERE id = ?", (row,))
+
+    def forwards_of(self, d: str, since: int) -> int:
+        return self._q("SELECT COUNT(*) FROM forwards WHERE delivery_id = ? AND at >= ?",
+                       (d, int(since))).fetchone()[0]
+
+    def double_forwards_since(self, since: int) -> int:
+        """Forwards beyond the first per delivery id: possible double wakes (accepted risk A)."""
+        return self._q("SELECT COUNT(*) - COUNT(DISTINCT delivery_id) FROM forwards WHERE at >= ?",
+                       (int(since),)).fetchone()[0]
 
     def count_since(self, since: int) -> int:
         return self._q("SELECT COUNT(*) FROM seen WHERE seen_at >= ?", (int(since),)).fetchone()[0]
@@ -249,10 +283,79 @@ class _Counter:
         return sum(v for m, v in self._m.items() if m > k - 24 * 60)
 
 
+class Tripwire:
+    """relay_tripwire{reason} log + optional alert(reason, fields), throttled to one alert per reason per 10 min."""
+
+    def __init__(self, clock, alert=None):
+        self.clock, self.alert = clock, alert
+        self._bad: list[float] = []               # HMAC failure times inside the window
+        self._alerted: dict[str, float] = {}
+
+    def _trip(self, reason: str, alert: bool = True, **fields) -> None:
+        now = self.clock()
+        _log("relay_tripwire", reason=reason, **fields)
+        if not alert or self.alert is None:
+            return
+        last = self._alerted.get(reason)
+        if last is not None and now - last < TRIP_WINDOW_S:
+            return
+        self._alerted[reason] = now
+        self.alert(reason, fields)
+
+    def bad_sig(self, bot: str) -> None:
+        now = self.clock()
+        self._bad = [t for t in self._bad if now - t < TRIP_WINDOW_S] + [now]
+        if len(self._bad) > BAD_SIG_MAX:
+            self._trip("bad_sig", bot=bot, failures_10m=len(self._bad))
+
+    def rate_limited(self, bot: str) -> None:
+        self._trip("rate_limited", bot=bot)
+
+    def upstream_denied(self, bot: str, code: int) -> None:
+        self._trip("upstream_http_%d" % code, bot=bot)
+
+    def double_forward(self, bot: str, delivery: str, count_24h: int) -> None:
+        self._trip("double_forward", alert=count_24h >= DRIFT_ALERT, bot=bot, delivery=delivery,
+                   double_forward_24h=count_24h)
+
+
+def _alerter(env: Mapping[str, str], http: httpx.AsyncClient):
+    """Mattermost alert post from RELAY_ALERT_* (all three or none). Fire and forget: never blocks a wake."""
+    vals = {k: (env.get(k) or "").strip() for k in ALERT_ENV}
+    if not any(vals.values()):
+        return None
+    if not all(vals.values()):
+        raise ConfigError("alert: set all of %s or none" % ", ".join(ALERT_ENV))
+    url, token, channel = (vals[k] for k in ALERT_ENV)
+    if not _https_ok(url, allow_http=True):
+        raise ConfigError("alert: RELAY_ALERT_URL must be http(s)")
+    register_secret(token)
+    tasks: set = set()
+
+    async def post(reason: str, fields: dict) -> None:
+        detail = ", ".join("%s=%s" % kv for kv in sorted(fields.items()))
+        msg = "mmbridge relay tripwire: %s (%s). See the relay logs (relay_tripwire); runbook: relay/README.md." % (
+            reason, detail)
+        try:
+            r = await http.post(url.rstrip("/") + "/api/v4/posts", json={"channel_id": channel, "message": msg},
+                                headers={"Authorization": "Bearer " + token}, timeout=5)
+            if r.status_code >= 300:
+                _log("relay_alert_failed", reason=reason, status=r.status_code)
+        except Exception as e:                    # type only: messages may carry request details
+            _log("relay_alert_failed", reason=reason, error=type(e).__name__)
+
+    def alert(reason: str, fields: dict) -> None:
+        t = asyncio.get_running_loop().create_task(post(reason, fields))
+        tasks.add(t)
+        t.add_done_callback(tasks.discard)
+    return alert
+
+
 class _Relay:
-    def __init__(self, bots, http, clock, seen, rate, timeout_s):
+    def __init__(self, bots, http, clock, seen, rate, timeout_s, tripwire=None):
         self.bots, self.http, self.clock, self.seen, self.rate = bots, http, clock, seen, rate
         self.timeout_s = timeout_s
+        self.tripwire = tripwire or Tripwire(clock)
         self.rejected = _Counter()
         self._locks: dict[str, list] = {}     # delivery id -> [asyncio.Lock, holders+waiters]
         self._pruned_at = None
@@ -273,7 +376,9 @@ class _Relay:
             return self._reject(now, None, "unknown_bot", 404)
         body = await request.body()
         if not verify(bot.hmac_secret, request.headers, body, int(now)):
-            return self._reject(now, bot.name, _reject_reason(request.headers, int(now)), 401)
+            resp = self._reject(now, bot.name, _reject_reason(request.headers, int(now)), 401)
+            self.tripwire.bad_sig(bot.name)
+            return resp
         d = request.headers["x-mmb-delivery"]
         if self._pruned_at is None or now - self._pruned_at >= PRUNE_EVERY_S:
             self.seen.prune(int(now))
@@ -295,15 +400,25 @@ class _Relay:
             return self._reject(now, bot.name, "in_flight", 503, delivery=d)
         try:
             if not self.rate.allow(bot.name, now):
-                return self._reject(now, bot.name, "rate_limited", 429, delivery=d)
+                resp = self._reject(now, bot.name, "rate_limited", 429, delivery=d)
+                self.tripwire.rate_limited(bot.name)
+                return resp
+            row = self.seen.forward_begin(d, int(now))
             status, err = await self._forward(bot, d, body)
             if status is not None and 200 <= status < 300:
                 self.seen.add(d, int(self.clock()))   # only after upstream 2xx (accepted risk A)
                 _log("relay_forwarded", bot=bot.name, delivery=d, upstream=status)
+                since = int(self.clock()) - SEEN_TTL_S
+                if self.seen.forwards_of(d, since) > 1:
+                    self.tripwire.double_forward(bot.name, d, self.seen.double_forwards_since(since))
             else:
                 if err not in (None, "connect"):
                     _log("relay_delivery_ambiguous", bot=bot.name, delivery=d, error=err)
+                else:                                 # an answer, or never reached: the routine did not start
+                    self.seen.forward_not_started(row)
                 _log("relay_upstream", bot=bot.name, delivery=d, code=err or status)
+                if status in (401, 403):
+                    self.tripwire.upstream_denied(bot.name, status)
             code, payload = map_upstream(status)
             return JSONResponse(payload, status_code=code)
         finally:
@@ -327,7 +442,8 @@ class _Relay:
     def health(self) -> dict:
         now = self.clock()
         return {"ok": True, "bots": len(self.bots), "forwarded_24h": self.seen.count_since(int(now) - SEEN_TTL_S),
-                "rejected_24h": self.rejected.since(now)}
+                "rejected_24h": self.rejected.since(now),
+                "double_forward_24h": self.seen.double_forwards_since(int(now) - SEEN_TTL_S)}
 
 
 def create_app(env: Mapping[str, str] | None = None, http: httpx.AsyncClient | None = None, clock=time.time,
@@ -344,7 +460,8 @@ def create_app(env: Mapping[str, str] | None = None, http: httpx.AsyncClient | N
     rate = RateLimit(float(env.get("RELAY_RATE_PER_MIN", "30")), int(env.get("RELAY_BURST", "10")))
     own_http = http is None
     client = http or httpx.AsyncClient()
-    relay = _Relay(bots, client, clock, seen, rate, float(env.get("RELAY_UPSTREAM_TIMEOUT_S", "5")))
+    tripwire = Tripwire(clock, alert=_alerter(env, client))
+    relay = _Relay(bots, client, clock, seen, rate, float(env.get("RELAY_UPSTREAM_TIMEOUT_S", "5")), tripwire)
 
     @asynccontextmanager
     async def lifespan(_app):

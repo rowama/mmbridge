@@ -56,10 +56,42 @@ async def _member_channel(c: Client, team: str, channel: str) -> dict:
     return ch
 
 
-async def post_channel(c: Client, team: str, channel: str, message: str) -> dict:
+_BAD_ROOT = "root_id is not a post in this conversation that the bot can see."
+
+
+async def _root(c: Client, root_id: str) -> dict:
+    """Thread root (ADR-0015), fetched with the bot's own token. Mattermost 400/403/404 (bad id, no access,
+    gone) -> invalid_root."""
+    try:
+        root = await c.get("/posts/%s" % segment(root_id))
+    except MMError as e:
+        if e.status in (400, 403, 404):
+            raise ToolError("invalid_root", _BAD_ROOT)
+        raise
+    return root if isinstance(root, dict) else {}
+
+
+def _same_channel(root: dict, channel_id: str) -> None:
+    if root.get("channel_id") != channel_id:
+        raise ToolError("invalid_root", _BAD_ROOT)
+
+
+async def check_root(c: Client, root_id: str, channel_id: str) -> None:
+    """The root must be a post in `channel_id` the bot can see; checked before any write."""
+    _same_channel(await _root(c, root_id), channel_id)
+
+
+def _new_post(channel_id: str, message: str, root_id: str | None) -> dict:
+    return {"channel_id": channel_id, "message": message, **({"root_id": root_id} if root_id else {})}
+
+
+async def post_channel(c: Client, team: str, channel: str, message: str, root_id: str | None = None) -> dict:
     ch = await _member_channel(c, team, channel)
-    p = await c.post("/posts", {"channel_id": ch["id"], "message": message})
-    return {"post_id": p["id"], "channel": channel, "team": team, "create_at": iso(p["create_at"])}
+    if root_id:
+        await check_root(c, root_id, ch["id"])
+    p = await c.post("/posts", _new_post(ch["id"], message, root_id))
+    out = {"post_id": p["id"], "channel": channel, "team": team, "create_at": iso(p["create_at"])}
+    return {**out, "root_id": root_id} if root_id else out
 
 
 async def _read_posts(c: Client, channel_id: str, limit: int) -> list:
@@ -87,10 +119,14 @@ async def _direct_channel(c: Client, username: str, me: dict) -> dict:
     return await c.post("/channels/direct", [me["id"], user["id"]])
 
 
-async def dm_send(c: Client, username: str, message: str, *, me: dict) -> dict:
+async def dm_send(c: Client, username: str, message: str, *, me: dict, root_id: str | None = None) -> dict:
+    root = await _root(c, root_id) if root_id else None   # a root the bot cannot see: nothing opened or posted
     ch = await _direct_channel(c, username, me)
-    p = await c.post("/posts", {"channel_id": ch["id"], "message": message})
-    return {"post_id": p["id"], "channel_id": ch["id"], "create_at": iso(p["create_at"])}
+    if root is not None:
+        _same_channel(root, ch["id"])
+    p = await c.post("/posts", _new_post(ch["id"], message, root_id))
+    out = {"post_id": p["id"], "channel_id": ch["id"], "create_at": iso(p["create_at"])}
+    return {**out, "root_id": root_id} if root_id else out
 
 
 async def dm_read(c: Client, username: str, limit: int = 20, *, me: dict) -> dict:

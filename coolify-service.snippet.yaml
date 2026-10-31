@@ -40,6 +40,10 @@ services:
       # - RELAY_BOT_EDDIE_HMAC_SECRET=<eddie's mmbridge wake secret>
       # - RELAY_BOT_EDDIE_ROUTINE_URL=<Grok Bot routine webhook URL>
       # - RELAY_BOT_EDDIE_ROUTINE_KEY=<routine Bearer key>
+      # Optional tripwire alert to a Mattermost channel (all three or none; relay/README.md "Tripwire"):
+      # - RELAY_ALERT_URL=http://mattermost:8065
+      # - RELAY_ALERT_TOKEN=<dedicated alert bot token>
+      # - RELAY_ALERT_CHANNEL=<alert channel id>
     volumes:
       - relay-data:/data
     expose:

@@ -9,6 +9,7 @@ from urllib.parse import quote
 from app.errors import ToolError
 
 _IDENT = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}")
+_POST_ID = re.compile(r"[a-z0-9]{26}")   # Mattermost id: 26 chars a-z0-9
 MAX_MESSAGE = 16383
 DEFAULT_LIMIT, MAX_LIMIT = 20, 100
 
@@ -35,6 +36,15 @@ def limit(value) -> int:
         return DEFAULT_LIMIT
     if type(value) is not int or not 1 <= value <= MAX_LIMIT:
         raise _bad("limit must be an integer from 1 to %d." % MAX_LIMIT)
+    return value
+
+
+def post_id(value) -> str | None:
+    """Optional Mattermost post id (root_id, ADR-0015): None, or exactly 26 chars a-z0-9."""
+    if value is None:
+        return None
+    if not isinstance(value, str) or not _POST_ID.fullmatch(value):
+        raise _bad("root_id must be a Mattermost post id (26 characters a-z, 0-9).")
     return value
 
 

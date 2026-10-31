@@ -2,6 +2,10 @@
 All notable changes to this project. Format: Keep a Changelog style; newest first.
 
 ## [Unreleased]
+<!-- id: CHANG-20261030-b-s2-round-trip-reply | owner_agent: claude-code | date: 2026-10-30 -->
+### Added
+- Grok Bots answer where they were woken: the wake carries reply hints (version 2: reply tool, team/channel or DM username, thread root_id, issued_at) and post_channel / dm_send take an optional root_id to answer inside a thread; a root_id from another channel or DM, or one the bot cannot see, is refused as invalid_root and nothing is posted. The relay raises a tripwire (log relay_tripwire, optional Mattermost alert via RELAY_ALERT_URL/TOKEN/CHANNEL) on repeated bad signatures, rate-limit hits, routine 401/403 and double forwards, and /health shows double_forward_24h.
+
 <!-- id: CHANG-20261029-b-s1-wake-relay | owner_agent: claude-code | date: 2026-10-29 -->
 ### Added
 - Wake relay (relay/, own image and Coolify app): verifies mmbridge's signed wakes (signature, 5-minute window, per-bot secret) and starts each bot's Grok Bot routine with its Bearer routine key; forged, altered, stale and repeated wakes never start a routine, each bot is rate-limited (30/min, burst 10), and a routine or relay outage is retried by mmbridge then shown as one failed wake. Point a bot at it with `set-bot --wake-url https://<relay>/wake/<name>`; no mmbridge redeploy.

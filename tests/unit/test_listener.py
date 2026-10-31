@@ -4,6 +4,7 @@ connect_once() is one connection; run() is the lb5 reconnect loop (tests/unit/te
 import asyncio
 import json
 import logging
+import re
 
 import pytest
 
@@ -94,16 +95,39 @@ async def test_payload_matches_wake_contract(running):
     m, w, lis, state = running
     p = m.add_post(w["chosen"], w["rob"]["id"], "eddie is great")
     d = m.add_post(w["dm"], w["rob"]["id"], "ping")
-    await until(lambda: state.wake(d["id"]) is not None)
-    assert state.wake(p["id"]).payload == {
-        "version": 1, "kind": "post", "delivery_id": p["id"], "attempt": 1,
+    t = m.add_post(w["chosen"], w["rob"]["id"], "why red?", root_id=p["id"])
+    await until(lambda: state.wake(t["id"]) is not None)
+    top = dict(state.wake(p["id"]).payload)
+    issued = top.pop("issued_at")
+    assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", issued)
+    assert top == {
+        "version": 2, "kind": "post", "delivery_id": p["id"], "attempt": 1,
         "bot": {"user_id": w["bot"]["id"], "username": "eddie"},
         "channel": {"id": w["chosen"], "name": "town-square", "display_name": "Town-Square", "type": "O",
                     "team": "main"},
         "sender": {"user_id": w["rob"]["id"], "username": "rob"},
-        "post": {"id": p["id"], "message": "eddie is great", "create_at": "2023-11-14T22:13:20Z", "root_id": None}}
+        "post": {"id": p["id"], "message": "eddie is great", "create_at": "2023-11-14T22:13:20Z", "root_id": None},
+        "reply": {"tool": "post_channel", "team": "main", "channel": "town-square", "root_id": None}}
     dm = state.wake(d["id"]).payload
     assert dm["channel"]["type"] == "D" and dm["channel"]["team"] is None and dm["sender"]["username"] == "rob"
+    assert dm["version"] == 2 and dm["reply"] == {"tool": "dm_send", "username": "rob", "root_id": None}
+    thread = state.wake(t["id"]).payload
+    assert thread["post"]["root_id"] == p["id"]
+    assert thread["reply"] == {"tool": "post_channel", "team": "main", "channel": "town-square", "root_id": p["id"]}
+
+
+async def test_payload_issued_at_uses_listener_clock(served, tmp_path):
+    lis, state = make(served, tmp_path, clock=lambda: 1_800_000_000.0)
+    task = asyncio.create_task(lis.run())
+    try:
+        await until(lambda: lis.status == "ok")
+        m, w, _ = served
+        p = m.add_post(w["chosen"], w["rob"]["id"], "hi")
+        await until(lambda: state.wake(p["id"]) is not None)
+        assert state.wake(p["id"]).payload["issued_at"] == "2027-01-15T08:00:00Z"
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
 
 
 async def test_lookups_are_cached(running):

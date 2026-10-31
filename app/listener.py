@@ -450,13 +450,22 @@ class Listener:
         team_id = ch.get("team_id", h.get("team_id")) or ""
         team = await self._get(client, self._teams, team_id, "/teams/" + team_id) if team_id else None
         user = await self._get(client, self._users, w.user_id, "/users/" + w.user_id) or {}
+        channel = {"id": w.channel_id, "name": ch.get("name", h.get("channel_name")),
+                   "display_name": ch.get("display_name", h.get("channel_display_name")),
+                   "type": w.channel_type, "team": (team or {}).get("name")}
+        sender = user.get("username") or (h.get("sender_name") or "").lstrip("@") or None
+        # Reply hints (architecture B, ADR-0015): the tool and target the woken bot answers with. A thread reply
+        # is answered in its thread; a top-level channel post and any DM are answered at top level.
+        if w.channel_type == "D":
+            reply = {"tool": "dm_send", "username": sender, "root_id": None}
+        else:
+            reply = {"tool": "post_channel", "team": channel["team"], "channel": channel["name"], "root_id": w.root_id}
         return {
-            "version": 1, "kind": "post", "delivery_id": w.post_id, "attempt": 1,
+            "version": 2, "kind": "post", "delivery_id": w.post_id, "attempt": 1,
+            "issued_at": _iso(int(self.clock() * 1000)),
             "bot": dict(self._bot),
-            "channel": {"id": w.channel_id, "name": ch.get("name", h.get("channel_name")),
-                        "display_name": ch.get("display_name", h.get("channel_display_name")),
-                        "type": w.channel_type, "team": (team or {}).get("name")},
-            "sender": {"user_id": w.user_id,
-                       "username": user.get("username") or (h.get("sender_name") or "").lstrip("@") or None},
+            "channel": channel,
+            "sender": {"user_id": w.user_id, "username": sender},
             "post": {"id": w.post_id, "message": w.message, "create_at": _iso(w.create_at), "root_id": w.root_id},
+            "reply": reply,
         }

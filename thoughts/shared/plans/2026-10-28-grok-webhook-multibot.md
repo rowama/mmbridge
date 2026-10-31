@@ -175,7 +175,7 @@ run_all() {
 for i in 1 2 3; do run_all || { echo RUN $i FAILED; break; }; done   # DoD: concurrency slice -> full suite 3x, all pass
 python3 .eng/bin/eng-check . && python3 .eng/bin/eng-spec status .
 ```
-- [ ] block above exit 0 (all 3 runs); outputs pasted into the slice handoff
+- [x] block above exit 0 (all 3 runs); outputs pasted into the slice handoff
 #### Manual Verification
 - [ ] Rob: post "@eddie status?" in Town Square -> Eddie's answer appears there as Eddie, and no second Eddie run starts; reply inside an Eddie thread -> answer lands in that thread; DM "hi" -> answer in the DM.
 
