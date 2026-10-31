@@ -53,6 +53,7 @@ IN_FLIGHT_STALE_S = 60
 PRUNE_EVERY_S = 3600
 TRIP_WINDOW_S = 600
 BAD_SIG_MAX = 5
+BAD_SIG_BUCKET_S = 10    # HMAC failures counted in 10 s buckets: bounded state under a forged flood
 DRIFT_ALERT = 3
 ALERT_ENV = ("RELAY_ALERT_URL", "RELAY_ALERT_TOKEN", "RELAY_ALERT_CHANNEL")
 FIELDS = ("HMAC_SECRET", "ROUTINE_URL", "ROUTINE_KEY")
@@ -288,7 +289,7 @@ class Tripwire:
 
     def __init__(self, clock, alert=None):
         self.clock, self.alert = clock, alert
-        self._bad: list[float] = []               # HMAC failure times inside the window
+        self._bad: dict[int, int] = {}            # 10 s bucket -> HMAC failures (window: TRIP_WINDOW_S)
         self._alerted: dict[str, float] = {}
 
     def _trip(self, reason: str, alert: bool = True, **fields) -> None:
@@ -302,11 +303,19 @@ class Tripwire:
         self._alerted[reason] = now
         self.alert(reason, fields)
 
+    def bad_sig_count(self) -> int:
+        """HMAC failures in the last 10 min (bucket granularity); drops buckets that left the window."""
+        k = int(self.clock()) // BAD_SIG_BUCKET_S
+        for old in [b for b in self._bad if b <= k - TRIP_WINDOW_S // BAD_SIG_BUCKET_S]:
+            del self._bad[old]
+        return sum(self._bad.values())
+
     def bad_sig(self, bot: str) -> None:
-        now = self.clock()
-        self._bad = [t for t in self._bad if now - t < TRIP_WINDOW_S] + [now]
-        if len(self._bad) > BAD_SIG_MAX:
-            self._trip("bad_sig", bot=bot, failures_10m=len(self._bad))
+        k = int(self.clock()) // BAD_SIG_BUCKET_S
+        self._bad[k] = self._bad.get(k, 0) + 1
+        n = self.bad_sig_count()
+        if n > BAD_SIG_MAX:
+            self._trip("bad_sig", bot=bot, failures_10m=n)
 
     def rate_limited(self, bot: str) -> None:
         self._trip("rate_limited", bot=bot)

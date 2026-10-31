@@ -166,3 +166,17 @@ async def test_tool_schema_documents_root_id(bridge, mm):
         prop = tools[name]["inputSchema"]["properties"]["root_id"]
         assert "thread" in prop["description"].lower()
         assert "root_id" not in tools[name]["inputSchema"].get("required", [])
+
+
+@pytest.mark.parametrize("tool,where,args", [
+    ("post_channel", "dev", {"team": "rmlab", "channel": "dev"}),
+    ("dm_send", "dm_rob", {"username": "rob"}),
+])
+async def test_root_that_is_itself_a_reply_is_invalid_root(bridge, mm, tool, where, args):
+    """Mattermost threads have one level: a reply inside the conversation is not a thread root (review F1)."""
+    r = root(mm, where)
+    cid = mm.posts[r]["channel_id"]
+    reply = mm.add_post(cid, mm.user_by_name("rob")["id"], "a reply", root_id=r)["id"]
+    is_err, d = payload(await call(bridge, tool, {**args, "message": "x", "root_id": reply}, token=tok(mm, "eddie")))
+    assert is_err and d["code"] == "invalid_root"
+    assert posts_created(mm) == [] and no_post_call(mm)

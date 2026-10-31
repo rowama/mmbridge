@@ -40,3 +40,4 @@ Format: `- YYYY-MM-DD - <confusing | redundant | missing | broken> - <what happe
 - 2026-10-28 - confusing - Rob surprised at ship that no @mention is required although delta D1 stated it at CP-C - handled: retro 2026-10-28-v0.3.0: change 1 + K-1 (proposed)
 - 2026-10-28 - broken - concurrent agents raced on PROJECT_STATE/TODOS during ship; restored manually - handled: retro 2026-10-28-v0.3.0: K-3 (proposed)
 - 2026-10-28 - redundant - CP-S live demos deferred on lb1/lb2/lb4/lb4b/lb5 until listener wired - handled: L-009 + retro change 2 (proposed)
+- 2026-10-30 - broken - `eng-run code-review` (B-s2) wrote "No findings." in the review-findings file although the Codex raw output listed two P2 findings (findings parser misses the "[P2] title — path:lines" format); table filled by hand. Also `bash -lc` alone still gave codex-not-found inside eng-run; needed an explicit nvm bin PATH prefix (AGENTS.md runtime fact) - handled: no (kit bug for the planner)

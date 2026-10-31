@@ -546,3 +546,16 @@ async def test_alert_failure_is_logged_and_never_breaks_the_wake(clk, db, caplog
         r = await post(c, body, signed(body))
         await until(lambda: "relay_alert_failed" in caplog.text)
     assert r.status_code == 424 and alert_tok not in caplog.text
+
+
+def test_bad_sig_tracking_is_bounded_under_a_flood():
+    """Forged wakes bypass the rate limiter: the failure window keeps bounded state, not one entry per request
+    (review F2), and still trips on > 5 in 10 min."""
+    clk = Clock()
+    tw = rl.Tripwire(clk)
+    for i in range(5000):
+        clk.t = NOW + i * 0.1                       # 5000 failures over ~8 min
+        tw.bad_sig("eddie")
+    assert len(tw._bad) <= rl.TRIP_WINDOW_S // rl.BAD_SIG_BUCKET_S + 1
+    clk.t += rl.TRIP_WINDOW_S + rl.BAD_SIG_BUCKET_S  # all failures out of the window
+    assert tw.bad_sig_count() == 0

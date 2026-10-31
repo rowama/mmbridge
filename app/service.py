@@ -72,12 +72,13 @@ async def _root(c: Client, root_id: str) -> dict:
 
 
 def _same_channel(root: dict, channel_id: str) -> None:
-    if root.get("channel_id") != channel_id:
+    """The root is a top-level post (Mattermost threads have one level) in `channel_id`."""
+    if root.get("channel_id") != channel_id or root.get("root_id"):
         raise ToolError("invalid_root", _BAD_ROOT)
 
 
 async def check_root(c: Client, root_id: str, channel_id: str) -> None:
-    """The root must be a post in `channel_id` the bot can see; checked before any write."""
+    """The root must be a top-level post in `channel_id` the bot can see; checked before any write."""
     _same_channel(await _root(c, root_id), channel_id)
 
 
