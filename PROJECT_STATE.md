@@ -3,14 +3,15 @@ id: STATE
 type: project-state
 phase: implement
 status: active
-owner_agent: claude-code
+owner_agent: grok-bot
 date: 2026-10-31
 links: []
 triage: large             # unset | small | medium | large
 active_slice: SLICE-20261028-b-s3-multi-bot-registry-routing
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: []
+pending_approvals:
+  - "CP-S: thoughts/shared/slices/2026-10-28-b-s3-multi-bot-registry-routing.md - manual verification (live on Coolify: eddie still works after deploy, add grok, routing, revoke)"
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -25,16 +26,16 @@ acceptance: executable-specs   # v2.5: tests/acceptance/, see PROCESS.md 13
 > Update it at the end of every session. Keep it under one screen.
 
 ## Current phase
-implement (increment B: Grok Bot webhook wake + multi-bot; architecture B done, see Approval log). v0.3.0 Live bots shipped 2026-10-28 (93b4f7d, tag v0.3.0).
+implement (B-s3 verify PASS 2026-10-31, awaiting CP-S; increment B: Grok Bot webhook wake + multi-bot; architecture B done, see Approval log). v0.3.0 Live bots shipped 2026-10-28 (93b4f7d, tag v0.3.0).
 
 ## Goal (one sentence)
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[SLICE-20261028-b-s3-multi-bot-registry-routing](thoughts/shared/slices/2026-10-28-b-s3-multi-bot-registry-routing.md) (review: implemented by claude-code 2026-10-31, commits cfe29e2 + aa7ce74, not pushed; includes bin/set-bot). Previous: B-s2 [done](thoughts/shared/slices/2026-10-28-b-s2-round-trip-reply-root-id.md) (CP-S 2026-10-31), B-s1 [done](thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md) (CP-S 2026-10-30)
+[SLICE-20261028-b-s3-multi-bot-registry-routing](thoughts/shared/slices/2026-10-28-b-s3-multi-bot-registry-routing.md) (verify PASS 2026-10-31, commits cfe29e2 + aa7ce74 pushed; includes bin/set-bot; awaiting CP-S). Previous: B-s2 [done](thoughts/shared/slices/2026-10-28-b-s2-round-trip-reply-root-id.md) (CP-S 2026-10-31), B-s1 [done](thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md) (CP-S 2026-10-30)
 
 ## Next action
-Planner: eng-verify B-s3 (base e2f6091; Phase 3 block exit 0 x3 in the handoff; Codex review 1 P2 fixed), then push main (standing), then CP-S per plan Phase 3 Manual Verification (Before -> After line in the handoff), then eng-ship v0.4.0. Planner decisions listed in the slice Blockers. OWNER-GUIDE multi-bot text pending Rob's uncommitted edits (README "Several bots" has it).
+Rob: CP-S for B-s3 per plan Phase 3 Manual Verification (Action for Rob in the latest handoff; Before -> After there). Then planner: record CP-S, slice done, eng-ship v0.4.0. OWNER-GUIDE multi-bot text pending Rob's uncommitted edits (README "Several bots" has it).
 
 Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
 
@@ -74,7 +75,8 @@ none
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0010 (all accepted): [docs/decisions/](docs/decisions/)
 - Verification lb4b (PASS): [thoughts/shared/verification/2026-10-27-lb4b-drop-allowlist.md](thoughts/shared/verification/2026-10-27-lb4b-drop-allowlist.md)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-31_01-41-16_b-s3-implemented-awaiting-verify.md](thoughts/shared/handoffs/2026-10-31_01-41-16_b-s3-implemented-awaiting-verify.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-31_12-40-00_b-s3-verified-awaiting-cp-s.md](thoughts/shared/handoffs/2026-10-31_12-40-00_b-s3-verified-awaiting-cp-s.md)
+- B-s3 verify (PASS): [thoughts/shared/verification/2026-10-31-b-s3-multi-bot-registry-routing-verify.md](thoughts/shared/verification/2026-10-31-b-s3-multi-bot-registry-routing-verify.md)
 - B-s3 review (addressed): [thoughts/shared/verification/2026-10-31-slice-20261028-b-s3-multi-bot-registry-routing-review.md](thoughts/shared/verification/2026-10-31-slice-20261028-b-s3-multi-bot-registry-routing-review.md)
 - B-s2 review (addressed): [thoughts/shared/verification/2026-10-30-slice-20261028-b-s2-round-trip-reply-root-id-review.md](thoughts/shared/verification/2026-10-30-slice-20261028-b-s2-round-trip-reply-root-id-review.md)
 - Review lb4b (addressed, no findings): [thoughts/shared/verification/2026-10-27-slice-20261027-lb4b-drop-allowlist-review.md](thoughts/shared/verification/2026-10-27-slice-20261027-lb4b-drop-allowlist-review.md)
