@@ -1,7 +1,8 @@
 """Live-bots runtime started from the FastAPI lifespan (slice lb5, ADR-0007/0009; plan Phase 5).
 
 LiveRuntime.start(): LIVE_BOTS_ENABLED must be "true" (else health `disabled`), the store must decrypt
-(MMB_STORE_KEY; else `off`, log store_unreadable) and /data/state.db must be writable (else `off`, log
+(MMB_STORE_KEY; else `off`, log store_unreadable, and re-try every RELOAD_S so the first set-bot starts the
+listener without a restart, log store_appeared) and /data/state.db must be writable (else `off`, log
 state_unwritable). Then three tasks: Listener and Dispatcher each under supervise() (crash -> log task_crashed,
 health `degraded`, restart with backoff 1->60 s; MCP keeps serving) and the ConfigHolder watcher.
 ConfigHolder (PR-2) re-reads the store when its mtime changes (every RELOAD_S): a valid new config replaces the
@@ -137,7 +138,24 @@ class LiveRuntime:
             cfg = store.load(path, key)
         except StoreError as e:
             _log("store_unreadable", "error", code=e.code, detail=e.detail)
+            # Stay `off` but keep polling: the first set-bot (or a fixed key file) starts the listener, no restart.
+            self._tasks = [asyncio.create_task(self._await_store(path, key))]
             return
+        self._launch(path, key, cfg)
+
+    async def _await_store(self, path: str, key: str | None) -> None:
+        """Retry store.load every reload_s until it succeeds (logged once, no values), then launch."""
+        while True:
+            await asyncio.sleep(self.reload_s)
+            try:
+                cfg = store.load(path, key)
+            except StoreError:
+                continue
+            _log("store_appeared")
+            self._launch(path, key, cfg)
+            return
+
+    def _launch(self, path: str, key: str | None, cfg) -> None:
         try:
             self.state = State(self._data("state.db"))
         except StateError as e:
@@ -149,7 +167,7 @@ class LiveRuntime:
         self.holder.subscribe(self.listener.config_changed)
         self._http = self._http or httpx.AsyncClient()
         self.dispatcher = Dispatcher(self.state, self.holder.get, self._http, poll_s=self.poll_s)
-        self._tasks = [
+        self._tasks += [
             asyncio.create_task(supervise("listener", self.listener.run, self.crashed, self.restart_base_s)),
             asyncio.create_task(supervise("dispatcher", self.dispatcher.run, self.crashed, self.restart_base_s)),
             asyncio.create_task(self.holder.watch(self.reload_s)),

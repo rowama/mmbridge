@@ -1,4 +1,4 @@
-"""Live wiring (slice lb5, plan Phase 5): lifespan gating on LIVE_BOTS_ENABLED + store + state, /health listener
+﻿"""Live wiring (slice lb5, plan Phase 5): lifespan gating on LIVE_BOTS_ENABLED + store + state, /health listener
 and wake_failed_24h (PR-10), supervisor restarts (PR-4), startup delivery of pending wakes, coordinated store
 reload (PR-2). The app runs its real lifespan; Mattermost is the fake on a free port, the receiver in-process."""
 import asyncio
@@ -295,3 +295,20 @@ def test_config_holder_only_notifies_on_a_real_change(tmp_path, key):
     assert h.check() is False and seen == []
     save(tmp_path, key, "u" * 26)
     assert h.check() is True and seen == [("t" * 26, "u" * 26)] and h.generation == 1
+
+
+async def test_boot_without_store_then_set_bot_starts_listener_without_restart(served, tmp_path, key, caplog):
+    """Ops fix (Rob 2026-10-30): boot before bots.enc exists -> `off`; the first set-bot writes the store and the
+    runtime picks it up on its reload poll and starts the listener (no container restart)."""
+    m, town, base = served
+    with caplog.at_level(logging.INFO, logger="mmbridge"):
+        async with running(runtime(tmp_path, key, base), m) as c:
+            assert (await health(c))["listener"] == "off"
+            await asyncio.sleep(0.15)
+            assert not any(x[0] == "WS" for x in m.calls)
+            save(tmp_path, key, tok(m, "eddie"))
+            await listener_is(c, "ok")
+            await until(lambda: any(x[0] == "WS" for x in m.calls))
+            await mcp_works(c, m)
+    assert caplog.text.count('"event": "store_unreadable"') == 1
+    assert '"event": "store_appeared"' in caplog.text

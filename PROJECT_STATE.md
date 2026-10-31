@@ -36,7 +36,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 ## Next action
 B-s2 (round-trip reply, root_id, relay tripwire; plan Phase 2, security review required): implementer (Claude Code) runs eng-implement-slice on [the slice card](thoughts/shared/slices/2026-10-28-b-s2-round-trip-reply-root-id.md), then Codex review + eng-verify, then CP-S (Rob: "@eddie status?" answer in channel/thread/DM, no re-wake). OQ-B2 = verbatim body (spike), so no `text` fallback field needed. Then B-s3.
 
-B-s1 done (CP-S 2026-10-30). Ops lesson: if mmbridge boots with store_unreadable (no bots.enc yet), a config reload does not start the WS listener; restart the mmbridge container after the first set-bot (candidate fix/TODO). http-wake-internal-hosts slice (8c60bc8) done (CP-S 2026-10-30). Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
+B-s1 done (CP-S 2026-10-30). Ops: boot-before-store fixed 2026-10-30 (Rob "fix it now", small): if mmbridge boots with store_unreadable (no bots.enc yet) it stays `off` and re-tries the store every 30 s; the first set-bot starts the WS listener (log store_appeared). Restart no longer required after first set-bot (needs the new image on Coolify). http-wake-internal-hosts slice (8c60bc8) done (CP-S 2026-10-30). Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
 
 ## Blockers
 - none
