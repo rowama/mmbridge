@@ -51,6 +51,7 @@ See plan Phase 3 Manual Verification.
 - 2026-10-31 - claude-code - unit tests updated to the bot-first API and extended (store v2/migration/backup/rotation, state v2/migration incl. crash mid-migration + idempotent rerun, filter table with registered ids, admin multi-bot + wrapper, supervisor add/remove/rotate, revoked bot isolation, dead-target fairness, bot_removed, health counts, boot migration): 458 passed.
 - 2026-10-31 - claude-code - plan Phase 3 Automated Verification block verbatim (WSL, `:bs3` images), exit 0, all 3 runs: unit 458 passed; mcp 16 passed/36 skipped; live inprocess 36 passed (~96 s); live container 36 passed (~445 s). eng-check OK (3 pre-existing warnings); eng-spec status: lock approval ok, specs and DSL interface match the lock; eng-spec trace maps REQ-B1..B8 to test_grok_multibot.py.
 - 2026-10-31 - claude-code - Codex slice review (`eng-run code-review ... --base e2f6091`): 1 P2 (boot-time v1 store migration could overwrite a concurrent set-bot), fixed: `store.locked` (moved from admin) taken by the runtime, which re-reads and keeps an already-v2 file. Review file `addressed`. Phase 3 block re-run after the fix (see next entry).
+- 2026-10-31 - claude-code - Phase 3 block re-run after the review fix (aa7ce74), exit 0 all 3 runs: unit 459; mcp 16p/36s; live inprocess 36; live container 36; eng-check OK; eng-spec lock clean.
 
 ## Blockers / deviations from plan
 - Diff is ~2.1k added / ~0.5k removed lines (plan Phase 3 scope in one slice), well over the 100-200 line guideline.

@@ -3,7 +3,7 @@ id: STATE
 type: project-state
 phase: implement
 status: active
-owner_agent: grok-bot
+owner_agent: claude-code
 date: 2026-10-31
 links: []
 triage: large             # unset | small | medium | large
@@ -31,12 +31,12 @@ implement (increment B: Grok Bot webhook wake + multi-bot; architecture B done, 
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[SLICE-20261028-b-s3-multi-bot-registry-routing](thoughts/shared/slices/2026-10-28-b-s3-multi-bot-registry-routing.md) (in-progress, implementer claude-code via eng-run 2026-10-31; includes friendlier bin/set-bot per Rob 2026-10-30). Previous: B-s2 [done](thoughts/shared/slices/2026-10-28-b-s2-round-trip-reply-root-id.md) (CP-S 2026-10-31), B-s1 [done](thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md) (CP-S 2026-10-30)
+[SLICE-20261028-b-s3-multi-bot-registry-routing](thoughts/shared/slices/2026-10-28-b-s3-multi-bot-registry-routing.md) (review: implemented by claude-code 2026-10-31, commits cfe29e2 + aa7ce74, not pushed; includes bin/set-bot). Previous: B-s2 [done](thoughts/shared/slices/2026-10-28-b-s2-round-trip-reply-root-id.md) (CP-S 2026-10-31), B-s1 [done](thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md) (CP-S 2026-10-30)
 
 ## Next action
-B-s3 implement started (eng-run implement, claude-code, 2026-10-31): plan Phase 3 + friendlier `bin/set-bot` wrapper (Rob 2026-10-30). Then Codex review, eng-verify, push (standing), CP-S per plan Phase 3 Manual Verification. B-s2 done (CP-S 2026-10-31, see Approval log).
+Planner: eng-verify B-s3 (base e2f6091; Phase 3 block exit 0 x3 in the handoff; Codex review 1 P2 fixed), then push main (standing), then CP-S per plan Phase 3 Manual Verification (Before -> After line in the handoff), then eng-ship v0.4.0. Planner decisions listed in the slice Blockers. OWNER-GUIDE multi-bot text pending Rob's uncommitted edits (README "Several bots" has it).
 
-B-s1 done (CP-S 2026-10-30). Ops: boot-before-store fixed 2026-10-30 (Rob "fix it now", small): if mmbridge boots with store_unreadable (no bots.enc yet) it stays `off` and re-tries the store every 30 s; the first set-bot starts the WS listener (log store_appeared). Restart no longer required after first set-bot (needs the new image on Coolify). http-wake-internal-hosts slice (8c60bc8) done (CP-S 2026-10-30). Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
+Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
 
 ## Blockers
 - none
@@ -74,7 +74,8 @@ none
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0010 (all accepted): [docs/decisions/](docs/decisions/)
 - Verification lb4b (PASS): [thoughts/shared/verification/2026-10-27-lb4b-drop-allowlist.md](thoughts/shared/verification/2026-10-27-lb4b-drop-allowlist.md)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-30_22-38-17_b-s2-implemented-awaiting-verify.md](thoughts/shared/handoffs/2026-10-30_22-38-17_b-s2-implemented-awaiting-verify.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-31_01-41-16_b-s3-implemented-awaiting-verify.md](thoughts/shared/handoffs/2026-10-31_01-41-16_b-s3-implemented-awaiting-verify.md)
+- B-s3 review (addressed): [thoughts/shared/verification/2026-10-31-slice-20261028-b-s3-multi-bot-registry-routing-review.md](thoughts/shared/verification/2026-10-31-slice-20261028-b-s3-multi-bot-registry-routing-review.md)
 - B-s2 review (addressed): [thoughts/shared/verification/2026-10-30-slice-20261028-b-s2-round-trip-reply-root-id-review.md](thoughts/shared/verification/2026-10-30-slice-20261028-b-s2-round-trip-reply-root-id-review.md)
 - Review lb4b (addressed, no findings): [thoughts/shared/verification/2026-10-27-slice-20261027-lb4b-drop-allowlist-review.md](thoughts/shared/verification/2026-10-27-slice-20261027-lb4b-drop-allowlist-review.md)
 - Review lb3 (addressed, no findings): [thoughts/shared/verification/2026-10-27-slice-20261027-lb3-listener-filters-review.md](thoughts/shared/verification/2026-10-27-slice-20261027-lb3-listener-filters-review.md)
