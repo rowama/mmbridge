@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import stat
@@ -6,17 +7,22 @@ import pytest
 from cryptography.fernet import Fernet
 
 from app import store
-from app.store import BotConfig, StoreError
+from app.store import BotEntry, Store, StoreError
 
 CH = "abcdefghijklmnopqrstuvwxyz"   # 26-char Mattermost id (legacy channels key)
 TOKEN = "mmtoken-abcdefghijklmnop-9876"
+TOKEN2 = "mmtoken-grokgrokgrokgrok-5432"
 SECRET = "s" * 43
 
 
-def cfg(**kw):
-    d = dict(token=TOKEN, wake_url="https://wake.example/hook", wake_secret=SECRET)
+def bot(name="eddie", **kw):
+    d = dict(token=TOKEN, wake_url="https://wake.example/hook", wake_secret=SECRET, name=name)
     d.update(kw)
-    return BotConfig(**d)
+    return BotEntry(**d)
+
+
+def cfg(**kw):
+    return Store(bots={"eddie": bot(**kw)})
 
 
 @pytest.fixture
@@ -36,8 +42,10 @@ def _code(fn, *a):
 
 
 def test_roundtrip(path, key):
-    store.save(path, key, cfg())
-    assert store.load(path, key) == cfg()
+    st = Store(bots={"eddie": bot(user_id="u-eddie", username="eddie"),
+                     "grok": bot("grok", token=TOKEN2, wake_url="http://relay:8080/wake/grok", wake_secret="g" * 40)})
+    store.save(path, key, st)
+    assert store.load(path, key) == st
 
 
 def test_file_is_ciphertext_mode_0600(path, key):
@@ -45,7 +53,7 @@ def test_file_is_ciphertext_mode_0600(path, key):
     raw = open(path, "rb").read()
     assert TOKEN.encode() not in raw and SECRET.encode() not in raw and b"wake.example" not in raw
     assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
-    assert os.listdir(os.path.dirname(path)) == ["bots.enc"]   # no tmp left behind
+    assert os.listdir(os.path.dirname(path)) == ["bots.enc"]   # no tmp, no backup for a fresh v2 store
 
 
 def test_wrong_key_unreadable(path, key):
@@ -77,7 +85,7 @@ def test_tamper_unreadable(path, key):
 
 
 def test_repr_masks_token_and_secret():
-    r = repr(cfg()) + str(cfg())
+    r = repr(cfg()) + str(cfg()) + repr(bot()) + str(bot())
     assert TOKEN not in r and SECRET not in r and "9876" in r
 
 
@@ -88,22 +96,35 @@ def test_store_error_carries_no_key_material(path, key):
 
 
 def _write_raw(path, key, obj):
-    import json
     open(path, "wb").write(Fernet(key.encode()).encrypt(json.dumps(obj).encode()))
 
 
-def _raw(**bot):
-    b = {"token": TOKEN, "wake_url": "https://w.example/h", "wake_secret": SECRET}
-    b.update(bot)
-    return b
+def _raw(**b):
+    d = {"token": TOKEN, "wake_url": "https://w.example/h", "wake_secret": SECRET}
+    d.update(b)
+    return d
+
+
+def _v2(**b):
+    d = {"token": TOKEN, "user_id": "", "username": "", "wake": {"url": "https://w.example/h", "secret": SECRET}}
+    d.update(b)
+    return d
 
 
 @pytest.mark.parametrize("obj,detail", [
-    ({"version": 2, "bot": _raw()}, "unsupported_version"),
+    ({"version": 3, "bots": {}}, "unsupported_version"),
     ({"version": 1, "bot": {k: v for k, v in _raw().items() if k != "token"}}, "token"),
     ({"version": 1, "bot": _raw(wake_secret="short")}, "wake_secret"),
     ({"version": 1, "bot": _raw(wake_url="http://w.example/h")}, "wake_url"),
     ({"version": 1}, "bot"),
+    ({"version": 2}, "bots"),
+    ({"version": 2, "bots": {"Eddie": _v2()}}, "name"),
+    ({"version": 2, "bots": {"-x": _v2()}}, "name"),
+    ({"version": 2, "bots": {"a" * 33: _v2()}}, "name"),
+    ({"version": 2, "bots": {"eddie": _v2(), "grok": _v2()}}, "token: already used by bot eddie"),
+    ({"version": 2, "bots": {"eddie": _v2(user_id="u1"), "grok": _v2(token=TOKEN2, user_id="u1")}}, "user_id"),
+    ({"version": 2, "bots": {"eddie": _v2(wake=None)}}, "wake"),
+    ({"version": 2, "bots": {"eddie": "x"}}, "bots.eddie"),
     ([1, 2], "format"),
 ])
 def test_load_validates(path, key, obj, detail):
@@ -116,23 +137,80 @@ def test_load_validates(path, key, obj, detail):
 def test_legacy_channels_key_loads_and_is_ignored(path, key, legacy):
     # pre-lb4b /data/bots.enc files carry a "channels" list; membership is the filter now (delta plan)
     _write_raw(path, key, {"version": 1, "bot": _raw(channels=legacy)})
-    cfg = store.load(path, key)
-    assert cfg == BotConfig(token=TOKEN, wake_url="https://w.example/h", wake_secret=SECRET)
-    assert not hasattr(cfg, "channels")
+    st = store.load(path, key)
+    assert st.bots == {"bot": BotEntry(token=TOKEN, wake_url="https://w.example/h", wake_secret=SECRET, name="bot")}
+    assert not hasattr(st.bots["bot"], "channels")
 
 
-def test_save_writes_no_channels_key(path, key):
-    import json
-    store.save(path, key, cfg())
+def test_save_writes_v2_document_without_channels(path, key):
+    store.save(path, key, cfg(user_id="u-eddie", username="eddie"))
     doc = json.loads(Fernet(key.encode()).decrypt(open(path, "rb").read()))
-    assert doc == {"version": 1, "bot": {"token": TOKEN, "wake_url": "https://wake.example/hook",
-                                         "wake_secret": SECRET}}
+    assert doc == {"version": 2, "bots": {"eddie": {"token": TOKEN, "user_id": "u-eddie", "username": "eddie",
+                                                    "wake": {"url": "https://wake.example/hook", "secret": SECRET}}}}
+
+
+# --- B-s3 v1 -> v2 migration (ADR-0013) ----------------------------------------------
+def test_v1_loads_as_one_named_bot_and_first_save_keeps_v1_backup(path, key):
+    _write_raw(path, key, {"version": 1, "bot": _raw(channels=[CH])})
+    v1_blob = open(path, "rb").read()
+    st = store.load(path, key)
+    assert st.migrated_from == 1 and list(st.bots) == ["bot"]
+    store.rename_v1(st, "Eddie.Bot", "u-eddie")
+    assert list(st.bots) == ["eddie-bot"] and st.bots["eddie-bot"].user_id == "u-eddie"
+    store.save(path, key, st)
+    bak = store.backup_path(path)
+    assert open(bak, "rb").read() == v1_blob                          # rollback file = the v0.3.0 store
+    assert stat.S_IMODE(os.stat(bak).st_mode) == 0o600
+    assert json.loads(Fernet(key.encode()).decrypt(open(bak, "rb").read()))["version"] == 1
+    again = store.load(path, key)
+    assert again.migrated_from is None and list(again.bots) == ["eddie-bot"]
+    assert again.bots["eddie-bot"].token == TOKEN
+    st2 = store.load(path, key)                                       # later saves never touch the backup
+    st2.bots["grok"] = bot("grok", token=TOKEN2)
+    store.save(path, key, st2)
+    assert open(bak, "rb").read() == v1_blob
+
+
+def test_v1_load_name_fallback_and_rename_rules():
+    assert store.name_from_username("eddie") == "eddie"
+    assert store.name_from_username("Grok_Bot") == "grok-bot"
+    assert store.name_from_username(None) == "bot" and store.name_from_username("___") == "bot"
+    assert store.name_from_username("x" * 40) == "x" * 32
+    st = Store(bots={"bot": bot("bot")}, migrated_from=1)
+    store.rename_v1(st, None)
+    assert list(st.bots) == ["bot"]
+    v2 = cfg()
+    assert store.rename_v1(v2, "other") is v2 and list(v2.bots) == ["eddie"]   # v2: no-op
+
+
+def test_legacy_owner_maps_v1_rows_to_the_right_bot():
+    st = Store(bots={"eddie": bot(user_id="u-eddie"), "grok": bot("grok", token=TOKEN2, user_id="u-grok")})
+    owner = store.legacy_owner(st)
+    assert owner("u-grok") == "grok" and owner("u-eddie") == "eddie" and owner(None) == "bot"
+    assert store.legacy_owner(cfg())("u-unknown") == "eddie"
+    assert store.legacy_owner(Store())(None) == "bot"
+
+
+@pytest.mark.parametrize("change,detail", [
+    (dict(token=TOKEN), "token: already used by bot eddie"),
+    (dict(user_id="u-eddie"), "user_id: same Mattermost user as bot eddie"),
+])
+def test_save_rejects_duplicate_token_or_user(path, key, change, detail):
+    st = Store(bots={"eddie": bot(user_id="u-eddie"), "grok": bot("grok", **{"token": TOKEN2, **change})})
+    e = _code(store.save, path, key, st)
+    assert e.code == "store_invalid" and detail in e.detail and not os.path.exists(path)
+
+
+@pytest.mark.parametrize("name", ["Eddie", "-eddie", "ed die", "a" * 33, ""])
+def test_save_rejects_bad_names(path, key, name):
+    e = _code(store.save, path, key, Store(bots={name: bot(name)}))
+    assert e.code == "store_invalid" and "name" in e.detail
 
 
 def test_http_wake_allowed_only_with_test_flag(path, key, monkeypatch):
     _write_raw(path, key, {"version": 1, "bot": _raw(wake_url="http://w.example/h")})
     monkeypatch.setenv("LIVE_ALLOW_HTTP_WAKE", "true")
-    assert store.load(path, key).wake_url == "http://w.example/h"
+    assert store.load(path, key).bots["bot"].wake_url == "http://w.example/h"
 
 
 def test_save_validates_and_writes_nothing(path, key):
@@ -151,6 +229,19 @@ def test_rotate_key_roundtrip(path):
     assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
 
 
+def test_rotate_covers_v2_and_the_v1_backup(path):
+    old, new = Fernet.generate_key().decode(), Fernet.generate_key().decode()
+    _write_raw(path, old, {"version": 1, "bot": _raw()})
+    st = store.load(path, old)
+    st.bots["grok"] = bot("grok", token=TOKEN2)
+    store.save(path, old, st)
+    store.rotate(path, new, old)
+    assert sorted(store.load(path, new).bots) == ["bot", "grok"]
+    bak = json.loads(Fernet(new.encode()).decrypt(open(store.backup_path(path), "rb").read()))
+    assert bak["version"] == 1 and bak["bot"]["token"] == TOKEN       # rollback file readable with the new key
+    assert stat.S_IMODE(os.stat(store.backup_path(path)).st_mode) == 0o600
+
+
 def test_rotate_with_wrong_old_key_leaves_file(path):
     old, new = Fernet.generate_key().decode(), Fernet.generate_key().decode()
     store.save(path, old, cfg())
@@ -160,14 +251,15 @@ def test_rotate_with_wrong_old_key_leaves_file(path):
 
 
 # --- REQ-A7: redaction of the stored token/secret in logs ---------------------------
-def test_loaded_token_and_secret_redacted_in_logs(path, key, caplog):
+def test_loaded_tokens_and_secrets_of_all_bots_redacted_in_logs(path, key, caplog):
     from app import logging as mlog
     mlog.setup()
-    store.save(path, key, cfg())
+    store.save(path, key, Store(bots={"eddie": bot(), "grok": bot("grok", token=TOKEN2, wake_secret="g" * 40)}))
     store.load(path, key)
     with caplog.at_level(logging.INFO, logger="mmbridge"):
-        mlog.log.info("oops token=%s secret=%s", TOKEN, SECRET)
+        mlog.log.info("oops token=%s secret=%s token2=%s secret2=%s", TOKEN, SECRET, TOKEN2, "g" * 40)
     assert TOKEN not in caplog.text and SECRET not in caplog.text and "[REDACTED]" in caplog.text
+    assert TOKEN2 not in caplog.text and "g" * 40 not in caplog.text
 
 
 def test_https_ok_rejects_unparseable_urls():

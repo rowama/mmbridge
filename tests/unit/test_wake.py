@@ -11,14 +11,15 @@ import httpx
 import pytest
 
 from app import store
-from app.state import State
-from app.store import BotConfig
+from app.state import State, meta_key
+from app.store import BotEntry, Store
 from app.wake import Dispatcher, sign, token_fp, verify
 from drivers.wake_receiver import WakeReceiver
 
 TOKEN = "tok-eddie-" + "x" * 20
 SECRET = "k" * 40
 URL = "https://receiver.test/wake"
+BOT = "eddie"
 
 
 class Clock:
@@ -50,8 +51,12 @@ def rx(clk):
     return WakeReceiver(SECRET, clock=clk)
 
 
-def cfg(url=URL, secret=SECRET):
-    return BotConfig(token=TOKEN, wake_url=url, wake_secret=secret)
+def entry(url=URL, secret=SECRET, token=TOKEN, name=BOT):
+    return BotEntry(token=token, wake_url=url, wake_secret=secret, name=name)
+
+
+def cfg(url=URL, secret=SECRET, token=TOKEN):
+    return Store(bots={BOT: entry(url, secret, token)})
 
 
 def payload(post_id="p-1", bot_id="u-eddie"):
@@ -65,18 +70,18 @@ def payload(post_id="p-1", bot_id="u-eddie"):
 
 
 def enqueue(state, post_id="p-1", bot_id="u-eddie"):
-    state.enqueue(post_id, "c-1", payload(post_id, bot_id), post_create_at=1_800_000_000_000)
+    state.enqueue(BOT, post_id, "c-1", payload(post_id, bot_id), post_create_at=1_800_000_000_000)
 
 
 def resolve(state, bot_id="u-eddie", token=TOKEN):
     """What the listener records after users/me for the current token."""
-    state.set_meta("bot_user_id", bot_id)
-    state.set_meta("bot_identity", token_fp(token) + ":" + bot_id)
+    state.set_meta(meta_key(BOT, "user_id"), bot_id)
+    state.set_meta(meta_key(BOT, "identity"), token_fp(token) + ":" + bot_id)
 
 
 def dispatcher(state, http, c=None, clk=None, **kw):
-    if state.get_meta("bot_identity") is None:
-        resolve(state, state.get_meta("bot_user_id") or "u-eddie")
+    if state.get_meta(meta_key(BOT, "identity")) is None:
+        resolve(state, state.get_meta(meta_key(BOT, "user_id")) or "u-eddie")
     return Dispatcher(state, c or cfg(), http, clock=clk or state.clock, **kw)
 
 
@@ -159,7 +164,7 @@ async def test_delivered_request_is_signed_as_receiver_recomputes(state, rx, clk
     enqueue(state)
     async with client(rx.transport()) as http:
         assert await dispatcher(state, http).tick() == 1
-    assert state.wake("p-1").status == "delivered"
+    assert state.wake(BOT, "p-1").status == "delivered"
     [req] = rx.requests
     h, body = req["headers"], req["body"]
     assert req["status"] == 204 and h["x-mmb-delivery"] == "p-1"
@@ -185,7 +190,7 @@ async def test_2xx_is_delivered(state, status):
     enqueue(state)
     async with client(mock(status)) as http:
         await dispatcher(state, http).tick()
-    w = state.wake("p-1")
+    w = state.wake(BOT, "p-1")
     assert w.status == "delivered" and w.delivered_at is not None
 
 
@@ -200,18 +205,18 @@ async def test_retryable_backs_off_2_4_8_16_32_then_fails(state, clk, caplog, st
         d = dispatcher(state, http)
         for delay in (2, 4, 8, 16):
             assert await d.tick() == 1
-            w = state.wake("p-1")
+            w = state.wake(BOT, "p-1")
             assert (w.status, w.last_error, w.next_at) == ("retry", err, clk.t + delay)
             clk.t += delay - 1
             assert await d.tick() == 0                   # not due yet
             clk.t += 1
         with caplog.at_level(logging.INFO, logger="mmbridge"):
             assert await d.tick() == 1
-    w = state.wake("p-1")
+    w = state.wake(BOT, "p-1")
     assert (w.status, w.attempts, w.last_error) == ("failed", 5, err)
     assert clk.t - t0 == 2 + 4 + 8 + 16
     failed = [json.loads(r.getMessage()) for r in caplog.records if "wake_failed" in r.getMessage()]
-    assert failed == [{"event": "wake_failed", "post_id": "p-1", "attempt": 5, "error": err}]
+    assert failed == [{"event": "wake_failed", "bot": BOT, "post_id": "p-1", "attempt": 5, "error": err}]
 
 
 @pytest.mark.parametrize("status", [400, 401, 403, 404, 410])
@@ -220,7 +225,7 @@ async def test_other_4xx_is_permanent(state, status, caplog):
     with caplog.at_level(logging.INFO, logger="mmbridge"):
         async with client(mock(status)) as http:
             await dispatcher(state, http).tick()
-    w = state.wake("p-1")
+    w = state.wake(BOT, "p-1")
     assert (w.status, w.attempts, w.last_error) == ("failed", 1, "http_%d" % status)
     assert any("wake_failed" in r.getMessage() for r in caplog.records)
 
@@ -230,7 +235,7 @@ async def test_receiver_rejecting_signature_is_permanent_failure(state, rx):
     async with client(rx.transport()) as http:
         await dispatcher(state, http, c=cfg(secret="w" * 40)).tick()
     assert rx.requests[0]["status"] == 401
-    w = state.wake("p-1")
+    w = state.wake(BOT, "p-1")
     assert (w.status, w.last_error) == ("failed", "http_401")
 
 
@@ -248,19 +253,29 @@ async def test_attempt_number_is_sent_and_signed(state, rx, clk):
     assert rx.requests[1]["status"] == 204
 
 
-async def test_concurrency_4(state):
+async def test_concurrency_4_total_2_per_bot(state):
     for i in range(6):
         enqueue(state, "p-%d" % i)
+    for i in range(6):
+        state.enqueue("grok", "g-%d" % i, "c-1", {**payload("g-%d" % i, "u-grok"), "delivery_id": "grok:g-%d" % i})
+    state.set_meta(meta_key("grok", "identity"), token_fp("tok-grok-" + "y" * 20) + ":u-grok")
+    two = Store(bots={BOT: entry(), "grok": entry(token="tok-grok-" + "y" * 20, name="grok")})
+    per_bot = {}
     inflight, peak, gate = [0], [0], asyncio.Event()
 
     async def handler(request):
+        bot = request.headers["x-mmb-delivery"].partition(":")[0] if ":" in request.headers["x-mmb-delivery"] \
+            else BOT
         inflight[0] += 1
+        per_bot[bot] = per_bot.get(bot, 0) + 1
         peak[0] = max(peak[0], inflight[0])
+        assert per_bot[bot] <= 2
         await gate.wait()
         inflight[0] -= 1
+        per_bot[bot] -= 1
         return httpx.Response(204)
     async with client(httpx.MockTransport(handler)) as http:
-        t = asyncio.create_task(dispatcher(state, http).tick())
+        t = asyncio.create_task(dispatcher(state, http, c=two).tick())
         for _ in range(200):
             if inflight[0] >= 4:
                 break
@@ -304,14 +319,14 @@ async def test_crash_mid_post_redelivers_exactly_once_after_restart(tmp_path, cl
         t.cancel()
         with pytest.raises(asyncio.CancelledError):
             await t
-        assert s1.wake("p-1").status == "in_flight"
+        assert s1.wake(BOT, "p-1").status == "in_flight"
         rx.hang = None
         clk.t += 61                                     # lease (30 s) and owner heartbeat (60 s) expired
         s2 = State(path, instance_id="d2", clock=clk)
         d2 = dispatcher(s2, http)
         assert await d2.tick() == 1
         assert await d2.tick() == 0
-    assert s2.wake("p-1").status == "delivered"
+    assert s2.wake(BOT, "p-1").status == "delivered"
     assert list(rx.accepted) == ["p-1"]
     assert [r["status"] for r in rx.requests] == [None, 204]  # the cancelled one never answered
 
@@ -323,7 +338,7 @@ async def test_two_dispatchers_never_double_send(tmp_path, clk, rx):
         enqueue(s1, "p-%d" % i)
     async with client(rx.transport()) as http:
         d1, d2 = dispatcher(s1, http), dispatcher(s2, http)
-        for _ in range(4):
+        for _ in range(6):                               # per-bot cap 2: 2 sends per pass
             await asyncio.gather(d1.tick(), d2.tick())
     assert len(rx.requests) == 10 and len(rx.accepted) == 10
     assert sorted([d1.owner, d2.owner]) == [False, True]  # one owner; the other stands by
@@ -358,7 +373,7 @@ async def test_run_loop_recovers_stale_and_delivers(tmp_path, clk, rx):
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
-    assert list(rx.accepted) == ["p-1"] and s2.wake("p-1").status == "delivered"
+    assert list(rx.accepted) == ["p-1"] and s2.wake(BOT, "p-1").status == "delivered"
 
 
 # --- PR-8: prune schedule -------------------------------------------------------------------------------------
@@ -369,20 +384,20 @@ def age(state, post_id, days):
 async def test_prune_runs_at_start_and_every_6h(state, clk, rx):
     enqueue(state, "a")
     state.claim_due(clk())
-    state.mark_failed("a", "http_404")
+    state.mark_failed(BOT, "a", "http_404")
     age(state, "a", 8)
     async with client(rx.transport()) as http:
         d = dispatcher(state, http)
         enqueue(state, "b")
         await d.tick()                                   # start: prunes 8-day-old "a", delivers "b"
-        assert state.wake("a") is None and state.wake("b").status == "delivered"
+        assert state.wake(BOT, "a") is None and state.wake(BOT, "b").status == "delivered"
         age(state, "b", 8)
         clk.t += 6 * 3600 - 1
         await d.tick()
-        assert state.wake("b") is not None               # next prune not due yet
+        assert state.wake(BOT, "b") is not None               # next prune not due yet
         clk.t += 1
         await d.tick()                                   # 6 h after the start prune
-    assert state.wake("b") is None
+    assert state.wake(BOT, "b") is None
 
 
 # --- PR-2: config at send time, bot rotation -----------------------------------------------------------------
@@ -407,18 +422,18 @@ async def test_secret_and_url_rotated_after_enqueue_use_new_values(tmp_path, sta
         store.save(path, key, cfg(url="https://new.test/wake", secret="n" * 40))
         await d.tick()
     assert old_rx.requests == [] and list(new_rx.accepted) == ["p-1"]
-    assert state.wake("p-1").status == "delivered"
+    assert state.wake(BOT, "p-1").status == "delivered"
 
 
 async def test_bot_rotated_fails_old_wakes(state, rx, caplog):
     enqueue(state, "p-old", bot_id="u-eddie")
     enqueue(state, "p-new", bot_id="u-ada")
-    state.set_meta("bot_user_id", "u-ada")               # listener resolved a different bot (token changed)
+    state.set_meta(meta_key(BOT, "user_id"), "u-ada")               # listener resolved a different bot (token changed)
     with caplog.at_level(logging.INFO, logger="mmbridge"):
         async with client(rx.transport()) as http:
             await dispatcher(state, http).tick()
-    assert (state.wake("p-old").status, state.wake("p-old").last_error) == ("failed", "bot_rotated")
-    assert state.wake("p-new").status == "delivered"
+    assert (state.wake(BOT, "p-old").status, state.wake(BOT, "p-old").last_error) == ("failed", "bot_rotated")
+    assert state.wake(BOT, "p-new").status == "delivered"
     assert list(rx.accepted) == ["p-new"]
     assert any("bot_rotated" in r.getMessage() for r in caplog.records)
 
@@ -428,7 +443,7 @@ async def test_no_identity_sends_nothing(state, rx):
     enqueue(state)
     async with client(rx.transport()) as http:
         assert await Dispatcher(state, cfg(), http, clock=state.clock).tick() == 0
-    assert rx.requests == [] and state.wake("p-1").status != "delivered" and state.wake("p-1").attempts == 0
+    assert rx.requests == [] and state.wake(BOT, "p-1").status != "delivered" and state.wake(BOT, "p-1").attempts == 0
 
 
 async def test_restart_after_token_swap_waits_then_fails_old_wakes(state, rx):
@@ -440,7 +455,7 @@ async def test_restart_after_token_swap_waits_then_fails_old_wakes(state, rx):
         assert rx.requests == []
         resolve(state, "u-ada")                                # listener resolved users/me for the new token
         await d.tick()
-    assert (state.wake("p-old").status, state.wake("p-old").last_error) == ("failed", "bot_rotated")
+    assert (state.wake(BOT, "p-old").status, state.wake(BOT, "p-old").last_error) == ("failed", "bot_rotated")
     assert rx.requests == []
 
 
@@ -461,21 +476,21 @@ async def test_drip_response_hits_overall_deadline(state, monkeypatch):
         t0 = time.monotonic()
         await dispatcher(state, http).tick()
         assert time.monotonic() - t0 < 1.5
-    w = state.wake("p-1")
+    w = state.wake(BOT, "p-1")
     assert w.status != "delivered" and w.last_error == "timeout"
 
 
 async def test_identity_is_one_snapshot_not_split_keys(state, rx):
     """Review 3 P2: a stale bot_user_id next to a fresh fingerprint must never approve old wakes."""
     enqueue(state, "p-old", bot_id="u-eddie")
-    state.set_meta("bot_user_id", "u-eddie")                        # stale id from the previous token
+    state.set_meta(meta_key(BOT, "user_id"), "u-eddie")                        # stale id from the previous token
     state.set_meta("bot_token_fp", token_fp(TOKEN))                  # split keys are not trusted
     async with client(rx.transport()) as http:
         d = Dispatcher(state, cfg(), http, clock=state.clock)
         assert await d.tick() == 0 and rx.requests == []
-        state.set_meta("bot_identity", token_fp(TOKEN) + ":u-ada")   # listener publishes id + token together
+        state.set_meta(meta_key(BOT, "identity"), token_fp(TOKEN) + ":u-ada")   # listener publishes id + token together
         await d.tick()
-    assert (state.wake("p-old").status, state.wake("p-old").last_error) == ("failed", "bot_rotated")
+    assert (state.wake(BOT, "p-old").status, state.wake(BOT, "p-old").last_error) == ("failed", "bot_rotated")
     assert rx.requests == []
 
 
@@ -484,7 +499,7 @@ async def test_malformed_wake_url_fails_wake_and_keeps_dispatching(state, rx):
     enqueue(state, "p-1")
     async with client(rx.transport()) as http:
         await dispatcher(state, http, c=cfg(url="https://example.org:bad/wake")).tick()
-        assert (state.wake("p-1").status, state.wake("p-1").last_error) == ("failed", "invalid_url")
+        assert (state.wake(BOT, "p-1").status, state.wake(BOT, "p-1").last_error) == ("failed", "invalid_url")
         enqueue(state, "p-2")
         await dispatcher(state, http).tick()
     assert list(rx.accepted) == ["p-2"]
@@ -499,5 +514,128 @@ async def test_unexpected_send_errors_retry_and_dispatch_continues(state, handle
     enqueue(state, "p-1")
     async with client(httpx.MockTransport(handler)) as http:
         await dispatcher(state, http).tick()
-    w = state.wake("p-1")
+    w = state.wake(BOT, "p-1")
     assert (w.status, w.last_error) == ("retry", err)
+
+
+# --- B-s3 shared dispatcher: per-row bot config, fairness, removed bots (ADR-0014) --------------------------------
+GROK_TOKEN = "tok-grok-" + "y" * 20
+
+
+def two_bots(grok_url="https://dead.test/wake"):
+    return Store(bots={BOT: entry(), "grok": entry(url=grok_url, token=GROK_TOKEN, name="grok")})
+
+
+def enqueue_grok(state, post_id):
+    state.enqueue("grok", post_id, "c-1", {**payload(post_id, "u-grok"), "delivery_id": "grok:" + post_id})
+
+
+async def test_dead_target_of_one_bot_never_blocks_the_other(state, clk):
+    """B8 fairness: grok's receiver hangs; grok holds at most its 2 slots and eddie's wakes still go out at once."""
+    resolve(state)
+    state.set_meta(meta_key("grok", "identity"), token_fp(GROK_TOKEN) + ":u-grok")
+    for i in range(5):
+        enqueue_grok(state, "g-%d" % i)
+    hang, seen = asyncio.Event(), []
+
+    async def handler(request):
+        seen.append(request.headers["x-mmb-delivery"])
+        if request.url.host == "dead.test":
+            await hang.wait()
+        return httpx.Response(204)
+    async with client(httpx.MockTransport(handler)) as http:
+        d = dispatcher(state, http, c=two_bots())
+        assert await d._pass() == 2                              # grok: 2 in flight, 3 waiting
+        assert d.in_flight("grok") == 2
+        assert await d._pass() == 0                              # cap: no more for grok
+        enqueue(state, "p-1")
+        enqueue(state, "p-2")
+        enqueue(state, "p-3")
+        assert await d._pass() == 2                              # eddie gets its own 2 slots immediately
+        for _ in range(100):
+            if state.wake(BOT, "p-1").status == "delivered" and state.wake(BOT, "p-2").status == "delivered":
+                break
+            await asyncio.sleep(0.01)
+        assert await d._pass() == 1                              # and the third once a slot is free
+        await asyncio.sleep(0.05)
+        assert {w.post_id for w in state.wakes(BOT) if w.status == "delivered"} == {"p-1", "p-2", "p-3"}
+        assert d.in_flight("grok") == 2 and sorted(seen[:2]) == ["grok:g-0", "grok:g-1"]
+        hang.set()
+        await d.drain()
+    assert seen.count("p-1") == 1
+
+
+async def test_round_robin_between_bots_with_due_rows(state, clk):
+    resolve(state)
+    state.set_meta(meta_key("grok", "identity"), token_fp(GROK_TOKEN) + ":u-grok")
+    for i in range(4):
+        enqueue(state, "p-%d" % i)
+        enqueue_grok(state, "g-%d" % i)
+    order = []
+
+    async def handler(request):
+        order.append(request.headers["x-mmb-delivery"][:2])
+        return httpx.Response(204)
+    async with client(httpx.MockTransport(handler)) as http:
+        d = dispatcher(state, http, c=two_bots("https://ok.test/w"))
+        assert await d.tick() == 4                               # total cap 4: 2 + 2
+        assert await d.tick() == 4
+    assert sorted(order) == ["gr"] * 4 + ["p-"] * 4
+
+
+async def test_wakes_of_a_removed_bot_fail_bot_removed(state, rx, caplog):
+    resolve(state)
+    enqueue(state, "p-1")
+    state.enqueue("gone", "x-1", "c-1", payload("x-1", "u-gone"))
+    with caplog.at_level(logging.INFO, logger="mmbridge"):
+        async with client(rx.transport()) as http:
+            assert await dispatcher(state, http).tick() == 2
+    w = state.wake("gone", "x-1")
+    assert (w.status, w.last_error) == ("failed", "bot_removed")
+    assert state.wake(BOT, "p-1").status == "delivered" and len(rx.requests) == 1
+    assert '"bot": "gone"' in caplog.text and "bot_removed" in caplog.text
+
+
+async def test_identity_is_per_bot(state, rx):
+    """grok's listener has not resolved its identity yet: grok's rows wait, eddie's go out."""
+    resolve(state)
+    enqueue(state, "p-1")
+    enqueue_grok(state, "g-1")
+    async with client(rx.transport()) as http:
+        d = dispatcher(state, http, c=two_bots("https://receiver.test/wake"))
+        assert await d.tick() == 1
+        assert state.wake("grok", "g-1").status == "queued"
+        state.set_meta(meta_key("grok", "identity"), token_fp(GROK_TOKEN) + ":u-grok")
+        assert await d.tick() == 1
+    assert sorted(rx.accepted) == ["grok:g-1", "p-1"]
+
+
+async def test_header_delivery_is_the_signed_bot_delivery_id(state, rx):
+    resolve(state)
+    state.enqueue(BOT, "p-9", "c-1", {**payload("p-9"), "delivery_id": "eddie:p-9"})
+    async with client(rx.transport()) as http:
+        await dispatcher(state, http).tick()
+    (req,) = rx.requests
+    assert req["status"] == 204 and req["headers"]["x-mmb-delivery"] == "eddie:p-9"
+    assert json.loads(req["body"])["delivery_id"] == "eddie:p-9"
+
+
+async def test_send_that_raises_is_logged_and_recovered_after_the_lease(state, clk, rx, monkeypatch, caplog):
+    resolve(state)
+    enqueue(state, "p-1")
+    real = state.mark_delivered
+
+    def broken(bot, post_id):
+        raise RuntimeError("state.db gone")
+    monkeypatch.setattr(state, "mark_delivered", broken)
+    with caplog.at_level(logging.INFO, logger="mmbridge"):
+        async with client(rx.transport()) as http:
+            d = dispatcher(state, http)
+            assert await d.tick() == 1
+            assert '"event": "wake_send_crashed", "bot": "eddie", "post_id": "p-1", "error": "RuntimeError"' \
+                in caplog.text
+            assert state.wake(BOT, "p-1").status == "in_flight"
+            monkeypatch.setattr(state, "mark_delivered", real)
+            clk.t += 31                                          # lease (30 s) expired
+            assert await d.tick() == 1
+    assert state.wake(BOT, "p-1").status == "delivered"

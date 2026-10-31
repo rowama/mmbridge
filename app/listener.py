@@ -1,4 +1,4 @@
-"""Mattermost websocket listener for the ONE live bot (ADR-0007).
+"""Mattermost websocket listener for ONE live bot (ADR-0007); B-s3 runs one per registered bot (ADR-0014).
 
 run(): GET /users/me -> WS /api/v4/websocket with `Authorization: Bearer` -> hello{connection_id} -> for each
 `posted` event, live_filter.decide -> wake payload (ADR-0008 schema, no token; channel/team/sender lookups
@@ -12,7 +12,11 @@ seen on the socket), then per channel `GET /channels/{id}/posts` paged back by p
 `since`, which Mattermost does not page), ascending (create_at, post_id),
 each post through decide() and enqueue_and_advance (the ledger dedupes). Channels without a cursor start at meta
 `last_event_at` (last alive); posts older than LIVE_CATCHUP_MINUTES are skipped (`catchup_skipped`). 401 ->
-`degraded`, retry every 5 min or on a config change. One listener per state.db (meta lease `listener_owner`).
+`degraded`, retry every 5 min or on a config change. One listener per bot per state.db (meta lease
+`listener_owner:<bot>`).
+B-s3: `state` is the bot's view (State.bot(name)); posts by any registered bot (`registered()`, user ids) are
+dropped (B7); delivery_id is "<bot>:<post_id>" (one wake per bot per post, relay dedupe per bot); every log line
+carries bot=<name>; `last_error` is the reason shown by admin status.
 """
 import asyncio
 import itertools
@@ -57,10 +61,6 @@ def connect(url: str, headers: dict):
     return websockets.connect(url, additional_headers=headers, ping_interval=None, open_timeout=10, logger=_ws_log)
 
 
-def _log(event: str, **fields) -> None:
-    mlog.log.info(json.dumps({"event": event, **fields}))
-
-
 def _iso(ms: int) -> str:
     return datetime.fromtimestamp(ms / 1000, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -79,9 +79,12 @@ class Listener:
                  backoff_s: float = BACKOFF_S, max_backoff_s: float = MAX_BACKOFF_S,
                  auth_retry_s: float = AUTH_RETRY_S, lease_retry_s: float = LEASE_TTL_S / 2,
                  catchup_minutes: float | None = None, refresh_s: float | None = None, per_page: int = PER_PAGE,
-                 rand=random.random):
-        """cfg: BotConfig or a zero-arg callable returning the current one (ConfigHolder.get, PR-2)."""
+                 rand=random.random, registered=None):
+        """cfg: BotEntry or a zero-arg callable returning the current one (PR-2). state: State.bot(name) view.
+        registered: zero-arg callable -> frozenset of the user ids of every registered bot (B7)."""
         self._cfg = cfg if callable(cfg) else (lambda: cfg)
+        self.name = getattr(state, "name", "bot")
+        self._registered = registered or frozenset
         self.state, self.client_factory, self.ws_connect = state, client_factory, ws_connect
         self.clock, self.base_url, self.ping_s, self.idle_s = clock, base_url, ping_s, idle_s
         self.backoff_s, self.max_backoff_s, self.rand = backoff_s, max_backoff_s, rand
@@ -90,6 +93,7 @@ class Listener:
                                        else float(os.getenv("LIVE_CATCHUP_MINUTES", "15"))))
         self.refresh_s = refresh_s if refresh_s is not None else float(os.getenv("LIVE_MEMBERSHIP_REFRESH_S", "300"))
         self.status = "off"                   # off | connecting | ok | degraded (401)
+        self.last_error = None                # reason for admin status (mm_unauthorized, ws error code)
         self.bot_user_id = self.connection_id = self.last_seq = None
         self.members: dict = {}               # channel id -> channel (O/P/D), catch-up set
         self._seen: dict = {}                 # channel id -> type, seen on the socket since start
@@ -105,6 +109,9 @@ class Listener:
         self._resume_id = None
         self._ws = None
         self._wake = asyncio.Event()
+
+    def _log(self, event: str, level: str = "info", **fields) -> None:
+        getattr(mlog.log, level)(json.dumps({"event": event, "bot": self.name, **fields}))
 
     @property
     def cfg(self):
@@ -143,19 +150,21 @@ class Listener:
                     attempt = 0 if ok else attempt + 1
                 except Unauthorized:
                     self.status = "degraded"
-                    mlog.log.warning(json.dumps({"event": "mm_unauthorized", "retry_s": self.auth_retry_s}))
+                    self.last_error = "mm_unauthorized"
+                    self._log("mm_unauthorized", "warning", retry_s=self.auth_retry_s)
                     await self._pause(self.auth_retry_s)
                     continue
                 except LeaseHeld:
-                    _log("listener_lease_held", instance=self.state.instance_id)
+                    self._log("listener_lease_held", instance=self.state.instance_id)
                     await self._pause(self.lease_retry_s)
                     continue
                 except (OSError, TimeoutError, MMError, InvalidHandshake, ConnectionClosed) as e:
                     attempt += 1
-                    _log("ws_connect_failed", error=getattr(e, "code", None) or type(e).__name__)
+                    self.last_error = getattr(e, "code", None) or type(e).__name__
+                    self._log("ws_connect_failed", error=self.last_error)
                 delay = self._backoff(attempt)
                 self.status = "connecting"
-                _log("ws_reconnect", attempt=attempt, delay=round(delay, 2))
+                self._log("ws_reconnect", attempt=attempt, delay=round(delay, 2))
                 await self._pause(delay)
         finally:
             self.status = "off"
@@ -183,7 +192,8 @@ class Listener:
                 raise
             if me["id"] != self.bot_user_id:
                 self.connection_id, self.members, self._seen = None, {}, {}
-            self.bot_user_id, self._bot = me["id"], {"user_id": me["id"], "username": me["username"]}
+            self.bot_user_id, self._bot = me["id"], {"name": self.name, "user_id": me["id"],
+                                                     "username": me["username"]}
             await asyncio.to_thread(self.state.set_meta, "bot_user_id", me["id"])   # dispatcher: bot_rotated
             await asyncio.to_thread(self.state.set_meta, "bot_identity",              # id + token as one row
                                     token_fp(cfg.token) + ":" + me["id"])
@@ -201,7 +211,7 @@ class Listener:
             self._ws = ws
             try:
                 if self.cfg.token != cfg.token:   # rotated while connecting: config_changed could not close us
-                    _log("token_changed_during_connect")
+                    self._log("token_changed_during_connect")
                     return True
                 pinger = asyncio.create_task(self._ping(ws))
                 try:
@@ -222,10 +232,10 @@ class Listener:
             try:
                 raw = await asyncio.wait_for(ws.recv(), self.idle_s)
             except TimeoutError:
-                _log("ws_idle", seconds=self.idle_s)
+                self._log("ws_idle", seconds=self.idle_s)
                 return reached
             except ConnectionClosed:
-                _log("ws_closed", connection_id=self.connection_id)
+                self._log("ws_closed", connection_id=self.connection_id)
                 return reached
             prev_alive = self._alive_at
             self._alive_at = int(self.clock() * 1000)   # persisted only once the frame is handled
@@ -243,7 +253,7 @@ class Listener:
         try:
             ev = json.loads(raw)
         except ValueError:
-            mlog.log.warning(json.dumps({"event": "event_invalid", "reason": "json"}))
+            self._log("event_invalid", "warning", reason="json")
             return False
         if not isinstance(ev, dict) or "event" not in ev:
             return False                      # ping replies ({"status","seq_reply"}) and other non-events
@@ -254,13 +264,13 @@ class Listener:
             await asyncio.to_thread(self.state.set_meta, "ws_connection_id", cid or "")
             if not resumed:
                 self.last_seq = ev.get("seq") if isinstance(ev.get("seq"), int) else 0
-            _log("ws_connected", connection_id=cid, resumed=resumed,
+            self._log("ws_connected", connection_id=cid, resumed=resumed,
                  server_version=(ev.get("data") or {}).get("server_version"))
             if not resumed or self._catchup_pending:
                 await self._catch_up(client, "new_connection" if not resumed else "pending", prev_alive)
             elif time.monotonic() - self._refreshed_at >= self.refresh_s:
                 await self._refresh_soft(client)
-            self.status = "ok"
+            self.status, self.last_error = "ok", None
             return True
         seq = ev.get("seq")
         if self._seq_gap(ev):
@@ -268,7 +278,7 @@ class Listener:
         if time.monotonic() - self._refreshed_at >= self.refresh_s:
             await self._refresh_soft(client)
         await self._membership_event(ev, client)
-        intent = decide(ev, self.bot_user_id)
+        intent = decide(ev, self.bot_user_id, self._registered())
         if intent:
             self._seen.setdefault(intent.channel_id, {"id": intent.channel_id, "type": intent.channel_type})
             await self._enqueue(intent, client)
@@ -280,7 +290,7 @@ class Listener:
         payload = await self._payload(intent, client)
         new = await asyncio.to_thread(self.state.enqueue_and_advance, intent.post_id, intent.channel_id,
                                       payload, intent.create_at)
-        _log("wake_queued", post_id=intent.post_id, channel_id=intent.channel_id, new=new)
+        self._log("wake_queued", post_id=intent.post_id, channel_id=intent.channel_id, new=new)
         return new
 
     def _seq_gap(self, ev: dict) -> bool:
@@ -290,7 +300,7 @@ class Listener:
             return False
         gap = self.last_seq is not None and seq != self.last_seq + 1
         if gap:
-            _log("ws_seq_gap", expected=self.last_seq + 1, got=seq)
+            self._log("ws_seq_gap", expected=self.last_seq + 1, got=seq)
         return gap
 
     async def _mark_alive(self) -> None:
@@ -306,7 +316,7 @@ class Listener:
         for n in itertools.count(1):
             await asyncio.sleep(self.ping_s)
             if not await asyncio.to_thread(self.state.claim_owner, self.clock(), LEASE_TTL_S, "listener_owner"):
-                _log("listener_lease_lost", instance=self.state.instance_id)
+                self._log("listener_lease_lost", instance=self.state.instance_id)
                 await ws.close()
                 return
             try:
@@ -339,7 +349,7 @@ class Listener:
         except MMError as e:
             if e.code != "not_found":
                 raise
-            _log("direct_channels_unavailable", code=e.code)   # older server: team lists still carry D
+            self._log("direct_channels_unavailable", code=e.code)   # older server: team lists still carry D
         for cid in await asyncio.to_thread(self.state.cursor_channels):
             found.setdefault(cid, self.members.get(cid) or {"id": cid})
         for cid, c in self._seen.items():
@@ -352,7 +362,7 @@ class Listener:
             await self._refresh_members(client)
         except MMError as e:
             self._refreshed_at = time.monotonic()
-            _log("membership_refresh_failed", code=e.code)
+            self._log("membership_refresh_failed", code=e.code)
 
     async def _membership_event(self, ev: dict, client) -> None:
         kind, data, bc = ev["event"], ev.get("data") or {}, ev.get("broadcast") or {}
@@ -364,7 +374,7 @@ class Listener:
                 self.members.pop(cid, None)
                 self._seen.pop(cid, None)
                 await asyncio.to_thread(self.state.delete_cursor, cid)
-                _log("channel_removed", channel_id=cid)
+                self._log("channel_removed", channel_id=cid)
 
     async def _catch_up(self, client, reason: str, alive_at: int | None) -> None:
         """REST catch-up of every member channel; raises (and stays pending, keeping its start) on MM errors."""
@@ -384,7 +394,7 @@ class Listener:
                 posts = await self._since(client, cid, max(cur[0], floor - self.window_ms))
             except MMError as e:
                 if e.code == "not_found" or e.status == 403:
-                    _log("channel_unavailable", channel_id=cid, code=e.code)
+                    self._log("channel_unavailable", channel_id=cid, code=e.code)
                     self.members.pop(cid, None)
                     continue
                 raise
@@ -400,15 +410,15 @@ class Listener:
                 ev = {"event": "posted", "data": {"channel_type": ctype, "channel_name": ch.get("name"),
                                                   "channel_display_name": ch.get("display_name"),
                                                   "team_id": ch.get("team_id"), "post": p}}
-                intent = decide(ev, self.bot_user_id)
+                intent = decide(ev, self.bot_user_id, self._registered())
                 if intent:
                     n_posts += await self._enqueue(intent, client)
                 else:
                     await asyncio.to_thread(self.state.set_cursor, cid, at, p["id"])
         self._catchup_pending = False
-        _log("catchup", reason=reason, channels=len(self.members), posts=n_posts, skipped=n_skipped)
+        self._log("catchup", reason=reason, channels=len(self.members), posts=n_posts, skipped=n_skipped)
         if n_skipped:
-            _log("catchup_skipped", n=n_skipped, window_minutes=self.window_ms // 60_000)
+            self._log("catchup_skipped", n=n_skipped, window_minutes=self.window_ms // 60_000)
 
     async def _since(self, client, cid: str, since_ms: int) -> list:
         """Every post with create_at >= since_ms. Mattermost ignores page/per_page when `since` is given (and caps
@@ -431,7 +441,7 @@ class Listener:
             if oldest.get("create_at", 0) < since_ms:
                 return list(posts.values())
             before = oldest["id"]
-        _log("catchup_truncated", channel_id=cid, pages=MAX_PAGES)
+        self._log("catchup_truncated", channel_id=cid, pages=MAX_PAGES)
         return list(posts.values())
 
     async def _get(self, client, cache: dict, key: str, path: str) -> dict | None:
@@ -440,7 +450,7 @@ class Listener:
             try:
                 cache[key] = await client.get(path)
             except MMError as e:
-                _log("lookup_failed", path=path.split("/")[1], code=e.code)
+                self._log("lookup_failed", path=path.split("/")[1], code=e.code)
                 return None
         return cache[key]
 
@@ -461,7 +471,7 @@ class Listener:
         else:
             reply = {"tool": "post_channel", "team": channel["team"], "channel": channel["name"], "root_id": w.root_id}
         return {
-            "version": 2, "kind": "post", "delivery_id": w.post_id, "attempt": 1,
+            "version": 2, "kind": "post", "delivery_id": "%s:%s" % (self.name, w.post_id), "attempt": 1,
             "issued_at": _iso(int(self.clock() * 1000)),
             "bot": dict(self._bot),
             "channel": channel,

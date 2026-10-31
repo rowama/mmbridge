@@ -1,6 +1,7 @@
 """mmbridge: MCP bridge between Grok Bots and self-hosted Mattermost.
 
-/health (public liveness + live-bots listener state, no ids) and /mcp (Bearer auth, MCP Streamable HTTP).
+/health (public liveness + live-bots state: worst listener status word and counts bots_total/bots_failing, no ids
+or names) and /mcp (Bearer auth, MCP Streamable HTTP).
 Everything else 404. The lifespan also starts the live-bots runtime (app/live.py) when LIVE_BOTS_ENABLED=true.
 """
 import contextlib

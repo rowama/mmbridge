@@ -9,7 +9,7 @@ import pytest
 from app.listener import Listener
 from app.mattermost import Client, MMError
 from app.state import State
-from app.store import BotConfig
+from app.store import BotEntry
 from drivers.fake_mattermost import FakeMattermost
 
 FAST = dict(backoff_s=0.05, max_backoff_s=0.2, ping_s=0.2, idle_s=2.0)
@@ -45,8 +45,8 @@ class Run:
 
     def __init__(self, served, path, client_cls=Client, **kw):
         self.m, self.w, base = served
-        cfg = BotConfig(token=self.w["bot"]["token"], wake_url="https://wake.example/hook", wake_secret="s" * 40)
-        self.state = State(str(path))
+        cfg = BotEntry(token=self.w["bot"]["token"], wake_url="https://wake.example/hook", wake_secret="s" * 40)
+        self.state = State(str(path)).bot("eddie")
         self.lis = Listener(cfg, self.state, lambda tok: client_cls(tok, base_url=base), base_url=base,
                             **{**FAST, **kw})
         self.task = None
@@ -355,7 +355,7 @@ async def test_unauthorized_token_degrades_then_retries(served, tmp_path, caplog
     good = w["bot"]["token"]
     w["bot"]["token"] = "revoked-token-value"
     r = Run(served, tmp_path / "state.db", auth_retry_s=0.3)
-    r.lis._cfg = lambda: BotConfig(token=good, wake_url="https://wake.example/hook", wake_secret="s" * 40)
+    r.lis._cfg = lambda: BotEntry(token=good, wake_url="https://wake.example/hook", wake_secret="s" * 40)
     with caplog.at_level(logging.INFO, logger="mmbridge"):
         r.task = asyncio.create_task(r.lis.run())
         await until(lambda: r.lis.status == "degraded")
@@ -380,7 +380,7 @@ async def test_second_listener_cannot_take_the_lease(served, tmp_path, caplog):
 
 def test_backoff_and_restart_delay_never_overflow(tmp_path):
     from app.live import restart_delay
-    lis = Listener(BotConfig("t" * 26, "https://x.example/h", "s" * 40), State(str(tmp_path / "s.db")),
+    lis = Listener(BotEntry("t" * 26, "https://x.example/h", "s" * 40), State(str(tmp_path / "s.db")).bot("eddie"),
                    lambda t: None, rand=lambda: 1.0)
     assert lis._backoff(5000) == 60
     assert restart_delay(5000, 1.0, 60.0) == 60.0 and restart_delay(1, 1.0, 60.0) == 1.0
@@ -406,7 +406,7 @@ async def test_token_rotated_during_connect_reconnects_with_new_token(served, tm
     def rotate():
         old = r.lis.cfg
         w["bot"]["tokens"] = [new]                 # a second access token; the old one stays valid
-        nc = BotConfig(token=new, wake_url=old.wake_url, wake_secret=old.wake_secret)
+        nc = BotEntry(token=new, wake_url=old.wake_url, wake_secret=old.wake_secret)
         r.lis._cfg = lambda: nc
         r.lis.config_changed(old, nc)              # _ws is None here: it cannot close the handshake
     _RotatingClient.hook, _RotatingClient.arm = rotate, True
@@ -416,7 +416,7 @@ async def test_token_rotated_during_connect_reconnects_with_new_token(served, tm
 
 
 def test_reconnect_backoff_doubles_with_jitter_and_caps(tmp_path):
-    lis = Listener(BotConfig("t" * 26, "https://x.example/h", "s" * 40), State(str(tmp_path / "s.db")),
+    lis = Listener(BotEntry("t" * 26, "https://x.example/h", "s" * 40), State(str(tmp_path / "s.db")).bot("eddie"),
                    lambda t: None, rand=lambda: 1.0)
     assert [lis._backoff(n) for n in range(1, 9)] == [1, 2, 4, 8, 16, 32, 60, 60]
     lis.rand = lambda: 0.0

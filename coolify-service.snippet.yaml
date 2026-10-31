@@ -43,6 +43,10 @@ services:
       # - RELAY_BOT_EDDIE_HMAC_SECRET=<eddie's mmbridge wake secret>
       # - RELAY_BOT_EDDIE_ROUTINE_URL=<Grok Bot routine webhook URL>
       # - RELAY_BOT_EDDIE_ROUTINE_KEY=<routine Bearer key>
+      # Second bot (B-s3), same three per bot; `bin/set-bot grok` in mmbridge prints the HMAC line:
+      # - RELAY_BOT_GROK_HMAC_SECRET=<grok's mmbridge wake secret>
+      # - RELAY_BOT_GROK_ROUTINE_URL=<grok's Grok Bot routine webhook URL>
+      # - RELAY_BOT_GROK_ROUTINE_KEY=<grok's routine Bearer key>
       # Optional tripwire alert to a Mattermost channel (all three or none; relay/README.md "Tripwire"):
       # - RELAY_ALERT_URL=http://mattermost:8065
       # - RELAY_ALERT_TOKEN=<dedicated alert bot token>

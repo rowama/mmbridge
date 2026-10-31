@@ -11,7 +11,7 @@ import pytest
 from app.listener import Listener, ws_url
 from app.mattermost import Client
 from app.state import State
-from app.store import BotConfig
+from app.store import BotEntry
 from drivers.fake_mattermost import FakeMattermost
 
 
@@ -38,8 +38,8 @@ async def served(world):
 
 def make(served, tmp_path, **kw):
     m, w, base = served
-    cfg = BotConfig(token=w["bot"]["token"], wake_url="https://wake.example/hook", wake_secret="s" * 40)
-    state = State(str(tmp_path / "state.db"))
+    cfg = BotEntry(token=w["bot"]["token"], wake_url="https://wake.example/hook", wake_secret="s" * 40)
+    state = State(str(tmp_path / "state.db")).bot("eddie")
     lis = Listener(cfg, state, lambda tok: Client(tok, base_url=base), base_url=base, **kw)
     return lis, state
 
@@ -101,8 +101,8 @@ async def test_payload_matches_wake_contract(running):
     issued = top.pop("issued_at")
     assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", issued)
     assert top == {
-        "version": 2, "kind": "post", "delivery_id": p["id"], "attempt": 1,
-        "bot": {"user_id": w["bot"]["id"], "username": "eddie"},
+        "version": 2, "kind": "post", "delivery_id": "eddie:" + p["id"], "attempt": 1,
+        "bot": {"name": "eddie", "user_id": w["bot"]["id"], "username": "eddie"},
         "channel": {"id": w["chosen"], "name": "town-square", "display_name": "Town-Square", "type": "O",
                     "team": "main"},
         "sender": {"user_id": w["rob"]["id"], "username": "rob"},

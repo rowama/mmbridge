@@ -54,7 +54,17 @@ def test_group_dm_drops():
 
 def test_decide_takes_no_channel_set():
     with pytest.raises(TypeError):
-        decide(posted(), BOT, {"c-main-town-square"})
+        decide(posted(), BOT, channels={"c-main-town-square"})
+
+
+@pytest.mark.parametrize("ctype", ["O", "P", "D"])
+def test_post_by_any_registered_bot_is_dropped(ctype):
+    # B7: another registered bot (here u-grok) posting never wakes this bot; humans and unregistered bots still do
+    reg = frozenset({BOT, "u-grok"})
+    assert decide(posted(ctype=ctype, user_id="u-grok"), BOT, reg) is None
+    assert decide(posted(ctype=ctype, user_id="u-rob"), BOT, reg) is not None
+    assert decide(posted(ctype=ctype, user_id="u-other-integration"), BOT, reg) is not None
+    assert decide(posted(ctype=ctype, user_id=BOT), BOT, frozenset()) is None   # own post, even if not listed
 
 
 @pytest.mark.parametrize("ctype", ["O", "D"])

@@ -7,8 +7,8 @@ Backoff is scaled by WAKE_BACKOFF_SCALE so retry specs run in seconds; LIVE_ALLO
 URL be the plain-HTTP local receiver (tests only).
 
 SUT mode (env LIVE_MODE):
-- `container` (default, lb5, ADR-0010 layer 4): the real image (env LIVE_IMAGE, default mmbridge:bs2; build it
-  first with `docker build -t mmbridge:bs2 .`) on `--network host` with a fresh named volume at /data, a fresh
+- `container` (default, lb5, ADR-0010 layer 4): the real image (env LIVE_IMAGE, default mmbridge:bs3; build it
+  first with `docker build -t mmbridge:bs3 .`) on `--network host` with a fresh named volume at /data, a fresh
   MMB_STORE_KEY and LIVE_BOTS_ENABLED=true. `python -m app.admin set-bot` runs in a one-off container on the same
   volume before the server starts (as an operator would before enabling the flag); `admin failed` runs through
   `docker exec`; `/health` tells when the listener is connected; `docker logs` is the log capture for the token
@@ -23,6 +23,11 @@ Wake retries: WAKE_BACKOFF_SCALE 0.25 gives ~7 s before a wake fails, enough to 
 B-s2 (ADR-0015): `given_routine_answers` makes the fake routine act as the bot on every started run: it follows
 the wake's `reply` hints and calls post_channel / dm_send on the real MCP bridge (/mcp of the container; in-process
 an app.main app with the fake Mattermost transport and no live runtime of its own) with the bot's own token.
+B-s3 (ADR-0013/0014): every bot is registered with `set-bot --name <name>`; a bot registered after the runtime
+started is picked up by the running bridge's store reload (30 s in the image), so register_bot waits until /health
+counts it and every listener is ok. Wakes carry delivery_id "<bot>:<post_id>" (X-MMB-Delivery). revoke_token
+revokes the bot's tokens in the fake Mattermost; assert_bot_failing reads `admin status` + /health,
+assert_failed_wake_visible_for_bot reads `admin failed --bot` and `admin failed`.
 drop_connection: the fake closes the websocket (no resume: a new connection id) and refuses REST + websocket
 until restore_connection, so posts made meanwhile are reachable only by the listener's REST catch-up.
 """
@@ -59,6 +64,8 @@ WAKE_WITHIN_S = 10.0       # design metric: wake within 10 s
 REPLY_WITHIN_S = 15.0      # wake + the routine's MCP call
 SETTLE_S = 0.3
 START_S = 30.0             # container start + listener connect
+ADD_BOT_S = 45.0           # a bot added to a running bridge: store reload (30 s in the image) + connect
+FAILING_S = 20.0           # revoked token noticed (reconnect backoff) and reported
 MARKER_USER = "zz-marker"
 LOGGERS = ("mmbridge", "mmbridge.ws", "httpx", "websockets")
 
@@ -117,6 +124,9 @@ class _InProcess:
     def listener(self):
         return self.runtime.listener_status() if self.runtime else "off"
 
+    def health(self):
+        return self.drv._run(self.runtime.health()) if self.runtime else {}
+
     def mcp_url(self):
         """The real MCP bridge (app.main) over HTTP, Mattermost = the fake (started on first use)."""
         if self._mcp is None:
@@ -150,7 +160,7 @@ class _Container:
 
     def __init__(self, drv, env):
         self.drv, self.env = drv, env
-        self.image = os.environ.get("LIVE_IMAGE", "mmbridge:bs2")
+        self.image = os.environ.get("LIVE_IMAGE", "mmbridge:bs3")
         self.name = "mmb-live-" + secrets.token_hex(4)
         self.volume = self.name + "-data"
         self.port = _free_port()
@@ -188,10 +198,13 @@ class _Container:
         return "http://127.0.0.1:%d/mcp" % self.port
 
     def listener(self):
+        return self.health().get("listener", "starting")
+
+    def health(self):
         try:
-            return httpx.get("http://127.0.0.1:%d/health" % self.port, timeout=2).json()["listener"]
-        except (httpx.HTTPError, ValueError, KeyError):
-            return "starting"
+            return httpx.get("http://127.0.0.1:%d/health" % self.port, timeout=2).json()
+        except (httpx.HTTPError, ValueError):
+            return {}
 
     def logs(self):
         if not self.started:
@@ -323,8 +336,15 @@ class LiveDriver:
         return hmac.compare_digest(h.get("x-mmb-signature", ""), "v1=" + mac) and \
             abs(time.time() - int(h["x-mmb-timestamp"])) <= 300
 
+    @staticmethod
+    def _post_of(delivery):
+        return (delivery or "").rpartition(":")[2]
+
+    def _rx_attempts(self, post_id):
+        return [r for r in self.rx.requests if self._post_of(r["headers"].get("x-mmb-delivery")) == post_id]
+
     def _delivered(self, post_id):
-        return [r for r in self.rx.attempts(post_id) if r["status"] == 204]
+        return [r for r in self._rx_attempts(post_id) if r["status"] == 204]
 
     def assert_woken_once(self, bot, channel, sender, message, thread=None):
         pid = self.posts[message]
@@ -334,7 +354,8 @@ class LiveDriver:
         assert len(got) == 1, "expected one delivered wake for %r, got %d" % (message, len(got))
         assert self._valid(got[0]), "wake signature does not verify"
         w = json.loads(got[0]["body"])
-        assert w["delivery_id"] == pid and w["post"]["id"] == pid and w["post"]["message"] == message
+        assert w["delivery_id"] == "%s:%s" % (bot, pid), w["delivery_id"]
+        assert w["post"]["id"] == pid and w["post"]["message"] == message
         assert w["bot"]["username"] == bot and w["sender"]["username"] == sender
         if channel is None:
             assert w["channel"]["type"] == "D"
@@ -360,7 +381,7 @@ class LiveDriver:
 
     def assert_not_woken(self, bot, message):
         mid = self._barrier(bot)
-        others = [r for r in self.rx.requests if r["headers"].get("x-mmb-delivery") != mid]
+        others = [r for r in self.rx.requests if self._post_of(r["headers"].get("x-mmb-delivery")) != mid]
         if message is not None:
             others = [r for r in others if json.loads(r["body"]).get("post", {}).get("message") == message]
         assert not others, "unexpected wake(s): %s" % [r["headers"].get("x-mmb-delivery") for r in others]
@@ -396,12 +417,12 @@ class LiveDriver:
     def assert_wake_retried(self, minimum):
         pid = self._last_post
         want = set(range(1, minimum + 1))
-        self._wait(lambda: self.rx.attempts(pid) or want <= self._grok_attempts(pid), WAKE_WITHIN_S,
+        self._wait(lambda: self._rx_attempts(pid) or want <= self._grok_attempts(pid), WAKE_WITHIN_S,
                    "%d attempts" % minimum)
-        if not self.rx.attempts(pid):          # grok bot: attempts via relay -> routine, or refused at the relay
+        if not self._rx_attempts(pid):         # grok bot: attempts via relay -> routine, or refused at the relay
             return
-        self._wait(lambda: len(self.rx.attempts(pid)) >= minimum, WAKE_WITHIN_S, "%d attempts" % minimum)
-        attempts = self.rx.attempts(pid)
+        self._wait(lambda: len(self._rx_attempts(pid)) >= minimum, WAKE_WITHIN_S, "%d attempts" % minimum)
+        attempts = self._rx_attempts(pid)
         assert all(self._valid(r) for r in attempts)
         assert [json.loads(r["body"])["attempt"] for r in attempts][:minimum] == list(range(1, minimum + 1))
 
@@ -439,7 +460,7 @@ class LiveDriver:
 
     def _set_bot(self, name):
         b, u = self.bots[name], self._user(name)
-        rc, out = self._admin("set-bot", "--token-stdin", "--wake-secret-stdin", "--wake-url",
+        rc, out = self._admin("set-bot", "--name", name, "--token-stdin", "--wake-secret-stdin", "--wake-url",
                               self._target(name, b["kind"]), stdin="%s\n%s\n" % (u["token"], b["secret"]))
         assert rc == 0, "admin set-bot failed: %s" % out.strip()
 
@@ -454,6 +475,14 @@ class LiveDriver:
             self.rx.secret = self.bots[name]["secret"]
         self._configure_relay()                 # relay ready (same name + secret) before mmbridge points at it
         self._set_bot(name)
+        if self.started:                        # running bridge: picked up by its own store reload, no restart
+            n = len(self.bots)
+            seen = {}
+
+            def live():
+                seen["h"] = self.sut.health()
+                return seen["h"].get("bots_total") == n and seen["h"].get("listener") == "ok"
+            self._wait(live, ADD_BOT_S, "bot %s live in the running bridge (last /health %s)" % (name, seen.get("h")))
         self._start()
 
     def _reloads(self):
@@ -578,6 +607,43 @@ class LiveDriver:
         for what, value in secrets_.items():
             for where, text in places.items():
                 assert value not in text, "%s in %s" % (what, where)
+
+    # --- increment B: several bots (B-s3) ---------------------------------------------------------------------------
+    def revoke_token(self, bot):
+        self._call(self.mm.revoke_token, self._user(bot)["id"])
+
+    def _status_lines(self):
+        rc, out = self._admin("status")
+        assert rc == 0, "admin status failed: %s" % out.strip()
+        return {line.split()[0]: line for line in out.splitlines() if line.strip()}
+
+    def assert_bot_failing(self, bot):
+        seen = {}
+
+        def failing():
+            lines, h = self._status_lines(), self.sut.health()
+            seen["lines"], seen["h"] = lines, h
+            mine = lines.get(bot, "")
+            others = [n for n in self.bots if n != bot]
+            return (mine.startswith("%s  listener degraded (" % bot) and
+                    all(lines.get(n, "").startswith("%s  listener ok " % n) for n in others) and
+                    h.get("bots_failing") == 1 and h.get("bots_total") == len(self.bots))
+        self._wait(failing, FAILING_S, "%s failing in admin status and /health (last: %s %s)" % (
+            bot, seen.get("lines"), seen.get("h")))
+
+    def assert_failed_wake_visible_for_bot(self, bot, message):
+        pid = self.posts[message] if message is not None else self._last_post
+        seen = {}
+
+        def listed():
+            rc, out = self._admin("failed", "--bot", bot)
+            seen["out"] = out
+            return rc == 0 and any(line.startswith("bot %s  %s " % (bot, pid)) for line in out.splitlines())
+        self._wait(listed, 20, "admin failed --bot %s to list %s (last output: %r)" % (bot, pid, seen.get("out")))
+        rc, out = self._admin("failed")
+        rows = [line for line in out.splitlines() if " %s " % pid in line]
+        assert rc == 0 and rows and all(line.startswith("bot %s  " % bot) for line in rows), \
+            "failed wakes for %s not only %s's: %s" % (pid, bot, rows)
 
     def drop_connection(self, seconds):
         # `seconds` is simulated: reconnects stay refused until restore_connection (no real wait).

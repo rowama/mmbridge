@@ -17,6 +17,7 @@ queue, and a reconnect with `?connection_id&sequence_number` gets hello (same id
 B-s2 (ADR-0015): GET /posts/{id} (403 unless the caller is in the post's channel, 404 unknown); POST /posts takes
 `root_id` (400 unless the root is a root post in the same channel, as Mattermost); `mm_ids=True` also gives posts
 Mattermost-shaped 26-char ids ("p" + 25 digits; root_id is validated as a Mattermost id).
+B-s3: several bot users each with its own token and websocket sessions; `revoke_token(user_id)` (REQ-B8).
 """
 import asyncio
 import contextlib
@@ -167,6 +168,15 @@ class FakeMattermost:
             s.q.put_nowait(None)
         if not resumable:
             self.ws_dead.clear()
+
+    def revoke_token(self, user_id):
+        """Revoke every access token of the user (as Mattermost does): REST 401 and websocket handshake refused from
+        now on; the user's open websocket sessions are closed (B-s3, REQ-B8)."""
+        u = self.users[user_id]
+        u["token"], u["tokens"] = None, []
+        for s in self.ws_sessions:
+            if s.user_id == user_id:
+                s.q.put_nowait(None)
 
     @contextlib.asynccontextmanager
     async def serve(self):

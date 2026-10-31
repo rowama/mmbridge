@@ -88,6 +88,17 @@ network; no public domain needed). See the `relay:` block in `coolify-service.sn
 
 Optional: a public Traefik domain (e.g. `relay.rmlab.cloud`) for ops only; mmbridge never needs it.
 
+## Adding a second bot (e.g. grok; B-s3)
+1. Mattermost: create the bot account `grok` and a token (shown once); add it to the channels it should hear.
+2. mmbridge container terminal: `bin/set-bot grok`; paste the token, press Enter for the default wake URL
+   `http://relay:8080/wake/grok` and Enter again to generate a wake secret. It prints
+   `RELAY_BOT_GROK_HMAC_SECRET=...` (shown once). mmbridge starts grok's listener within 30 s, no redeploy.
+3. Coolify, Mattermost compose stack, `relay` service env: add that line plus `RELAY_BOT_GROK_ROUTINE_URL` and
+   `RELAY_BOT_GROK_ROUTINE_KEY` from grok's Grok routine; redeploy the stack. Until then grok's wakes get 404 at the
+   relay and show in `python -m app.admin failed --bot grok` (retry them with `--retry grok:<post_id>`).
+4. Check: `python -m app.admin status` lists both bots `listener ok`; a post in a channel only grok is in starts
+   only grok's routine; a post in Town Square starts both once.
+
 ## Grok routine setup
 The routine receives the wake JSON verbatim as its input (B-s1 spike): `version` 2, `bot`, `channel` (`name`,
 `type`: O/P channel, D = DM), `sender.username`, `post` (`id`, `message`, `root_id`) and `reply`, which says how to

@@ -215,7 +215,7 @@ run_all() {
 for i in 1 2 3; do run_all || { echo RUN $i FAILED; break; }; done   # DoD: concurrency slice -> full suite 3x, all pass
 python3 .eng/bin/eng-check . && python3 .eng/bin/eng-spec status . && python3 .eng/bin/eng-spec trace .
 ```
-- [ ] block above exit 0 (all 3 runs); outputs pasted into the slice handoff
+- [x] block above exit 0 (all 3 runs); outputs pasted into the slice handoff
 #### Manual Verification
 - [ ] Rob on Coolify: after deploy the existing eddie bot still works (v1 store migrated, `.v1.bak` present); register grok (`set-bot --name grok`, relay env `RELAY_BOT_GROK_*`); post in a channel only grok is in -> only Grok answers; post in Town Square -> both answer once each; eddie posts "@grok hi" -> nobody woken; revoke grok's token in Mattermost -> eddie still answers, `admin status` shows grok degraded.
 

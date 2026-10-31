@@ -63,7 +63,7 @@ Off by default: with `LIVE_BOTS_ENABLED` unset the bridge is the MCP bridge only
    bot token at the prompt. Copy the printed wake secret into your receiver (shown once). No channel list: add the
    bot to channels in Mattermost; it wakes on every post by someone else in those channels and on DMs.
 4. Env `LIVE_BOTS_ENABLED=true`, redeploy. `curl https://chats.rmlab.cloud/health` shows
-   `{"ok": true, "listener": "ok", "wake_failed_24h": 0}`.
+   `{"ok": true, "listener": "ok", "wake_failed_24h": 0, "bots_total": 1, "bots_failing": 0}`.
 
 `listener` is `disabled` (flag off), `off` (store key wrong/missing, no bot stored, or `/data` not writable; see the
 `store_unreadable` / `state_unwritable` log line; fix it, then restart: e.g. the flag was on before the first
@@ -72,13 +72,34 @@ Mattermost, retried every 5 min, or a crashed task restarting). Drops reconnect 
 posts made while disconnected are caught up from the REST API (window `LIVE_CATCHUP_MINUTES`, default 15) and
 still wake exactly once. Edits made with `admin set-bot` while running are picked up within 30 s (a new token
 reconnects); a store that no longer decrypts keeps the previous config and logs `store_reload_failed`.
-`python -m app.admin failed` lists wakes the receiver never accepted; `--retry <post_id>` sends one again.
+`python -m app.admin failed` lists wakes the receiver never accepted; `--retry <bot>:<post_id>` sends one again.
+
+### Several bots (v0.4.0)
+One mmbridge serves any number of bots, each with its own Mattermost token, name and wake target. The name
+(lowercase letters, digits, `-`) is the same everywhere: mmbridge store, relay env block (`RELAY_BOT_<NAME>_*`)
+and the Grok routine.
+- Add or change a bot (container terminal, no redeploy, live within 30 s): `bin/set-bot <name>` asks for the
+  Mattermost bot token (hidden; Mattermost shows it once under Integrations > Bot Accounts, if lost create a new
+  one), the wake URL (default `http://relay:8080/wake/<name>`) and the wake secret (Enter generates one), then
+  prints the `RELAY_BOT_<NAME>_HMAC_SECRET=...` line for the relay env. Scripted form:
+  `python -m app.admin set-bot --name <name> --token-stdin [--wake-secret-stdin] --wake-url <url>`.
+- `python -m app.admin list` (one line per bot), `show <name>`, `remove-bot <name>` (its pending wakes become
+  failed `bot_removed`), `status` (per bot: listener `ok|connecting|off|degraded (<reason>)`, last event, last
+  wake, failed in 24 h), `failed [--bot <name>]`, `stats [--bot <name>]`.
+- Each post wakes every registered bot that can see it (channel member, or the DM's bot) once; posts by any
+  registered bot wake nobody (no bot-to-bot wakes). A revoked token or dead target of one bot never stops the
+  others: `admin status` shows it `degraded`, `/health` counts it in `bots_failing` (`bots_total` = bots stored;
+  `listener` = the worst bot).
+- Upgrade from v0.3.0: deploy the new image; on first start the one-bot store and `state.db` are migrated in place
+  (bot named after its Mattermost username) and the old files are kept as `/data/bots.enc.v1.bak` and
+  `/data/state.db.v1.bak`. Rollback to v0.3.0: stop mmbridge, in `/data` copy `bots.enc.v1.bak` over `bots.enc`
+  and `state.db.v1.bak` over `state.db` (delete `state.db-wal`/`state.db-shm` if present), deploy v0.3.0. Bots added
+  after the upgrade are lost on rollback; the relay needs no change.
 
 ## Grok Bot routines (wake relay)
 Grok Bot routines take a Bearer key, not a signed wake, so a small relay sits beside mmbridge: it checks each
 signed wake (signature, 5-minute window, no repeats, per-bot rate limit) and starts the bot's routine with its key.
-Point the bot at it with `python -m app.admin set-bot --token-stdin --wake-secret-stdin --wake-url
-https://<relay>/wake/<bot>` (no redeploy). Setup, env and key rotation: [relay/README.md](relay/README.md).
+Point the bot at it with `bin/set-bot <bot>` (wake URL `http://relay:8080/wake/<bot>`; no redeploy). Setup, env and key rotation: [relay/README.md](relay/README.md).
 
 ## Wake receiver (live bots)
 

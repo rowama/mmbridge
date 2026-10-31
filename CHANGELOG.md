@@ -2,6 +2,10 @@
 All notable changes to this project. Format: Keep a Changelog style; newest first.
 
 ## [Unreleased]
+<!-- id: CHANG-20261031-b-s3-multi-bot | owner_agent: claude-code | date: 2026-10-31 -->
+### Added
+- Several bots on one mmbridge: each bot has its own name, Mattermost token and wake target (store v2); bin/set-bot NAME registers or changes one interactively (token hidden, wake URL default http://relay:8080/wake/NAME, prints the RELAY_BOT_<NAME>_HMAC_SECRET line for the relay); python -m app.admin gains list, show NAME, remove-bot, status and --bot on failed/stats (retry with BOT:POST_ID). Each post wakes every bot that can see it exactly once, posts by any registered bot wake nobody, and a revoked token or dead target of one bot never stops the others (admin status shows it degraded, /health adds bots_total and bots_failing). The v0.3.0 store and state.db migrate in place on first start, keeping bots.enc.v1.bak and state.db.v1.bak for rollback; wake delivery ids are now <bot>:<post_id>.
+
 <!-- id: CHANG-20261030-b-s2-round-trip-reply | owner_agent: claude-code | date: 2026-10-30 -->
 ### Added
 - Grok Bots answer where they were woken: the wake carries reply hints (version 2: reply tool, team/channel or DM username, thread root_id, issued_at) and post_channel / dm_send take an optional root_id to answer inside a thread; a root_id from another channel or DM, or one the bot cannot see, is refused as invalid_root and nothing is posted. The relay raises a tripwire (log relay_tripwire, optional Mattermost alert via RELAY_ALERT_URL/TOKEN/CHANNEL) on repeated bad signatures, rate-limit hits, routine 401/403 and double forwards, and /health shows double_forward_24h.
