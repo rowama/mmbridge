@@ -2,7 +2,7 @@
 id: SLICE-20261028-b-s1-relay-grok-wake-one-bot
 type: slice
 phase: implement
-status: review           # todo | in-progress | blocked | review | done
+status: done             # todo | in-progress | blocked | review | done
 owner_agent: claude-code
 date: 2026-10-28
 links: [thoughts/shared/plans/2026-10-28-grok-webhook-multibot.md, docs/architecture/2026-10-28-grok-webhook-multibot.md]
@@ -50,6 +50,7 @@ See plan Phase 1 Manual Verification. Deploy target changed 2026-10-30 (Rob): re
 - 2026-10-29 - claude-code - plan Phase 1 Automated Verification block run verbatim, exit 0: each of 3 runs: unit 322 passed; mcp 16 passed/36 skipped; live inprocess A+B1 26 passed; live container A+B1 26 passed (~2m50s). eng-check OK (3 pre-existing warnings); eng-spec status: specs and DSL interface match the lock.
 - 2026-10-29 - claude-code - slice-diff Codex review NOT run: `codex` not on PATH even in a login shell (`bash -lc "which codex"` -> not found). Security-relevant slice: planner to run `python3 .eng/bin/eng-run code-review SLICE-20261028-b-s1-relay-grok-wake-one-bot` where Codex is available (base bc73656).
 
+- 2026-10-30 - grok-bot - CP-S approved by Rob (~9:29 PM CDT). Live demo: Rob posted in ~acorn ("Trying again. Hi."); routine mmbridge-wake-eddie run 2026-10-30 21:28:50 CDT succeeded; wake ack delivered in Eddie chat. Ops note: after set-bot created bots.enc, mmbridge had booted with store_unreadable / listener off and config reload does not start the WS listener if start failed; fixed by `docker restart` of the mmbridge container only (Ulrik). HTTP wake host-restricted to `relay` (8c60bc8); no LIVE_ALLOW_HTTP_WAKE in prod compose. Ulrik duplicate re-POST check not run (not in Rob's CP-S bar).
 - 2026-10-29 - grok-bot - Codex review --base bc73656: 0 findings (review-2; review-1 without --base invalid). eng-verify PASS: plan Phase 1 block 3x exit 0. Report thoughts/shared/verification/2026-10-29-b-s1-relay-grok-wake-one-bot-verify.md. Awaiting CP-S.
 
 ## Blockers / deviations from plan
