@@ -2,7 +2,7 @@
 id: SLICE-20261030-http-wake-internal-hosts
 type: slice
 phase: implement
-status: review           # todo | in-progress | blocked | review | done
+status: done             # todo | in-progress | blocked | review | done
 owner_agent: grok-bot
 date: 2026-10-30
 links: [thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md, docs/decisions/0011-hmac-to-bearer-wake-relay.md]
@@ -39,6 +39,8 @@ specs: none - unit tests in tests/unit/test_store.py cover the rule
 
 ## Progress log
 - 2026-10-30 - grok-bot - tests at tail of tests/unit/test_store.py; app/store.py https_ok; snippet/docs.
+
+- 2026-10-30 - grok-bot - CP-S approved by Rob (via Eddie); commit 8c60bc8 exercised live by the B-s1 demo (http://relay wake). Slice done.
 
 ## Blockers / deviations from plan
 none

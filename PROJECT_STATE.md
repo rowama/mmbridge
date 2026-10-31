@@ -36,7 +36,7 @@ A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) tha
 ## Next action
 B-s2 (round-trip reply, root_id, relay tripwire; plan Phase 2, security review required): implementer (Claude Code) runs eng-implement-slice on [the slice card](thoughts/shared/slices/2026-10-28-b-s2-round-trip-reply-root-id.md), then Codex review + eng-verify, then CP-S (Rob: "@eddie status?" answer in channel/thread/DM, no re-wake). OQ-B2 = verbatim body (spike), so no `text` fallback field needed. Then B-s3.
 
-B-s1 done (CP-S 2026-10-30). Ops lesson: if mmbridge boots with store_unreadable (no bots.enc yet), a config reload does not start the WS listener; restart the mmbridge container after the first set-bot (candidate fix/TODO). http-wake-internal-hosts slice (8c60bc8) in review, exercised live by the B-s1 demo. Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
+B-s1 done (CP-S 2026-10-30). Ops lesson: if mmbridge boots with store_unreadable (no bots.enc yet), a config reload does not start the WS listener; restart the mmbridge container after the first set-bot (candidate fix/TODO). http-wake-internal-hosts slice (8c60bc8) done (CP-S 2026-10-30). Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
 
 ## Blockers
 - none
@@ -93,6 +93,7 @@ none
 | Date | Checkpoint | Artifact | Decision (Rob) |
 |---|---|---|---|
 | 2026-10-30 | CP-S | thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md | approved (relay in Mattermost compose stack; live: Rob post in ~acorn woke mmbridge-wake-eddie, run 21:28:50 CDT succeeded, ack in Eddie chat; mmbridge needed a container restart after first set-bot (booted store_unreadable, reload does not start WS); http wake host `relay` only (8c60bc8); Ulrik duplicate re-POST not run; via Eddie) |
+| 2026-10-30 | CP-S | thoughts/shared/slices/2026-10-30-http-wake-internal-hosts.md | approved (8c60bc8 on main; exercised live by B-s1 demo: wake via http://relay with LIVE_ALLOW_HTTP_WAKE unset in prod; via Eddie) |
 | 2026-10-30 | triage (size) | thoughts/shared/slices/2026-10-30-http-wake-internal-hosts.md | approved (small, security; Rob 'Tighten now': no global LIVE_ALLOW_HTTP_WAKE in prod, http only to in-stack relay; via Eddie) |
 | 2026-10-29 | CP-C | thoughts/shared/plans/2026-10-28-grok-webhook-multibot.md | approved speclock sha256:ee97d6ceffddcb0b (slices B-s1 -> B-s2 -> B-s3; via Eddie) |
 | 2026-10-28 | CP-B | docs/architecture/2026-10-28-grok-webhook-multibot.md, docs/decisions/0011-hmac-to-bearer-wake-relay.md, docs/decisions/0013-multi-bot-store-v2.md, docs/decisions/0014-multi-bot-runtime-state-v2.md, docs/decisions/0015-thread-replies-root-id.md, docs/decisions/0016-acceptance-tests-increment-b.md | approved (architecture B + ADR-0011, 0013..0016 accepted; ADR-0012 claim_wake stays rejected; ops accepted for now: relay Bearer key + routine URL in Coolify env on relay, not mmbridge admin; same bot name ties Mattermost bot, relay and Grok routine; RELAY_BOT_<name>_HMAC_SECRET = copy of the bot wake secret; via Eddie) |
