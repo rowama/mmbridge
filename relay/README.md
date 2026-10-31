@@ -72,7 +72,7 @@ network; no public domain needed). See the `relay:` block in `coolify-service.sn
 
 1. Rob, in the Coolify UI (Mattermost service -> Docker Compose): add the `relay:` service and the `relay-data`
    volume from `coolify-service.snippet.yaml` (build `https://github.com/rowama/mmbridge.git#main:relay`,
-   Dockerfile, `expose: 8080`, no published port, volume `relay-data:/data`, separate from mmbridge's). No mmbridge env change: mmbridge accepts plain
+   Dockerfile, `expose: 8080`, no published port, volume `relay-data:/data`, separate from mmbridge's `mmbridge-data:/data`, which must stay to keep bots.enc). No mmbridge env change: mmbridge accepts plain
    `http://` wake URLs only for the in-stack host `relay` (do **not** set `LIVE_ALLOW_HTTP_WAKE`; it is tests-only).
 2. Rob, same screen, environment/secrets: `RELAY_BOT_EDDIE_HMAC_SECRET`, `RELAY_BOT_EDDIE_ROUTINE_URL`,
    `RELAY_BOT_EDDIE_ROUTINE_KEY`. The HMAC secret is eddie's existing mmbridge wake secret (if lost, make a new one

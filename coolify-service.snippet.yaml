@@ -16,6 +16,9 @@ services:
       # Wake URL http://relay:8080/wake/<bot> is accepted without any flag (http allowed only to host 'relay').
       # Never set LIVE_ALLOW_HTTP_WAKE here: it is tests-only.
       # Per-bot Mattermost tokens: add later as Coolify secrets, never commit them.
+    # /data MUST be a persistent named volume: it holds bots.enc (bot registry). Dropping it wipes bots on redeploy.
+    volumes:
+      - mmbridge-data:/data
     expose:
       - "8080"
     healthcheck:
@@ -55,4 +58,5 @@ services:
       retries: 3
 
 volumes:
+  mmbridge-data:   # persists mmbridge /data (bots.enc) across redeploys
   relay-data:
