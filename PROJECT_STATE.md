@@ -3,7 +3,7 @@ id: STATE
 type: project-state
 phase: implement
 status: active
-owner_agent: grok-bot
+owner_agent: claude-code
 date: 2026-10-30
 links: []
 triage: large             # unset | small | medium | large
@@ -31,10 +31,10 @@ implement (increment B: Grok Bot webhook wake + multi-bot; architecture B done, 
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[SLICE-20261028-b-s2-round-trip-reply-root-id](thoughts/shared/slices/2026-10-28-b-s2-round-trip-reply-root-id.md) (todo; next for implementer). Previous: B-s1 [done](thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md) (CP-S 2026-10-30)
+[SLICE-20261028-b-s2-round-trip-reply-root-id](thoughts/shared/slices/2026-10-28-b-s2-round-trip-reply-root-id.md) (review: implemented e68ee8f + review fixes 6be652b, not pushed; awaiting eng-verify). Previous: B-s1 [done](thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md) (CP-S 2026-10-30)
 
 ## Next action
-B-s2 (round-trip reply, root_id, relay tripwire; plan Phase 2, security review required): implementer (Claude Code) runs eng-implement-slice on [the slice card](thoughts/shared/slices/2026-10-28-b-s2-round-trip-reply-root-id.md), then Codex review + eng-verify, then CP-S (Rob: "@eddie status?" answer in channel/thread/DM, no re-wake). OQ-B2 = verbatim body (spike), so no `text` fallback field needed. Then B-s3.
+B-s2 implemented (claude-code 2026-10-30, handoff [b-s2-implemented-awaiting-verify](thoughts/shared/handoffs/2026-10-30_22-38-17_b-s2-implemented-awaiting-verify.md)): plan Phase 2 block 3x exit 0; Codex review 2 P2 fixed. Planner: eng-verify (base d5dc1ae), push after PASS, then CP-S (Rob: routine instruction text from relay/README.md "Grok routine setup", redeploy mmbridge + relay, "@eddie status?" answer in channel/thread/DM, no re-wake). Planner decision: DM reply hints carry root_id null (architecture contract). Then B-s3.
 
 B-s1 done (CP-S 2026-10-30). Ops: boot-before-store fixed 2026-10-30 (Rob "fix it now", small): if mmbridge boots with store_unreadable (no bots.enc yet) it stays `off` and re-tries the store every 30 s; the first set-bot starts the WS listener (log store_appeared). Restart no longer required after first set-bot (needs the new image on Coolify). http-wake-internal-hosts slice (8c60bc8) done (CP-S 2026-10-30). Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
 
@@ -74,7 +74,8 @@ none
 - Architecture: [docs/architecture/2026-10-25-mmbridge-mcp.md](docs/architecture/2026-10-25-mmbridge-mcp.md)
 - ADRs 0001-0010 (all accepted): [docs/decisions/](docs/decisions/)
 - Verification lb4b (PASS): [thoughts/shared/verification/2026-10-27-lb4b-drop-allowlist.md](thoughts/shared/verification/2026-10-27-lb4b-drop-allowlist.md)
-- Latest handoff: [thoughts/shared/handoffs/2026-10-29_23-08-07_b-s1-implemented-awaiting-review.md](thoughts/shared/handoffs/2026-10-29_23-08-07_b-s1-implemented-awaiting-review.md)
+- Latest handoff: [thoughts/shared/handoffs/2026-10-30_22-38-17_b-s2-implemented-awaiting-verify.md](thoughts/shared/handoffs/2026-10-30_22-38-17_b-s2-implemented-awaiting-verify.md)
+- B-s2 review (addressed): [thoughts/shared/verification/2026-10-30-slice-20261028-b-s2-round-trip-reply-root-id-review.md](thoughts/shared/verification/2026-10-30-slice-20261028-b-s2-round-trip-reply-root-id-review.md)
 - Review lb4b (addressed, no findings): [thoughts/shared/verification/2026-10-27-slice-20261027-lb4b-drop-allowlist-review.md](thoughts/shared/verification/2026-10-27-slice-20261027-lb4b-drop-allowlist-review.md)
 - Review lb3 (addressed, no findings): [thoughts/shared/verification/2026-10-27-slice-20261027-lb3-listener-filters-review.md](thoughts/shared/verification/2026-10-27-slice-20261027-lb3-listener-filters-review.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
