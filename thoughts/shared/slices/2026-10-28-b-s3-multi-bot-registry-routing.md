@@ -2,7 +2,7 @@
 id: SLICE-20261028-b-s3-multi-bot-registry-routing
 type: slice
 phase: implement
-status: todo             # todo | in-progress | blocked | review | done
+status: in-progress      # todo | in-progress | blocked | review | done
 owner_agent: claude-code
 date: 2026-10-28
 links: [thoughts/shared/plans/2026-10-28-grok-webhook-multibot.md, docs/architecture/2026-10-28-grok-webhook-multibot.md]
@@ -28,6 +28,7 @@ Two or more bots (e.g. eddie, grok, test) registered on one mmbridge, each with 
 - [ ] `app/wake.py` per-row config, delivery_id `<bot>:<post_id>`, per-bot in-flight cap 2; `app/main.py` /health bots_total, bots_failing
 - [ ] fake MM multiple bot users + revoke; DSL register_bot for several bots, assert_bot_failing, assert_failed_wake_visible_for_bot (two-bot outage spec: grok routine down, eddie still woken once, grok's failed wake visible via `failed --bot grok`)
 - [ ] Unit tests per plan Phase 3 (migrations incl. crash mid-migration, admin, filter table, supervisor, dispatcher fairness, health)
+- [ ] Friendlier `bin/set-bot` (Rob 2026-10-30, folded into B-s3): one owner-facing wrapper for `app.admin set-bot --name NAME` that prompts for the Mattermost bot token (shown once in Mattermost; regenerate if lost) and wake URL default `http://relay:8080/wake/NAME`, generates or accepts the HMAC-SHA256 wake secret and prints the matching `RELAY_BOT_<NAME>_HMAC_SECRET` line for Coolify; never echoes the token; Fernet store key stays a one-time Coolify env (not touched by the wrapper)
 - [ ] README/OWNER-GUIDE multi-bot setup + rollback; CHANGELOG
 - [ ] Full suite: all A + B live specs (in-process and container, 3x), MCP specs; `eng-spec trace .` maps REQ-B1..B8
 

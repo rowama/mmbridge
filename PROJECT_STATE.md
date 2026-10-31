@@ -4,13 +4,13 @@ type: project-state
 phase: implement
 status: active
 owner_agent: grok-bot
-date: 2026-10-30
+date: 2026-10-31
 links: []
 triage: large             # unset | small | medium | large
-active_slice: SLICE-20261028-b-s2-round-trip-reply-root-id
+active_slice: SLICE-20261028-b-s3-multi-bot-registry-routing
 # Single source of truth for approvals. One item per line: "CP-X: <path> - <decision needed>".
 # Later checkpoints (e.g. CP-B while in discover) may be listed early. Quote items containing commas.
-pending_approvals: ["CP-S: thoughts/shared/slices/2026-10-28-b-s2-round-trip-reply-root-id.md - manual verification"]
+pending_approvals: []
 # Working agreements (see PROCESS.md section 10). Never hard-code these in design docs.
 implementer: claude-code      # who writes code (default: Claude Code on the owner's PC)
 planner: grok-bot             # who plans, writes docs, keeps state and process
@@ -31,10 +31,10 @@ implement (increment B: Grok Bot webhook wake + multi-bot; architecture B done, 
 A public HTTPS MCP bridge (Python, deployed on Coolify at chats.rmlab.cloud) that lets Grok Bots read and post in Rob's self-hosted Mattermost, each bot using its own Mattermost bot token.
 
 ## Active slice
-[SLICE-20261028-b-s2-round-trip-reply-root-id](thoughts/shared/slices/2026-10-28-b-s2-round-trip-reply-root-id.md) (review: eng-verify PASS 2026-10-30 [report](thoughts/shared/verification/2026-10-30-b-s2-round-trip-reply-root-id-verify.md), pushed; awaiting CP-S). Previous: B-s1 [done](thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md) (CP-S 2026-10-30)
+[SLICE-20261028-b-s3-multi-bot-registry-routing](thoughts/shared/slices/2026-10-28-b-s3-multi-bot-registry-routing.md) (in-progress, implementer claude-code via eng-run 2026-10-31; includes friendlier bin/set-bot per Rob 2026-10-30). Previous: B-s2 [done](thoughts/shared/slices/2026-10-28-b-s2-round-trip-reply-root-id.md) (CP-S 2026-10-31), B-s1 [done](thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md) (CP-S 2026-10-30)
 
 ## Next action
-B-s2 implemented (claude-code 2026-10-30, handoff [b-s2-implemented-awaiting-verify](thoughts/shared/handoffs/2026-10-30_22-38-17_b-s2-implemented-awaiting-verify.md)): plan Phase 2 block 3x exit 0; Codex review 2 P2 fixed. eng-verify PASS (grok-bot 2026-10-30), pushed. Waiting on CP-S (Rob: routine instruction text from relay/README.md "Grok routine setup", redeploy mmbridge + relay, "@eddie status?" answer in channel/thread/DM, no re-wake). Planner decision: DM reply hints carry root_id null (architecture contract). Then B-s3.
+B-s3 implement started (eng-run implement, claude-code, 2026-10-31): plan Phase 3 + friendlier `bin/set-bot` wrapper (Rob 2026-10-30). Then Codex review, eng-verify, push (standing), CP-S per plan Phase 3 Manual Verification. B-s2 done (CP-S 2026-10-31, see Approval log).
 
 B-s1 done (CP-S 2026-10-30). Ops: boot-before-store fixed 2026-10-30 (Rob "fix it now", small): if mmbridge boots with store_unreadable (no bots.enc yet) it stays `off` and re-tries the store every 30 s; the first set-bot starts the WS listener (log store_appeared). Restart no longer required after first set-bot (needs the new image on Coolify). http-wake-internal-hosts slice (8c60bc8) done (CP-S 2026-10-30). Open: live Mattermost-restart resume check (TODOS, deferred); OWNER-GUIDE pointer (TODOS P2); flaky timing tests (TODOS P2).
 
@@ -93,6 +93,7 @@ none
      Pre-kit decisions: back-fill with Checkpoint "pre-kit" and Decision "approved (back-filled, pre-kit)". .eng/bin/eng-check matches rows to statuses. -->
 | Date | Checkpoint | Artifact | Decision (Rob) |
 |---|---|---|---|
+| 2026-10-31 | CP-S | thoughts/shared/slices/2026-10-28-b-s2-round-trip-reply-root-id.md | approved (live: Town Square "@eddie status?" answered; DM "hi" answered; volume mmbridge-data persists bots.enc across redeploy (4c3d2cb); MCP reconnected; wake_url http://relay:8080/wake/eddie; via Eddie) |
 | 2026-10-30 | CP-S | thoughts/shared/slices/2026-10-28-b-s1-relay-grok-wake-one-bot.md | approved (relay in Mattermost compose stack; live: Rob post in ~acorn woke mmbridge-wake-eddie, run 21:28:50 CDT succeeded, ack in Eddie chat; mmbridge needed a container restart after first set-bot (booted store_unreadable, reload does not start WS); http wake host `relay` only (8c60bc8); Ulrik duplicate re-POST not run; via Eddie) |
 | 2026-10-30 | CP-S | thoughts/shared/slices/2026-10-30-http-wake-internal-hosts.md | approved (8c60bc8 on main; exercised live by B-s1 demo: wake via http://relay with LIVE_ALLOW_HTTP_WAKE unset in prod; via Eddie) |
 | 2026-10-30 | triage (size) | thoughts/shared/slices/2026-10-30-http-wake-internal-hosts.md | approved (small, security; Rob 'Tighten now': no global LIVE_ALLOW_HTTP_WAKE in prod, http only to in-stack relay; via Eddie) |
