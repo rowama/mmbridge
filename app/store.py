@@ -11,6 +11,7 @@ accepted (MultiFernet) for key rotation, which also re-encrypts the .v1.bak. Err
 or secret. Loaded/saved tokens and secrets are registered with the log redact filter. A legacy `channels` key
 (pre-lb4b stores) is ignored on load and dropped on the next save.
 """
+import contextlib
 import httpx
 import json
 import os
@@ -229,6 +230,23 @@ def _write(path: str, data: bytes) -> None:
         if os.path.exists(tmp):
             os.unlink(tmp)
         raise
+
+
+@contextlib.contextmanager
+def locked(path: str):
+    """Exclusive advisory lock (bots.enc.lock) around a load-modify-save of the store: admin CLI edits and the
+    runtime's v1 migration never clobber each other (POSIX; no-op where fcntl is missing)."""
+    try:
+        import fcntl
+    except ImportError:                       # pragma: no cover - dev on Windows only
+        yield
+        return
+    with open(path + ".lock", "a") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
 
 
 def load(path: str, key: str | None, v1_name: str = LEGACY_NAME) -> Store:

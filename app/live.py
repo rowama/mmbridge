@@ -243,11 +243,13 @@ class LiveRuntime:
     async def _load(self, path: str, key: str | None):
         st = store.load(path, key)
         if st.migrated_from == 1:
-            await self._migrate_store(path, key, st)
+            st = await self._migrate_store(path, key, st)
         return st
 
-    async def _migrate_store(self, path: str, key: str | None, st) -> None:
-        """v1 store: name its bot after the Mattermost username (fallback `bot`) and save as v2 (+ .v1.bak)."""
+    async def _migrate_store(self, path: str, key: str | None, st):
+        """v1 store: name its bot after the Mattermost username (fallback `bot`) and save as v2 (+ .v1.bak).
+        The save holds the store lock and re-reads the file first: if an admin edit already rewrote it (v2) while
+        the username was looked up, that store wins and nothing is written (Codex B-s3 review P2)."""
         (b,) = st.bots.values()
         try:
             me = await self.client_factory(b.token).get("/users/me")
@@ -255,12 +257,23 @@ class LiveRuntime:
         except Exception as e:                       # MM down / token refused: keep the fallback name
             username, uid = None, ""
             _log("store_migrate_lookup_failed", "warning", error=getattr(e, "code", None) or type(e).__name__)
-        store.rename_v1(st, username, uid)
         try:
-            store.save(path, key, st)
-            _log("store_migrated", bot=next(iter(st.bots)), fallback=username is None)
+            return await asyncio.to_thread(self._commit_migration, path, key, username, uid)
         except (StoreError, OSError) as e:           # runs from memory; the next start tries again
             _log("store_migrate_failed", "error", error=getattr(e, "code", None) or type(e).__name__)
+            return store.rename_v1(st, username, uid)
+
+    @staticmethod
+    def _commit_migration(path: str, key: str | None, username: str | None, uid: str):
+        with store.locked(path):
+            cur = store.load(path, key)
+            if cur.migrated_from != 1:
+                _log("store_migrate_skipped", reason="already_v2")
+                return cur
+            store.rename_v1(cur, username, uid)
+            store.save(path, key, cur)
+        _log("store_migrated", bot=next(iter(cur.bots)), fallback=username is None)
+        return cur
 
     async def _await_store(self, path: str, key: str | None) -> None:
         """Retry the store load every reload_s until it succeeds (logged once, no values), then launch."""

@@ -12,7 +12,6 @@ read state.db and never print message text.
 """
 import argparse
 import asyncio
-import contextlib
 import json
 import os
 import secrets
@@ -75,22 +74,6 @@ def _key() -> str:
     return key
 
 
-@contextlib.contextmanager
-def _locked(path: str):
-    """Exclusive advisory lock for a load-modify-save of the store (POSIX; no-op where fcntl is missing)."""
-    try:
-        import fcntl
-    except ImportError:                       # pragma: no cover - dev on Windows only
-        yield
-        return
-    with open(path + ".lock", "a") as fh:
-        fcntl.flock(fh, fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            fcntl.flock(fh, fcntl.LOCK_UN)
-
-
 def _name_v1(st, transport, me: dict | None = None) -> None:
     """A store read from v1: name its bot after the Mattermost username (`me`, or looked up with its own token)."""
     if st.migrated_from != 1:
@@ -135,7 +118,7 @@ def _set_bot(a, stdin, out, transport) -> None:
     key = _key()
     me = asyncio.run(_me(token, transport))
     path = store.path_from_env()
-    with _locked(path):
+    with store.locked(path):
         if os.path.exists(path):           # never overwrite other bots because the store did not decrypt
             st = store.load(path, key)
             _name_v1(st, transport, me if a.name is None else None)
@@ -202,7 +185,7 @@ def _show(a, out, transport) -> None:
 
 def _remove_bot(a, out, transport) -> None:
     key, path = _key(), store.path_from_env()
-    with _locked(path):
+    with store.locked(path):
         st = _load(transport)
         if a.name not in st.bots:
             raise AdminError("not_found", "no bot %s" % a.name)

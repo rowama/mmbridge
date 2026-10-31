@@ -473,3 +473,26 @@ async def test_state_migration_failure_turns_live_off_mcp_stays_up(served, tmp_p
             await asyncio.sleep(0.1)
             assert not any(x[0] == "WS" for x in m.calls)
     assert '"event": "live_runtime_off", "reason": "live_migration_failed"' in caplog.text
+
+
+async def test_boot_migration_never_overwrites_a_concurrent_set_bot(served, tmp_path, key):
+    """Codex B-s3 review P2: set-bot saved v2 while the runtime was looking up the v1 bot's username; the runtime
+    must keep the on-disk store (under the store lock), not write its stale v1 snapshot."""
+    m, town, base = served
+    v1 = Fernet(key.encode()).encrypt(json.dumps({"version": 1, "bot": {
+        "token": tok(m, "eddie"), "wake_url": URL, "wake_secret": SECRET}}).encode())
+    (tmp_path / "bots.enc").write_bytes(v1)
+    live = runtime(tmp_path, key, base)
+    real = live.client_factory
+
+    class Racing:
+        def __init__(self, token):
+            self.c = real(token)
+
+        async def get(self, path, **kw):
+            save_bots(tmp_path, key, m, "eddie", "eddie2")             # operator's set-bot lands meanwhile
+            return await self.c.get(path, **kw)
+    live.client_factory = Racing
+    st = await live._load(str(tmp_path / "bots.enc"), key)
+    assert sorted(st.bots) == ["eddie", "eddie2"]
+    assert sorted(store.load(str(tmp_path / "bots.enc"), key).bots) == ["eddie", "eddie2"]
